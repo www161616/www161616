@@ -96,8 +96,11 @@ body { font-family:'Noto Sans TC',sans-serif; background:#f5f5f5; color:#333; }
 
 <script>
 const SHEET_ID = '1Krj3aevhGkj5akB-MjrE9drVIQzQAZCFY7pEdq1PfaE';
+const SB_URL = 'https://xuykenpvonfqwsgbuvvj.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh1eWtlbnB2b25mcXdzZ2J1dnZqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwMDY3MzgsImV4cCI6MjA4NzU4MjczOH0.HmIktEbkPc0e7eTdqJdMWVxMzYIh4YkZ4LewZfC4Qr4';
 let cachedOrderId = '';
 let cachedRows = [];
+let cachedCustomer = null;
 
 async function loadOrder() {
   const params = new URLSearchParams(location.search);
@@ -117,6 +120,18 @@ async function loadOrder() {
     const taxType = cachedRows[0]['稅別'] || '免稅';
     if (taxType === '應稅' || taxType === '稅外加') {
       document.getElementById('taxToggle').checked = true;
+    }
+
+    // 從 Supabase 查客戶資料
+    const customerName = cachedRows[0]['客戶名稱'] || '';
+    if (customerName) {
+      try {
+        const res = await fetch(`${SB_URL}/rest/v1/customers?select=name,contact,phone,mobile,address&name=eq.${encodeURIComponent(customerName)}`, {
+          headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY }
+        });
+        const custs = await res.json();
+        if (custs.length > 0) cachedCustomer = custs[0];
+      } catch (e) { /* 查不到就用空的 */ }
     }
 
     renderOrder();
@@ -154,13 +169,14 @@ function renderOrder() {
   const orderTime = first['開單時間'] || '';
   const shipDate = first['出貨日期'] || '';
   const operator = first['開單人員'] || '';
-  const recipient = rows.map(r => r['收件人']).find(r => r) || '';
-  const address = rows.map(r => r['地址']).find(r => r) || '';
-  const phone = rows.map(r => r['電話']).find(r => r) || '';
+  // 收件人資料從 Supabase 客戶帶入
+  const contact = cachedCustomer?.contact || '';
+  const phone = cachedCustomer?.phone || cachedCustomer?.mobile || '';
+  const address = cachedCustomer?.address || '';
 
-  // 備註：過濾掉客戶名稱、空值、重複
+  // 備註：過濾掉客戶名稱、空值、重複，只有實際有內容才顯示
   const skipWords = [customer, '同上', '（同上）'];
-  const notes = [...new Set(rows.map(r => r['備註']).filter(n => n && !skipWords.some(w => n === w)))];
+  const notes = [...new Set(rows.map(r => r['備註']).filter(n => n && n.trim() && !skipWords.some(w => n === w)))];
 
   const hasPrice = rows.some(r => r['單價'] && parseFloat(r['單價']) > 0);
 
@@ -192,14 +208,20 @@ function renderOrder() {
     </div></div>`;
   }
 
-  // 收件人/地址/電話 子資訊（有值才顯示）
+  // 客戶聯絡資料（從 Supabase 帶入）
   let subInfoHtml = '';
-  const subItems = [];
-  if (recipient) subItems.push(`<span class="info-label">收件人：</span><span class="info-value">${recipient}</span>`);
-  if (phone) subItems.push(`<span class="info-label">電話：</span><span class="info-value">${phone}</span>`);
-  if (address) subItems.push(`<span class="info-label">地址：</span><span class="info-value">${address}</span>`);
-  if (subItems.length > 0) {
-    subInfoHtml = `<div class="sub-info">${subItems.join('　')}</div>`;
+  const subLines = [];
+  if (contact || phone) {
+    const parts = [];
+    if (contact) parts.push(`<span class="info-label">聯絡人：</span><span class="info-value">${contact}</span>`);
+    if (phone) parts.push(`<span class="info-label">電話：</span><span class="info-value">${phone}</span>`);
+    subLines.push(parts.join('　'));
+  }
+  if (address) {
+    subLines.push(`<span class="info-label">地址：</span><span class="info-value">${address}</span>`);
+  }
+  if (subLines.length > 0) {
+    subInfoHtml = `<div class="sub-info">${subLines.join('<br>')}</div>`;
   }
 
   document.getElementById('content').innerHTML = `
