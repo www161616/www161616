@@ -30,71 +30,53 @@ body { font-family:'Noto Sans TC',sans-serif; background:#f5f5f5; color:#333; }
 /* 訂購單本體 */
 .page {
   width:210mm; margin:52px auto 20px; background:#fff;
-  padding:15mm 15mm; box-shadow:0 2px 10px rgba(0,0,0,0.1);
+  padding:12mm 12mm; box-shadow:0 2px 10px rgba(0,0,0,0.1);
 }
 
 /* 表頭 */
-.header { text-align:center; margin-bottom:15px; border-bottom:3px double #333; padding-bottom:10px; }
+.header { text-align:center; margin-bottom:12px; border-bottom:3px double #333; padding-bottom:8px; }
 .company-name { font-size:20px; font-weight:700; letter-spacing:4px; }
 .doc-title { font-size:16px; font-weight:600; margin-top:4px; color:#555; }
 
 /* 資訊列 */
 .info-row {
-  display:flex; justify-content:space-between; margin-bottom:12px;
-  font-size:13px; border-bottom:1px solid #ddd; padding-bottom:8px;
+  display:flex; justify-content:space-between; margin-bottom:8px;
+  font-size:13px; border-bottom:1px solid #ddd; padding-bottom:6px;
 }
-.info-row .left, .info-row .right { display:flex; flex-direction:column; gap:3px; }
+.info-row .left, .info-row .right { display:flex; flex-direction:column; gap:2px; }
 .info-label { color:#888; font-size:11px; }
 .info-value { font-weight:500; }
+.sub-info { font-size:12px; margin-bottom:8px; }
 
 /* 明細表 - 緊湊行高 */
-.detail-table { width:100%; border-collapse:collapse; margin-bottom:10px; }
+.detail-table { width:100%; border-collapse:collapse; margin-bottom:8px; }
 .detail-table th {
-  background:#f8f8f8; border:1px solid #ccc; padding:4px 8px;
+  background:#f8f8f8; border:1px solid #ccc; padding:3px 6px;
   font-size:11px; color:#555; text-align:center; font-weight:600;
 }
 .detail-table td {
-  border:1px solid #ccc; padding:3px 8px; font-size:12px; text-align:center;
-  line-height:1.4;
+  border:1px solid #ccc; padding:2px 6px; font-size:12px; text-align:center;
+  line-height:1.3;
 }
 .detail-table td.left { text-align:left; }
 
 /* 合計區 */
-.total-section {
-  display:flex; justify-content:flex-end; margin-bottom:10px;
-}
-.total-box {
-  width:250px; border:1px solid #ccc; font-size:12px;
-}
-.total-row {
-  display:flex; justify-content:space-between; padding:4px 10px;
-  border-bottom:1px solid #eee;
-}
+.total-section { display:flex; justify-content:flex-end; margin-bottom:8px; }
+.total-box { width:250px; border:1px solid #ccc; font-size:12px; }
+.total-row { display:flex; justify-content:space-between; padding:3px 10px; border-bottom:1px solid #eee; }
 .total-row:last-child { border-bottom:none; }
-.total-row.grand {
-  font-weight:700; font-size:14px; background:#f8f8f8;
-  border-top:2px solid #999;
-}
+.total-row.grand { font-weight:700; font-size:14px; background:#f8f8f8; border-top:2px solid #999; }
 
 /* 備註 */
-.notes { margin-top:10px; font-size:11px; color:#666; }
-.notes-title { font-weight:600; margin-bottom:3px; }
-
-/* 簽名欄 */
-.sign-row {
-  display:flex; justify-content:space-around; margin-top:30px;
-  padding-top:10px; border-top:1px solid #ddd;
-}
-.sign-box { text-align:center; width:120px; }
-.sign-label { font-size:11px; color:#888; margin-bottom:25px; }
-.sign-line { border-top:1px solid #333; padding-top:4px; font-size:10px; color:#aaa; }
+.notes { margin-top:8px; font-size:11px; color:#666; border-top:1px solid #eee; padding-top:6px; }
+.notes-title { font-weight:600; margin-bottom:2px; }
 
 /* 列印樣式 */
 @media print {
   body { background:#fff; }
   .toolbar { display:none; }
-  .page { margin:0; box-shadow:none; width:100%; padding:8mm 10mm; }
-  @page { size:A4; margin:5mm; }
+  .page { margin:0; box-shadow:none; width:100%; padding:2mm 3mm; }
+  @page { size:A4; margin:2mm; }
 }
 </style>
 </head>
@@ -104,7 +86,7 @@ body { font-family:'Noto Sans TC',sans-serif; background:#f5f5f5; color:#333; }
   <span class="order-id" id="toolbarId">訂購單</span>
   <div class="actions">
     <label><input type="checkbox" id="taxToggle" onchange="reRender()"> 稅外加 5%</label>
-    <button class="btn-print" onclick="window.print()">🖨️ 列印</button>
+    <button class="btn-print" onclick="window.print()">列印</button>
   </div>
 </div>
 
@@ -132,11 +114,9 @@ async function loadOrder() {
     cachedRows = data.filter(r => r['訂單編號'] === cachedOrderId);
     if (cachedRows.length === 0) { showError(`找不到訂單 ${cachedOrderId}`); return; }
 
-    // 根據稅別自動設定勾選
     const taxType = cachedRows[0]['稅別'] || '免稅';
-    const taxToggle = document.getElementById('taxToggle');
     if (taxType === '應稅' || taxType === '稅外加') {
-      taxToggle.checked = true;
+      document.getElementById('taxToggle').checked = true;
     }
 
     renderOrder();
@@ -174,7 +154,6 @@ function renderOrder() {
   const orderTime = first['開單時間'] || '';
   const shipDate = first['出貨日期'] || '';
   const operator = first['開單人員'] || '';
-  // 收件人取第一個非空的
   const recipient = rows.map(r => r['收件人']).find(r => r) || '';
   const address = rows.map(r => r['地址']).find(r => r) || '';
   const phone = rows.map(r => r['電話']).find(r => r) || '';
@@ -213,6 +192,16 @@ function renderOrder() {
     </div></div>`;
   }
 
+  // 收件人/地址/電話 子資訊（有值才顯示）
+  let subInfoHtml = '';
+  const subItems = [];
+  if (recipient) subItems.push(`<span class="info-label">收件人：</span><span class="info-value">${recipient}</span>`);
+  if (phone) subItems.push(`<span class="info-label">電話：</span><span class="info-value">${phone}</span>`);
+  if (address) subItems.push(`<span class="info-label">地址：</span><span class="info-value">${address}</span>`);
+  if (subItems.length > 0) {
+    subInfoHtml = `<div class="sub-info">${subItems.join('　')}</div>`;
+  }
+
   document.getElementById('content').innerHTML = `
   <div class="page">
     <div class="header">
@@ -224,8 +213,6 @@ function renderOrder() {
       <div class="left">
         <div><span class="info-label">訂單編號：</span><span class="info-value">${orderId}</span></div>
         <div><span class="info-label">客戶名稱：</span><span class="info-value">${customer}</span></div>
-        ${recipient ? `<div><span class="info-label">收 件 人：</span><span class="info-value">${recipient}</span></div>` : ''}
-        ${phone ? `<div><span class="info-label">電　　話：</span><span class="info-value">${phone}</span></div>` : ''}
       </div>
       <div class="right">
         <div><span class="info-label">開單時間：</span><span class="info-value">${orderTime}</span></div>
@@ -234,16 +221,16 @@ function renderOrder() {
       </div>
     </div>
 
-    ${address ? `<div style="font-size:12px;margin-bottom:10px;"><span class="info-label">地　　址：</span><span class="info-value">${address}</span></div>` : ''}
+    ${subInfoHtml}
 
     <table class="detail-table">
       <thead>
         <tr>
-          <th style="width:35px">項次</th>
+          <th style="width:30px">項次</th>
           <th>商品名稱</th>
-          <th style="width:70px">數量</th>
-          ${hasPrice ? '<th style="width:80px">單價</th>' : ''}
-          ${hasPrice ? '<th style="width:100px">金額</th>' : ''}
+          <th style="width:60px">數量</th>
+          ${hasPrice ? '<th style="width:70px">單價</th>' : ''}
+          ${hasPrice ? '<th style="width:90px">金額</th>' : ''}
         </tr>
       </thead>
       <tbody>
@@ -258,21 +245,6 @@ function renderOrder() {
       <div class="notes-title">備註：</div>
       <div>${notes.join('、')}</div>
     </div>` : ''}
-
-    <div class="sign-row">
-      <div class="sign-box">
-        <div class="sign-label">製單</div>
-        <div class="sign-line">&nbsp;</div>
-      </div>
-      <div class="sign-box">
-        <div class="sign-label">審核</div>
-        <div class="sign-line">&nbsp;</div>
-      </div>
-      <div class="sign-box">
-        <div class="sign-label">客戶簽收</div>
-        <div class="sign-line">&nbsp;</div>
-      </div>
-    </div>
   </div>`;
 }
 
