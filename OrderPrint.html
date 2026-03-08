@@ -132,6 +132,13 @@ async function loadOrder() {
     cachedRows = data.filter(r => r['訂單編號'] === cachedOrderId);
     if (cachedRows.length === 0) { showError(`找不到訂單 ${cachedOrderId}`); return; }
 
+    // 根據稅別自動設定勾選
+    const taxType = cachedRows[0]['稅別'] || '免稅';
+    const taxToggle = document.getElementById('taxToggle');
+    if (taxType === '應稅' || taxType === '稅外加') {
+      taxToggle.checked = true;
+    }
+
     renderOrder();
   } catch (e) {
     showError('載入失敗：' + e.message);
