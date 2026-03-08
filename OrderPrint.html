@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>訂購單列印</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Noto Sans TC',sans-serif; background:#f5f5f5; color:#333; }
+
+.loading { text-align:center; padding:100px; font-size:16px; color:#888; }
+.error { text-align:center; padding:100px; font-size:16px; color:#c53030; }
+
+/* 工具列（列印時隱藏） */
+.toolbar {
+  position:fixed; top:0; left:0; right:0; z-index:100;
+  background:#fff; border-bottom:1px solid #ddd; padding:10px 20px;
+  display:flex; align-items:center; justify-content:space-between;
+}
+.toolbar .order-id { font-size:15px; font-weight:600; color:#555; }
+.btn-print {
+  padding:8px 24px; background:#b45309; color:#fff; border:none; border-radius:6px;
+  font-size:14px; cursor:pointer; font-family:inherit; font-weight:600;
+}
+.btn-print:hover { background:#92400e; }
+
+/* 訂購單本體 */
+.page {
+  width:210mm; min-height:297mm; margin:60px auto 20px; background:#fff;
+  padding:20mm 15mm; box-shadow:0 2px 10px rgba(0,0,0,0.1);
+}
+
+/* 表頭 */
+.header { text-align:center; margin-bottom:20px; border-bottom:3px double #333; padding-bottom:15px; }
+.company-name { font-size:22px; font-weight:700; letter-spacing:4px; }
+.doc-title { font-size:18px; font-weight:600; margin-top:6px; color:#555; }
+
+/* 資訊列 */
+.info-row {
+  display:flex; justify-content:space-between; margin-bottom:15px;
+  font-size:13px; border-bottom:1px solid #ddd; padding-bottom:10px;
+}
+.info-row .left, .info-row .right { display:flex; flex-direction:column; gap:4px; }
+.info-label { color:#888; font-size:11px; }
+.info-value { font-weight:500; }
+
+/* 明細表 */
+.detail-table { width:100%; border-collapse:collapse; margin-bottom:20px; }
+.detail-table th {
+  background:#f8f8f8; border:1px solid #ccc; padding:8px 10px;
+  font-size:12px; color:#555; text-align:center; font-weight:600;
+}
+.detail-table td {
+  border:1px solid #ccc; padding:8px 10px; font-size:13px; text-align:center;
+}
+.detail-table td.left { text-align:left; }
+.detail-table tbody tr:nth-child(even) { background:#fafafa; }
+
+/* 備註 */
+.notes { margin-top:15px; font-size:12px; color:#666; }
+.notes-title { font-weight:600; margin-bottom:5px; }
+
+/* 簽名欄 */
+.sign-row {
+  display:flex; justify-content:space-around; margin-top:40px;
+  padding-top:15px; border-top:1px solid #ddd;
+}
+.sign-box { text-align:center; width:120px; }
+.sign-label { font-size:12px; color:#888; margin-bottom:30px; }
+.sign-line { border-top:1px solid #333; padding-top:5px; font-size:11px; color:#aaa; }
+
+/* 列印樣式 */
+@media print {
+  body { background:#fff; }
+  .toolbar { display:none; }
+  .page { margin:0; box-shadow:none; width:100%; padding:10mm 12mm; min-height:auto; }
+  @page { size:A4; margin:5mm; }
+}
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+  <span class="order-id" id="toolbarId">訂購單</span>
+  <button class="btn-print" onclick="window.print()">🖨️ 列印</button>
+</div>
+
+<div id="content">
+  <div class="loading" id="loading">載入中...</div>
+</div>
+
+<script>
+const SHEET_ID = '1Krj3aevhGkj5akB-MjrE9drVIQzQAZCFY7pEdq1PfaE';
+
+async function loadOrder() {
+  const params = new URLSearchParams(location.search);
+  const orderId = params.get('id');
+  if (!orderId) {
+    showError('缺少訂單編號參數');
+    return;
+  }
+
+  document.getElementById('toolbarId').textContent = orderId;
+  document.title = `訂購單 ${orderId}`;
+
+  try {
+    const data = await fetchSheet('訂購單');
+    if (!data || data.length === 0) {
+      showError('找不到訂購單資料');
+      return;
+    }
+
+    // 篩選同一訂單編號的所有列
+    const rows = data.filter(r => r['訂單編號'] === orderId);
+    if (rows.length === 0) {
+      showError(`找不到訂單 ${orderId}`);
+      return;
+    }
+
+    renderOrder(orderId, rows);
+  } catch (e) {
+    showError('載入失敗：' + e.message);
+  }
+}
+
+async function fetchSheet(sheetName) {
+  const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(sheetName)}`;
+  const res = await fetch(url);
+  const text = await res.text();
+  const json = JSON.parse(text.replace(/^[^(]*\(/, '').replace(/\);?\s*$/, ''));
+  const table = json.table;
+  if (!table || !table.rows) return [];
+
+  const headers = table.cols.map(c => c.label || '');
+  return table.rows.map(r => {
+    const obj = {};
+    r.c.forEach((cell, i) => {
+      obj[headers[i]] = cell ? (cell.v != null ? String(cell.v) : '') : '';
+    });
+    return obj;
+  });
+}
+
+function renderOrder(orderId, rows) {
+  const first = rows[0];
+  const customer = first['客戶名稱'] || '';
+  const orderTime = first['開單時間'] || '';
+  const shipDate = first['出貨日期'] || '';
+  const operator = first['開單人員'] || '';
+  const recipient = first['收件人'] || '';
+  const address = first['地址'] || '';
+  const phone = first['電話'] || '';
+
+  // 收集所有不重複的備註
+  const notes = [...new Set(rows.map(r => r['備註']).filter(n => n))];
+
+  let detailHtml = '';
+  rows.forEach((r, i) => {
+    detailHtml += `<tr>
+      <td>${i + 1}</td>
+      <td class="left">${r['商品名稱'] || ''}</td>
+      <td>${r['數量'] || ''}</td>
+      <td>${r['備註'] || ''}</td>
+    </tr>`;
+  });
+
+  // 補空行到至少 8 行
+  for (let i = rows.length; i < 8; i++) {
+    detailHtml += `<tr><td>${i + 1}</td><td>&nbsp;</td><td></td><td></td></tr>`;
+  }
+
+  document.getElementById('content').innerHTML = `
+  <div class="page">
+    <div class="header">
+      <div class="company-name">丸十水產股份有限公司</div>
+      <div class="doc-title">訂 購 單</div>
+    </div>
+
+    <div class="info-row">
+      <div class="left">
+        <div><span class="info-label">訂單編號：</span><span class="info-value">${orderId}</span></div>
+        <div><span class="info-label">客戶名稱：</span><span class="info-value">${customer}</span></div>
+        ${recipient ? `<div><span class="info-label">收 件 人：</span><span class="info-value">${recipient}</span></div>` : ''}
+        ${phone ? `<div><span class="info-label">電　　話：</span><span class="info-value">${phone}</span></div>` : ''}
+      </div>
+      <div class="right">
+        <div><span class="info-label">開單時間：</span><span class="info-value">${orderTime}</span></div>
+        ${shipDate ? `<div><span class="info-label">出貨日期：</span><span class="info-value">${shipDate}</span></div>` : ''}
+        <div><span class="info-label">開單人員：</span><span class="info-value">${operator}</span></div>
+      </div>
+    </div>
+
+    ${address ? `<div style="font-size:13px;margin-bottom:12px;"><span class="info-label">地　　址：</span><span class="info-value">${address}</span></div>` : ''}
+
+    <table class="detail-table">
+      <thead>
+        <tr>
+          <th style="width:40px">項次</th>
+          <th>商品名稱</th>
+          <th style="width:100px">數量</th>
+          <th style="width:150px">備註</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${detailHtml}
+      </tbody>
+    </table>
+
+    ${notes.length > 0 ? `
+    <div class="notes">
+      <div class="notes-title">備註：</div>
+      <div>${notes.join('、')}</div>
+    </div>` : ''}
+
+    <div class="sign-row">
+      <div class="sign-box">
+        <div class="sign-label">製單</div>
+        <div class="sign-line">&nbsp;</div>
+      </div>
+      <div class="sign-box">
+        <div class="sign-label">審核</div>
+        <div class="sign-line">&nbsp;</div>
+      </div>
+      <div class="sign-box">
+        <div class="sign-label">客戶簽收</div>
+        <div class="sign-line">&nbsp;</div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function showError(msg) {
+  document.getElementById('content').innerHTML = `<div class="error">${msg}</div>`;
+}
+
+loadOrder();
+</script>
+</body>
+</html>
