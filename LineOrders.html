@@ -203,14 +203,14 @@ window.onload = async function() {
   renderGroupTags();
   try {
     const [supps, prods, mats] = await Promise.all([
-      api('suppliers', 'select=*&order=name'),
+      api('customers', 'select=*&order=name'),
       api('products', 'select=*&order=name'),
       api('materials', 'select=*&order=name')
     ]);
     allSuppliers = supps;
     allProducts = prods;
     allMaterials = mats;
-    document.getElementById('statusLeft').textContent = `已載入 ${supps.length} 供應商, ${prods.length} 商品, ${mats.length} 原料`;
+    document.getElementById('statusLeft').textContent = `已載入 ${supps.length} 客戶, ${prods.length} 商品, ${mats.length} 原料`;
   } catch(e) {
     showToast('載入 Supabase 資料失敗：' + e.message, 'error');
   }
@@ -345,19 +345,19 @@ function renderTable() {
     return;
   }
 
-  const cols = ['開單時間','出貨日期','廠商名稱','商品名稱','數量','收件人','地址','電話','開單人員','備註'];
+  const cols = ['開單時間','出貨日期','客戶名稱','商品名稱','數量','收件人','地址','電話','開單人員','備註'];
 
   let html = `<table class="data-table">
     <thead><tr>
       <th class="cb"><input type="checkbox" id="checkAll" onchange="toggleAll(this.checked)"></th>
       <th>#</th>
       ${cols.map(c => `<th>${c}</th>`).join('')}
-      <th>供應商比對</th>
+      <th>客戶比對</th>
       <th>商品比對</th>
     </tr></thead><tbody>`;
 
   filteredRows.forEach((r, i) => {
-    const suppMatch = matchSupplier(r['廠商名稱'] || '');
+    const suppMatch = matchSupplier(r['客戶名稱'] || '');
     const prodMatch = matchProduct(r['商品名稱'] || '');
     html += `<tr class="${r._selected ? 'selected' : ''}" ondblclick="toggleRow(${i})">
       <td class="cb"><input type="checkbox" ${r._selected ? 'checked' : ''} onchange="toggleRow(${i})"></td>
@@ -421,10 +421,10 @@ function startConvert() {
   const selected = filteredRows.filter(r => r._selected);
   if (selected.length === 0) { showToast('請先勾選要轉換的訂單', 'error'); return; }
 
-  // 按供應商分組
+  // 按客戶分組
   const groups = {};
   selected.forEach(r => {
-    const suppName = (r['廠商名稱'] || '未指定').trim();
+    const suppName = (r['客戶名稱'] || '未指定').trim();
     if (!groups[suppName]) groups[suppName] = [];
     groups[suppName].push(r);
   });
@@ -469,18 +469,18 @@ function renderConfirmModal() {
   html += `<div class="confirm-summary">
     <div class="item"><span>將建立</span><span class="num" style="color:var(--orange)">${totalOrders}</span><span>張進貨單</span></div>
     <div class="item"><span>共</span><span class="num">${totalItems}</span><span>個品項</span></div>
-    <div class="item"><span>供應商已匹配</span><span class="num" style="color:var(--success)">${matched}</span><span>/ ${totalOrders}</span></div>
+    <div class="item"><span>客戶已匹配</span><span class="num" style="color:var(--success)">${matched}</span><span>/ ${totalOrders}</span></div>
   </div>`;
 
   confirmData.forEach((group, gi) => {
     html += `<div class="confirm-section">
-      <h4>進貨單 #${gi+1} - 供應商：
+      <h4>進貨單 #${gi+1} - 客戶：
         ${group.supplierMatch
           ? `<span class="match-tag ok">${group.supplierMatch.name} (${group.supplierMatch.id})</span>`
           : `<span class="match-tag fail">${group.supplierName} - 未匹配</span>
              <select class="form-control" style="font-size:12px;padding:3px 6px;display:inline;width:auto;margin-left:6px;" onchange="manualMatchSupplier(${gi},this.value)">
                <option value="">-- 手動選擇 --</option>
-               ${allSuppliers.filter(s=>s.status==='啟用').map(s=>`<option value="${s.id}">${s.name}</option>`).join('')}
+               ${allSuppliers.filter(s=>s.status==='啟用'||!s.status).map(s=>`<option value="${s.id}">${s.name}</option>`).join('')}
              </select>`
         }
       </h4>
@@ -519,7 +519,7 @@ function renderConfirmModal() {
   const hasUnmatched = confirmData.some(g => !g.supplierMatch || g.items.some(it => !it.productMatch));
   if (hasUnmatched) {
     html += `<div style="padding:10px;background:rgba(197,48,48,0.08);border-radius:8px;color:var(--danger);font-size:12px;margin-top:8px;">
-      注意：有未匹配的供應商或商品，請手動選擇後再轉單。未匹配的品項將被跳過。
+      注意：有未匹配的客戶或商品，請手動選擇後再轉單。未匹配的品項將被跳過。
     </div>`;
   }
 
@@ -560,7 +560,7 @@ async function doConvert() {
   // 驗證：每組都要有供應商
   for (const g of confirmData) {
     if (!g.supplierMatch) {
-      showToast(`供應商「${g.supplierName}」尚未匹配，請手動選擇`, 'error');
+      showToast(`客戶「${g.supplierName}」尚未匹配，請手動選擇`, 'error');
       return;
     }
   }
