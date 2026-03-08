@@ -155,19 +155,37 @@ function renderOrder(orderId, rows) {
   // 收集所有不重複的備註
   const notes = [...new Set(rows.map(r => r['備註']).filter(n => n))];
 
+  const hasPrice = rows.some(r => r['單價'] && parseFloat(r['單價']) > 0);
+
   let detailHtml = '';
+  let grandTotal = 0;
   rows.forEach((r, i) => {
+    const unitPrice = parseFloat(r['單價']) || 0;
+    const amount = parseFloat(r['金額']) || 0;
+    grandTotal += amount;
     detailHtml += `<tr>
       <td>${i + 1}</td>
       <td class="left">${r['商品名稱'] || ''}</td>
       <td>${r['數量'] || ''}</td>
+      ${hasPrice ? `<td style="text-align:right">${unitPrice ? unitPrice.toLocaleString() : ''}</td>` : ''}
+      ${hasPrice ? `<td style="text-align:right;font-weight:600">${amount ? amount.toLocaleString() : ''}</td>` : ''}
       <td>${r['備註'] || ''}</td>
     </tr>`;
   });
 
+  // 合計列
+  if (hasPrice && grandTotal > 0) {
+    const colSpan = 4;
+    detailHtml += `<tr style="background:#f0f0f0;font-weight:700;">
+      <td colspan="${colSpan}" style="text-align:right;border-top:2px solid #999;">合計</td>
+      <td style="text-align:right;border-top:2px solid #999;">NT$ ${grandTotal.toLocaleString()}</td>
+      <td style="border-top:2px solid #999;"></td>
+    </tr>`;
+  }
+
   // 補空行到至少 8 行
   for (let i = rows.length; i < 8; i++) {
-    detailHtml += `<tr><td>${i + 1}</td><td>&nbsp;</td><td></td><td></td></tr>`;
+    detailHtml += `<tr><td>${i + 1}</td><td>&nbsp;</td><td></td>${hasPrice ? '<td></td><td></td>' : ''}<td></td></tr>`;
   }
 
   document.getElementById('content').innerHTML = `
@@ -198,8 +216,10 @@ function renderOrder(orderId, rows) {
         <tr>
           <th style="width:40px">項次</th>
           <th>商品名稱</th>
-          <th style="width:100px">數量</th>
-          <th style="width:150px">備註</th>
+          <th style="width:80px">數量</th>
+          ${hasPrice ? '<th style="width:90px">單價</th>' : ''}
+          ${hasPrice ? '<th style="width:90px">金額</th>' : ''}
+          <th style="width:120px">備註</th>
         </tr>
       </thead>
       <tbody>
