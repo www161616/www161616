@@ -349,7 +349,7 @@ window.onload = async function () {
   showLoading('載入客戶與商品資料中...');
   try {
     const [customers, products] = await Promise.all([
-      api('customers', 'select=*&status=eq.啟用&order=name'),
+      api('customers', 'select=*&status=eq.啟用&order=id'),
       api('products', 'select=*&status=eq.啟用&order=category,name')
     ]);
     allCustomers = customers;
