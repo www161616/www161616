@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  
+  <style>
+    * { box-sizing: border-box; }
+    body { 
+      font-family: 'Microsoft JhengHei', sans-serif; 
+      padding: 20px; 
+      background: #f5f5f5; 
+      margin: 0;
+    }
+    
+    .header-box { 
+      background: white; 
+      padding: 20px; 
+      border-radius: 12px; 
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1); 
+      margin-bottom: 20px; 
+      display: flex; 
+      align-items: center; 
+      gap: 15px; 
+    }
+    
+    h2 { 
+      color: #1976D2; 
+      margin: 0; 
+      flex-grow: 1; 
+      font-size: 24px;
+    }
+    
+    input[type="month"] { 
+      padding: 10px; 
+      border: 2px solid #ddd; 
+      border-radius: 8px; 
+      font-size: 16px; 
+    }
+    
+    .btn { 
+      padding: 10px 20px; 
+      border: none; 
+      border-radius: 8px; 
+      cursor: pointer; 
+      font-weight: bold; 
+      font-size: 14px;
+    }
+    
+    .btn-query { 
+      background: #FF9800; 
+      color: white; 
+    }
+    .btn-query:hover { background: #F57C00; }
+    
+    .btn-export { 
+      background: #1D6F42; 
+      color: white; 
+    }
+    .btn-export:hover { background: #165a36; }
+    .btn-export:disabled { background: #ccc; cursor: not-allowed; }
+    
+    .btn-print { 
+      background: #555; 
+      color: white; 
+    }
+    .btn-print:hover { background: #333; }
+    
+    /* 四大卡片區塊 */
+    .summary-cards {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+    
+    .card {
+      background: white;
+      padding: 20px; 
+      border-radius: 10px; 
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08); 
+      border-top: 4px solid #ccc;
+    }
+    
+    .card-title {
+      font-size: 14px; 
+      color: #666; 
+      margin-bottom: 10px; 
+    }
+    
+    .card-value {
+      font-size: 28px; 
+      font-weight: bold; 
+      margin-bottom: 5px; 
+    }
+    
+    .card-count {
+      font-size: 12px; 
+      color: #999; 
+    }
+    
+    .card-sales { border-color: #4CAF50; }
+    .card-sales .card-value { color: #2E7D32; }
+    
+    .card-purchase { border-color: #F44336; }
+    .card-purchase .card-value { color: #C62828; }
+    
+    .card-expense { border-color: #FF9800; }
+    .card-expense .card-value { color: #EF6C00; }
+    
+    .card-meal { border-color: #9C27B0; }
+    .card-meal .card-value { color: #7B1FA2; }
+    
+    /* 損益卡片 */
+    .profit-card {
+      background: white;
+      padding: 25px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    
+    .profit-title {
+      font-size: 18px;
+      color: #666;
+      margin-bottom: 15px;
+    }
+    
+    .profit-value {
+      font-size: 42px;
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+    
+    .profit-positive { color: #2E7D32; }
+    .profit-negative { color: #C62828; }
+    
+    .profit-formula {
+      font-size: 14px;
+      color: #999;
+    }
+    
+    /* 明細表格區塊 */
+    .section {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      margin-bottom: 20px;
+    }
+    
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid #eee;
+    }
+    
+    .section-title {
+      font-size: 18px;
+      font-weight: bold;
+      color: #333;
+    }
+    
+    table { 
+      width: 100%; 
+      border-collapse: collapse; 
+    }
+    
+    th { 
+      background: #f8f9fa; 
+      color: #555; 
+      padding: 12px; 
+      text-align: left; 
+      font-weight: bold;
+      border-bottom: 2px solid #ddd;
+    }
+    
+    td { 
+      padding: 10px 12px; 
+      border-bottom: 1px solid #eee; 
+    }
+    
+    tr:hover { 
+      background: #f8f9fa; 
+    }
+    
+    .total-row {
+      background: #e3f2fd;
+      font-weight: bold;
+      font-size: 16px;
+    }
+    
+    .loading { 
+      text-align: center; 
+      padding: 50px; 
+      color: #1976D2; 
+      font-size: 18px; 
+    }
+    
+    .empty-state {
+      text-align: center; 
+      padding: 50px; 
+      color: #999; 
+      font-size: 16px; 
+    }
+    
+    /* 列印樣式 */
+    @media print {
+      body { background: white; padding: 10px; }
+      .header-box { box-shadow: none; border: 1px solid #ddd; }
+      .btn { display: none !important; }
+      .summary-cards { grid-template-columns: repeat(4, 1fr); }
+      .card { box-shadow: none; border: 1px solid #ddd; page-break-inside: avoid; }
+      .section { box-shadow: none; border: 1px solid #ddd; page-break-inside: avoid; }
+      th { background: #f0f0f0 !important; }
+    }
+  </style>
+</head>
+<body>
+  
+  <div class="header-box">
+    <h2>📊 簡易月結報表</h2>
+    <input type="month" id="monthInput">
+    <button class="btn btn-query" onclick="fetchData()">🔍 查詢</button>
+    <button id="exportBtn" class="btn btn-export" onclick="exportToExcel()" disabled>📥 匯出 Excel</button>
+    <button class="btn btn-print" onclick="window.print()">🖨️ 列印</button>
+  </div>
+
+  <div id="reportArea">
+    <div class="empty-state">請選擇月份後查詢</div>
+  </div>
+
+  <script>
+    var currentData = null;
+    var currentMonth = '';
+    
+    window.onload = function() {
+      const today = new Date();
+      document.getElementById('monthInput').value = today.toISOString().substring(0, 7);
+    };
+
+    function fetchData() {
+      const month = document.getElementById('monthInput').value;
+      if (!month) {
+        alert('請選擇月份');
+        return;
+      }
+      
+      currentMonth = month;
+      const area = document.getElementById('reportArea');
+      area.innerHTML = '<div class="loading">🔄 正在整理月結資料...</div>';
+
+      google.script.run
+        .withSuccessHandler(renderReport)
+        .withFailureHandler(function(err) {
+          area.innerHTML = '<div style="color:red; padding:20px;">❌ 查詢錯誤: ' + err + '</div>';
+        })
+        .getSimpleMonthlyReport(month);
+    }
+
+    function renderReport(data) {
+      const area = document.getElementById('reportArea');
+      const exportBtn = document.getElementById('exportBtn');
+      
+      if (!data.success) {
+        area.innerHTML = '<div style="color:red; padding:20px;">❌ ' + data.error + '</div>';
+        exportBtn.disabled = true;
+        return;
+      }
+      
+      currentData = data;
+      exportBtn.disabled = false;
+      
+      // 計算損益
+      const profit = data.totals.sales - data.totals.purchase - data.totals.expense - data.totals.meals;
+      const profitClass = profit >= 0 ? 'profit-positive' : 'profit-negative';
+      const profitIcon = profit >= 0 ? '📈' : '📉';
+      
+      let html = '';
+      
+      // 1. 四大卡片
+      html += '<div class="summary-cards">';
+      html += `
+        <div class="card card-sales">
+          <div class="card-title">💰 銷貨收入</div>
+          <div class="card-value">$${data.totals.sales.toLocaleString()}</div>
+          <div class="card-count">共 ${data.salesList.length} 筆</div>
+        </div>
+        <div class="card card-purchase">
+          <div class="card-title">📦 進貨成本</div>
+          <div class="card-value">$${data.totals.purchase.toLocaleString()}</div>
+          <div class="card-count">共 ${data.purchaseList.length} 筆</div>
+        </div>
+        <div class="card card-expense">
+          <div class="card-title">💸 費用支出</div>
+          <div class="card-value">$${data.totals.expense.toLocaleString()}</div>
+          <div class="card-count">共 ${data.expenseList.length} 筆</div>
+        </div>
+        <div class="card card-meal">
+          <div class="card-title">🍱 員工餐費</div>
+          <div class="card-value">$${data.totals.meals.toLocaleString()}</div>
+          <div class="card-count">共 ${data.mealList.length} 筆</div>
+        </div>
+      `;
+      html += '</div>';
+      
+      // 2. 損益卡片
+      html += `
+        <div class="profit-card">
+          <div class="profit-title">${profitIcon} 本月損益</div>
+          <div class="profit-value ${profitClass}">$${profit.toLocaleString()}</div>
+          <div class="profit-formula">
+            銷貨 $${data.totals.sales.toLocaleString()} - 
+            進貨 $${data.totals.purchase.toLocaleString()} - 
+            費用 $${data.totals.expense.toLocaleString()} - 
+            餐費 $${data.totals.meals.toLocaleString()}
+          </div>
+        </div>
+      `;
+      
+      // 3. 銷貨明細
+      html += '<div class="section">';
+      html += '<div class="section-header"><div class="section-title">💰 銷貨收入明細</div></div>';
+      html += '<table><thead><tr>';
+      html += '<th width="15%">客戶名稱</th><th width="12%">訂單日期</th><th width="15%">單號</th>';
+      html += '<th width="12%" style="text-align:right;">金額</th>';
+      html += '<th width="12%" style="text-align:right;">已收</th>';
+      html += '<th width="12%" style="text-align:right;">未收</th>';
+      html += '<th width="22%">收款狀態 / 備註</th>';
+      html += '</tr></thead><tbody>';
+
+      if (data.salesList.length === 0) {
+        html += '<tr><td colspan="7" style="text-align:center; color:#999;">無銷貨紀錄</td></tr>';
+      } else {
+        data.salesList.forEach(function(s) {
+          var statusStyle = '';
+          if (s.statusColor === 'green') statusStyle = 'color:#2E7D32; font-weight:bold;';
+          else if (s.statusColor === 'orange') statusStyle = 'color:#F57C00; font-weight:bold;';
+          else if (s.statusColor === 'red') statusStyle = 'color:#C62828; font-weight:bold;';
+          
+          html += `<tr>
+            <td>${s.customerName}</td>
+            <td>${s.date}</td>
+            <td><code style="font-size:12px;">${s.orderId}</code></td>
+            <td style="text-align:right; font-weight:bold;">$${s.amount.toLocaleString()}</td>
+            <td style="text-align:right; color:#2E7D32;">$${s.paidAmount.toLocaleString()}</td>
+            <td style="text-align:right; color:#C62828;">$${s.unpaidAmount.toLocaleString()}</td>
+            <td style="font-size:13px; ${statusStyle}">${s.note}</td>
+          </tr>`;
+        });
+        html += `<tr class="total-row">
+          <td colspan="3">小計</td>
+          <td style="text-align:right;">$${data.totals.sales.toLocaleString()}</td>
+          <td colspan="3"></td>
+        </tr>`;
+      }
+      html += '</tbody></table></div>';
+
+      // 4. 進貨明細
+      html += '<div class="section">';
+      html += '<div class="section-header"><div class="section-title">📦 進貨成本明細</div></div>';
+      html += '<table><thead><tr>';
+      html += '<th width="20%">供應商</th><th width="15%">進貨日期</th><th width="20%">單號</th><th width="15%" style="text-align:right;">金額</th><th width="30%">備註</th>';
+      html += '</tr></thead><tbody>';
+
+      if (data.purchaseList.length === 0) {
+        html += '<tr><td colspan="5" style="text-align:center; color:#999;">無進貨紀錄</td></tr>';
+      } else {
+        data.purchaseList.forEach(function(p) {
+          html += `<tr>
+            <td>${p.supplierName}</td>
+            <td>${p.date}</td>
+            <td><code style="font-size:12px;">${p.orderId}</code></td>
+            <td style="text-align:right; font-weight:bold;">$${p.amount.toLocaleString()}</td>
+            <td>${p.note || ''}</td>
+          </tr>`;
+        });
+        html += `<tr class="total-row">
+          <td colspan="3">小計</td>
+          <td style="text-align:right;">$${data.totals.purchase.toLocaleString()}</td>
+          <td></td>
+        </tr>`;
+      }
+      html += '</tbody></table></div>';
+
+      // 5. 費用明細
+      html += '<div class="section">';
+      html += '<div class="section-header"><div class="section-title">💸 費用支出明細</div></div>';
+      html += '<table><thead><tr>';
+      html += '<th width="15%">日期</th><th width="15%">類別</th><th width="20%">項目</th><th width="15%">對象</th><th width="15%" style="text-align:right;">金額</th><th width="20%">付款方式</th>';
+      html += '</tr></thead><tbody>';
+
+      if (data.expenseList.length === 0) {
+        html += '<tr><td colspan="6" style="text-align:center; color:#999;">無費用紀錄</td></tr>';
+      } else {
+        data.expenseList.forEach(function(e) {
+          html += `<tr>
+            <td>${e.date}</td>
+            <td>${e.category}</td>
+            <td>${e.item}</td>
+            <td>${e.payee || ''}</td>
+            <td style="text-align:right; font-weight:bold; color:#EF6C00;">$${e.amount.toLocaleString()}</td>
+            <td>${e.paymentMethod || ''}</td>
+          </tr>`;
+        });
+        html += `<tr class="total-row">
+          <td colspan="4">小計</td>
+          <td style="text-align:right;">$${data.totals.expense.toLocaleString()}</td>
+          <td></td>
+        </tr>`;
+      }
+      html += '</tbody></table></div>';
+      
+      // 6. 員工餐費明細
+      html += '<div class="section">';
+      html += '<div class="section-header"><div class="section-title">🍱 員工餐費明細</div></div>';
+      html += '<table><thead><tr>';
+      html += '<th width="20%">日期</th><th width="15%">用餐人數</th><th width="20%" style="text-align:right;">金額</th><th width="20%">付款方式</th><th width="25%">備註</th>';
+      html += '</tr></thead><tbody>';
+      
+      if (data.mealList.length === 0) {
+        html += '<tr><td colspan="5" style="text-align:center; color:#999;">無餐費紀錄</td></tr>';
+      } else {
+        data.mealList.forEach(function(m) {
+          html += `<tr>
+            <td>${m.date}</td>
+            <td style="text-align:center;">${m.headcount} 人</td>
+            <td style="text-align:right; font-weight:bold; color:#7B1FA2;">$${m.amount.toLocaleString()}</td>
+            <td>${m.paymentMethod}</td>
+            <td style="font-size:13px; color:#666;">${m.note || '-'}</td>
+          </tr>`;
+        });
+        html += `<tr class="total-row">
+          <td colspan="2">小計</td>
+          <td style="text-align:right;">$${data.totals.meals.toLocaleString()}</td>
+          <td colspan="2"></td>
+        </tr>`;
+      }
+      html += '</tbody></table></div>';
+      
+      area.innerHTML = html;
+    }
+
+    function exportToExcel() {
+      if (!currentData) {
+        alert('❌ 沒有資料可匯出');
+        return;
+      }
+      
+      const btn = document.getElementById('exportBtn');
+      btn.disabled = true;
+      btn.innerText = '⏳ 匯出中...';
+      
+      let csv = '\uFEFF';
+      csv += `簡易月結報表 - ${currentMonth}\n\n`;
+      
+      const profit = currentData.totals.sales - currentData.totals.purchase - currentData.totals.expense - currentData.totals.meals;
+      csv += `本月損益,$${profit.toLocaleString()}\n\n`;
+      
+      // 銷貨
+      csv += '【銷貨收入明細】\n客戶名稱,訂單日期,單號,金額,已收,未收,收款狀態/備註\n';
+      currentData.salesList.forEach(s => {
+        csv += `"${s.customerName}","${s.date}","${s.orderId}",${s.amount},${s.paidAmount},${s.unpaidAmount},"${s.note}"\n`;
+      });
+      csv += `,,,${currentData.totals.sales},,,\n\n`;
+      
+      // 進貨
+      csv += '【進貨成本明細】\n供應商,進貨日期,單號,金額,備註\n';
+      currentData.purchaseList.forEach(p => csv += `"${p.supplierName}","${p.date}","${p.orderId}",${p.amount},"${p.note || ''}"\n`);
+      csv += `,,小計,${currentData.totals.purchase},\n\n`;
+      
+      // 費用
+      csv += '【費用支出明細】\n日期,類別,項目,對象,金額,付款方式\n';
+      currentData.expenseList.forEach(e => csv += `"${e.date}","${e.category}","${e.item}","${e.payee || ''}",${e.amount},"${e.paymentMethod || ''}"\n`);
+      csv += `,,,,${currentData.totals.expense},\n\n`;
+      
+      // 餐費
+      csv += '【員工餐費明細】\n日期,人數,金額,付款方式,備註\n';
+      currentData.mealList.forEach(m => csv += `"${m.date}",${m.headcount},${m.amount},"${m.paymentMethod}","${m.note || ''}"\n`);
+      csv += `,,${currentData.totals.meals},,\n`;
+      
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', `簡易月結報表_${currentMonth}.csv`);
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      btn.disabled = false;
+      btn.innerText = '📥 匯出 Excel';
+    }
+  </script>
+</body>
+</html>

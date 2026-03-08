@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    /* CSS 樣式區 */
+    body { font-family: "Segoe UI", sans-serif; padding: 20px; background-color: #f8f9fa; color: #333; }
+    
+    /* 版面配置 */
+    .container { display: flex; gap: 20px; height: 540px; }
+    .left-panel { flex: 1; display: flex; flex-direction: column; gap: 15px; }
+    .right-panel { flex: 2; background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); padding: 15px; display: flex; flex-direction: column; }
+
+    /* 餘額卡片 */
+    .balance-card {
+      background: linear-gradient(135deg, #2c3e50, #3498db);
+      color: white; padding: 20px; border-radius: 12px;
+      text-align: center; box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
+    }
+    .balance-title { font-size: 0.9em; opacity: 0.9; margin-bottom: 5px; }
+    .balance-amount { font-size: 2.5em; font-weight: bold; letter-spacing: 1px; }
+
+    /* 入金表單 */
+    .form-card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); flex: 1; }
+    h3 { margin-top: 0; color: #2c3e50; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; font-size: 1.1em; }
+    
+    .form-group { margin-bottom: 12px; }
+    label { display: block; margin-bottom: 4px; font-weight: 500; font-size: 0.9em; color: #555; }
+    input, select, textarea { width: 100%; padding: 8px 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-size: 14px; }
+    input:focus, textarea:focus { border-color: #3498db; outline: none; }
+
+    button.btn-submit {
+      width: 100%; background-color: #27ae60; color: white; border: none; padding: 10px;
+      border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.2s; margin-top: 10px;
+    }
+    button.btn-submit:hover { background-color: #219150; }
+    button:disabled { background-color: #ccc; cursor: not-allowed; }
+
+    /* 表格樣式 */
+    .table-wrapper { flex: 1; overflow-y: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.9em; }
+    th { position: sticky; top: 0; background: #f8f9fa; z-index: 1; padding: 10px; text-align: left; color: #666; border-bottom: 2px solid #eee; }
+    td { padding: 10px; border-bottom: 1px solid #f0f0f0; color: #444; }
+    
+    /* 類型標籤 */
+    .tag { padding: 3px 8px; border-radius: 4px; font-size: 0.85em; font-weight: bold; display: inline-block; }
+    .tag.in { background-color: #e8f8f5; color: #27ae60; }
+    .tag.out { background-color: #fdedec; color: #e74c3c; }
+
+    .amount-in { color: #27ae60; font-weight: bold; }
+    .amount-out { color: #e74c3c; font-weight: bold; }
+    .text-muted { color: #999; font-size: 0.85em; }
+    
+    /* 彈窗樣式 */
+    .modal-overlay {
+      display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.5); z-index: 9999;
+      align-items: center; justify-content: center; animation: fadeIn 0.2s;
+    }
+    .modal-box {
+      background: white; width: 320px; padding: 25px; border-radius: 12px;
+      text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+      transform: scale(0.9); animation: popIn 0.2s forwards;
+    }
+    .modal-icon { font-size: 40px; color: #f39c12; margin-bottom: 15px; }
+    .modal-title { font-size: 1.2em; font-weight: bold; color: #2c3e50; margin-bottom: 10px; }
+    .modal-text { color: #666; margin-bottom: 25px; line-height: 1.5; }
+    .modal-actions { display: flex; gap: 10px; justify-content: center; }
+    .btn-modal { padding: 10px 20px; border-radius: 6px; border: none; cursor: pointer; font-weight: bold; flex: 1; }
+    .btn-cancel { background: #ecf0f1; color: #7f8c8d; }
+    .btn-confirm { background: #3498db; color: white; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes popIn { from { transform: scale(0.8); } to { transform: scale(1); } }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <div class="left-panel">
+      <div class="balance-card">
+        <div class="balance-title">目前零用金結餘</div>
+        <div class="balance-amount" id="currentBalance">---</div>
+      </div>
+
+      <div class="form-card">
+        <button onclick="google.script.run.showExpensePanel()" style="width:100%; margin-bottom:20px; padding:12px; background:#e74c3c; color:white; border:none; border-radius:6px; cursor:pointer; font-weight:bold; font-size:16px; box-shadow: 0 2px 5px rgba(231, 76, 60, 0.3);">
+          <i class="fas fa-minus-circle"></i> 我要記支出 (扣款)
+        </button>
+
+        <h3><i class="fas fa-hand-holding-usd"></i> 零用金撥補 (入金)</h3>
+        <form id="depositForm">
+          <div class="form-group">
+            <label>日期</label>
+            <input type="date" id="date" required>
+          </div>
+          <div class="form-group">
+            <label>撥補金額</label>
+            <input type="number" id="amount" min="1" placeholder="輸入金額" required>
+          </div>
+          <div class="form-group">
+            <label>資金來源 (摘要)</label>
+            <select id="source" required>
+              <option value="銀行提領">🏦 銀行提領</option>
+              <option value="老闆現付">👤 老闆現付</option>
+              <option value="營業收入轉入">💰 營業收入轉入</option>
+              <option value="其他">📝 其他</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>備註</label>
+            <textarea id="note" rows="2" placeholder="例如：從銀行領出"></textarea>
+          </div>
+          <button type="submit" class="btn-submit" id="submitBtn">確認撥補</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="right-panel">
+      <h3><i class="fas fa-list-ul"></i> 最近交易紀錄</h3>
+      <div class="table-wrapper">
+        <table id="logTable">
+          <thead>
+            <tr>
+              <th width="15%">日期</th>
+              <th width="12%">類型</th>
+              <th width="25%">摘要 / 用途</th>
+              <th width="18%" style="text-align:right">金額</th>
+              <th width="18%" style="text-align:right">結餘</th>
+              <th width="12%">備註</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td colspan="6" style="text-align:center; padding:20px;">載入中...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div id="customModal" class="modal-overlay">
+    <div class="modal-box">
+      <div class="modal-icon"><i class="fas fa-question-circle"></i></div>
+      <div class="modal-title">確認撥補？</div>
+      <div class="modal-text" id="modalMessage">您確定要執行此動作嗎？</div>
+      <div class="modal-actions">
+        <button class="btn-modal btn-cancel" onclick="closeModal()">取消</button>
+        <button class="btn-modal btn-confirm" id="btnRealConfirm">確認入金</button>
+      </div>
+    </div>
+  </div> 
+
+  <script>
+    document.getElementById('date').valueAsDate = new Date();
+    window.onload = loadData;
+
+    function loadData() {
+      google.script.run.withSuccessHandler(renderUI).getPettyCashData();
+    }
+
+    function renderUI(data) {
+      if (!data.success) { alert("讀取失敗：" + data.error); return; }
+
+      var balanceEl = document.getElementById('currentBalance');
+      balanceEl.innerText = '$' + Number(data.currentBalance).toLocaleString();
+      if (data.currentBalance < 0) balanceEl.style.color = '#ff6b6b';
+      else balanceEl.style.color = 'white';
+
+      var tbody = document.querySelector('#logTable tbody');
+      tbody.innerHTML = '';
+
+      if (data.logs.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#999; padding:20px;">尚無紀錄</td></tr>';
+        return;
+      }
+
+      data.logs.forEach(function(row) {
+        var isDeposit = (row.type === '入金');
+        var typeClass = isDeposit ? 'in' : 'out';
+        var amountClass = isDeposit ? 'amount-in' : 'amount-out';
+        var sign = isDeposit ? '+' : '-';
+        
+        var tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${row.date.substring(5)}</td>
+          <td><span class="tag ${typeClass}">${row.type}</span></td>
+          <td>${row.summary}</td>
+          <td class="${amountClass}" style="text-align:right">${sign}${Number(row.amount).toLocaleString()}</td>
+          <td style="text-align:right; color:#666">$${Number(row.balance).toLocaleString()}</td>
+          <td class="text-muted">${row.note}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    var pendingData = null;
+
+    document.getElementById('depositForm').onsubmit = function(e) {
+      e.preventDefault();
+      var amt = document.getElementById('amount').value;
+      var dateVal = document.getElementById('date').value;
+      
+      document.getElementById('modalMessage').innerHTML = 
+        `日期：${dateVal}<br>金額：<span style="color:#e74c3c;font-weight:bold">$${Number(amt).toLocaleString()}</span>`;
+      
+      pendingData = {
+        date: dateVal,
+        amount: amt,
+        source: document.getElementById('source').value,
+        note: document.getElementById('note').value
+      };
+      document.getElementById('customModal').style.display = 'flex';
+    };
+
+    document.getElementById('btnRealConfirm').onclick = function() {
+      if (!pendingData) return;
+      var dataToSend = Object.assign({}, pendingData); 
+      closeModal();
+      
+      var btn = document.getElementById('submitBtn');
+      btn.disabled = true; btn.innerText = '處理中...';
+
+      google.script.run.withSuccessHandler(function(res) {
+        btn.disabled = false; btn.innerText = '確認撥補';
+        if (res.success) {
+          document.getElementById('amount').value = '';
+          document.getElementById('note').value = '';
+          loadData();
+        } else {
+          alert('❌ 失敗：' + res.error);
+        }
+      }).saveDeposit(dataToSend);
+    };
+
+    function closeModal() {
+      document.getElementById('customModal').style.display = 'none';
+      pendingData = null;
+    }
+  </script>
+</body>
+</html>

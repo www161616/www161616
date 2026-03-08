@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>龍潭央廚 - 新增支出</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+:root {
+  --bg:#fffbf0;
+  --surface:#ffffff;
+  --surface2:#fdf5d8;
+  --surface-sidebar:#fef9ec;
+  --border:#f5e0a0;
+  --text:#3d2a00;
+  --text2:#92660a;
+  --accent:#b45309;
+  --accent2:#d97706;
+  --danger:#c53030;
+  --success:#276749;
+  --warning:#b7791f;
+  --orange:#c05621;
+  --purple:#553c9a;
+  --pink:#b83280;
+  --teal:#0e7490;
+  --surface-dark:#f5c842;
+  --text-on-dark:#5a3a00;
+  --accent-light:#fef3c7;
+  --shadow:rgba(180,83,9,0.07);
+}
+body { font-family:'Noto Sans TC',sans-serif; background:var(--bg); color:var(--text); height:100vh; display:flex; flex-direction:column; overflow:hidden; }
+
+/* 導覽列 */
+.navbar { background:var(--surface); border-bottom:1px solid var(--border); padding:0 20px; height:52px; display:flex; align-items:center; justify-content:space-between; flex-shrink:0; }
+.navbar-brand { font-size:15px; font-weight:700; color:var(--accent); }
+.navbar-brand span { color:var(--text2); font-weight:400; font-size:13px; margin-left:10px; }
+.nav-links { display:flex; gap:4px; }
+.nav-btn { padding:6px 14px; border-radius:6px; border:none; background:transparent; color:var(--text2); font-size:13px; cursor:pointer; font-family:inherit; transition:all 0.15s; }
+.nav-btn:hover { background:var(--surface2); color:var(--text); }
+.nav-btn.active { background:var(--accent); color:white; }
+
+/* 雙欄佈局 */
+.main-layout { display: grid; grid-template-columns: 380px 1fr; gap: 16px; flex: 1; overflow: hidden; padding: 16px; }
+
+.panel { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; display: flex; flex-direction: column; overflow: hidden; height: 100%; }
+
+/* 標題列 */
+.panel-header { padding: 14px 18px; background: var(--surface2); border-bottom: 1px solid var(--border); color: var(--accent2); font-weight: 600; font-size: 14px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
+
+/* 左側表單區 */
+.form-scroll { flex: 1; overflow-y: auto; padding: 20px; }
+.form-group { margin-bottom: 16px; }
+label { display: block; font-size: 12px; font-weight: 500; margin-bottom: 6px; color: var(--text2); }
+.form-control { width: 100%; padding: 10px 14px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 13px; font-family: inherit; outline: none; transition: border-color 0.15s; }
+.form-control:focus { border-color: var(--accent); }
+select.form-control { cursor: pointer; }
+textarea.form-control { resize: vertical; }
+
+.btn-submit { width: 100%; padding: 12px; background: var(--accent); color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 10px; transition: all 0.15s; }
+.btn-submit:hover { background: #3d6be8; }
+.btn-submit:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* 右側列表區 */
+.list-filter { padding: 12px 18px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; gap: 10px; align-items: center; flex-shrink: 0; }
+.btn-refresh { padding: 8px 14px; background: var(--surface2); border: 1px solid var(--border); color: var(--text2); border-radius: 6px; cursor: pointer; font-size: 13px; font-family: inherit; transition: all 0.15s; }
+.btn-refresh:hover { border-color: var(--accent); color: var(--accent); }
+
+.list-scroll { flex: 1; overflow-y: auto; padding: 0; }
+.data-table { width: 100%; border-collapse: collapse; }
+.data-table th { position: sticky; top: 0; background: var(--surface2); color: var(--text2); padding: 10px 14px; text-align: left; font-size: 12px; border-bottom: 1px solid var(--border); font-weight: 500; z-index: 10; }
+.data-table td { padding: 12px 14px; border-bottom: 1px solid var(--border); font-size: 13px; vertical-align: middle; }
+.data-table tr:hover { background: rgba(255,255,255,0.02); }
+.data-table tr:last-child td { border-bottom: none; }
+
+.amount-col { font-weight: 700; color: var(--orange); text-align: right; font-size: 15px; }
+.date-col { color: var(--text2); font-size: 12px; }
+
+.btn-delete { background: rgba(255,107,107,0.15); color: var(--danger); border: 1px solid var(--danger); padding: 5px 10px; border-radius: 6px; cursor: pointer; font-size: 12px; transition: all 0.15s; }
+.btn-delete:hover { background: var(--danger); color: white; }
+
+.loading-overlay { text-align: center; padding: 40px; color: var(--text2); font-size: 13px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.spinner { width: 28px; height: 28px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* RWD */
+@media (max-width: 800px) {
+  .main-layout { grid-template-columns: 1fr; display: flex; flex-direction: column; overflow-y: auto; }
+  .panel { height: auto; flex-shrink: 0; }
+}
+
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="navbar-brand">🐟 龍潭央廚<span>進銷存系統</span></div>
+  <div class="nav-links">
+    <button class="nav-btn" onclick="location.href='SearchSales.html'">📋 銷貨查詢</button>
+    <button class="nav-btn" onclick="location.href='SalesOrder.html'">➕ 開銷貨單</button>
+    <button class="nav-btn active">📝 新增支出</button>
+    <button class="nav-btn" onclick="location.href='月結報表.html'">📊 月結報表</button>
+  </div>
+</nav>
+
+<div class="main-layout">
+
+  <div class="panel">
+    <div class="panel-header">📝 新增支出紀錄</div>
+    <div class="form-scroll">
+      <form id="expenseForm">
+        <div class="form-group">
+          <label>📅 日期</label>
+          <input type="date" id="date" class="form-control" required>
+        </div>
+
+        <div class="form-group">
+          <label>💰 付款方式</label>
+          <select id="paymentMethod" class="form-control">
+            <option value="零用金" selected>零用金 (由我代墊)</option>
+            <option value="現金">公司現金</option>
+            <option value="轉帳">公司轉帳</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>📂 類別 (可選或直接輸入)</label>
+          <input type="text" id="category" class="form-control" list="categoryList" placeholder="請選擇或輸入類別" required>
+          <datalist id="categoryList">
+            <option value="進貨成本"><option value="運費"><option value="老闆借支"><option value="股東往來">
+            <option value="薪資"><option value="伙食費"><option value="水電瓦斯"><option value="租金">
+            <option value="維修費"><option value="交通費"><option value="交際費"><option value="雜支">
+            <option value="其他">
+          </datalist>
+        </div>
+
+        <div class="form-group">
+          <label>💵 金額</label>
+          <input type="number" id="amount" class="form-control" min="0" placeholder="輸入金額" required>
+        </div>
+
+        <div class="form-group">
+          <label>📝 項目摘要</label>
+          <input type="text" id="item" class="form-control" placeholder="例如：購買文具、老闆借款..." required>
+        </div>
+
+        <div class="form-group">
+          <label>👤 對象 (選填)</label>
+          <input type="text" id="recipient" class="form-control" placeholder="廠商或收款人">
+        </div>
+
+        <div class="form-group">
+          <label>🧾 發票號碼 (選填)</label>
+          <input type="text" id="invoiceNo" class="form-control" placeholder="統一發票號碼">
+        </div>
+
+        <div class="form-group">
+          <label>📒 備註</label>
+          <textarea id="note" class="form-control" rows="2" placeholder="補充說明..."></textarea>
+        </div>
+
+        <button type="submit" id="submitBtn" class="btn-submit">✅ 確認存檔</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-header">
+      <span>📋 本月支出明細</span>
+      <span id="totalDisplay" style="color:var(--orange); font-size:16px;">總計: NT$ 0</span>
+    </div>
+    
+    <div class="list-filter">
+      <span style="font-size:12px; color:var(--text2);">月份篩選：</span>
+      <input type="month" id="filterMonth" class="form-control" style="width:140px; margin-bottom:0;" onchange="loadList()">
+      <button type="button" class="btn-refresh" onclick="loadList()">🔄 刷新</button>
+    </div>
+
+    <div class="list-scroll" id="listArea">
+      <div class="loading-overlay"><div class="spinner"></div>載入中...</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const SUPABASE_URL = 'https://xuykenpvonfqwsgbuvvj.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh1eWtlbnB2b25mcXdzZ2J1dnZqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwMDY3MzgsImV4cCI6MjA4NzU4MjczOH0.HmIktEbkPc0e7eTdqJdMWVxMzYIh4YkZ4LewZfC4Qr4';
+const H = { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' };
+
+async function api(table, params='', method='GET', body=null) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${params}`, { method, headers: H, body: body ? JSON.stringify(body) : null });
+  if (!res.ok) throw new Error(await res.text());
+  return method === 'GET' ? res.json() : true;
+}
+
+window.onload = function() {
+  const today = new Date();
+  document.getElementById('date').value = today.toISOString().split('T')[0];
+  
+  const yyyy = today.getFullYear();
+  const mm = String(today.getMonth() + 1).padStart(2, '0');
+  document.getElementById('filterMonth').value = `${yyyy}-${mm}`;
+
+  loadList();
+};
+
+async function loadList() {
+  const monthVal = document.getElementById('filterMonth').value; // e.g. 2026-02
+  const listDiv = document.getElementById('listArea');
+  
+  if (!monthVal) return;
+  listDiv.innerHTML = '<div class="loading-overlay"><div class="spinner"></div>資料撈取中...</div>';
+
+  try {
+    // 計算該月的最後一天
+    const [year, month] = monthVal.split('-');
+    const firstDay = `${monthVal}-01`;
+    const lastDay = new Date(year, month, 0).toISOString().split('T')[0];
+
+    const data = await api('expenses', `date=gte.${firstDay}&date=lte.${lastDay}&order=date.desc,id.desc`);
+    renderTable(data);
+  } catch(e) {
+    listDiv.innerHTML = `<div style="text-align:center; padding:30px; color:var(--danger);">❌ 讀取失敗: ${e.message}</div>`;
+  }
+}
+
+function renderTable(data) {
+  const listDiv = document.getElementById('listArea');
+  if (!data || data.length === 0) {
+    listDiv.innerHTML = '<div style="text-align:center; padding:40px; color:var(--text2);">本月尚無支出紀錄 🍃</div>';
+    document.getElementById('totalDisplay').innerText = '總計: NT$ 0';
+    return;
+  }
+
+  let total = 0;
+  let html = `<table class="data-table">
+    <thead><tr><th>日期</th><th>類別/項目</th><th style="text-align:right">金額</th><th>方式</th><th style="text-align:center">操作</th></tr></thead>
+    <tbody>`;
+
+  data.forEach(row => {
+    total += Number(row.amount);
+    html += `
+      <tr>
+        <td class="date-col">${row.date.substring(5)}</td>
+        <td>
+          <div style="font-weight:600; color:var(--text); margin-bottom:3px;">${row.item}</div>
+          <div style="font-size:11px; color:var(--text2);">${row.category} ${row.recipient ? ' | 對象: '+row.recipient : ''}</div>
+        </td>
+        <td class="amount-col">$${Number(row.amount).toLocaleString()}</td>
+        <td style="font-size:12px; color:var(--text2);">${row.payment_method}</td>
+        <td style="text-align:center;">
+          <button class="btn-delete" onclick="deleteItem('${row.id}', '${row.item}')">🗑️ 刪除</button>
+        </td>
+      </tr>
+    `;
+  });
+
+  html += '</tbody></table>';
+  listDiv.innerHTML = html;
+  document.getElementById('totalDisplay').innerText = '總計: NT$ ' + total.toLocaleString();
+}
+
+// 送出表單 (新增支出)
+document.getElementById('expenseForm').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  
+  const btn = document.getElementById('submitBtn');
+  const originalText = btn.innerText;
+  btn.disabled = true;
+  btn.innerText = '⏳ 存檔中...';
+
+  try {
+    // 產生新 ID (EXP + 5碼數字)
+    const lastList = await api('expenses', 'select=id&order=id.desc&limit=1');
+    let newNum = 1;
+    if (lastList.length > 0) newNum = parseInt(lastList[0].id.replace(/[^0-9]/g,''), 10) + 1;
+    const expId = 'EXP' + String(newNum).padStart(5, '0');
+
+    const formData = {
+      id: expId,
+      date: document.getElementById('date').value,
+      category: document.getElementById('category').value,
+      item: document.getElementById('item').value,
+      amount: Number(document.getElementById('amount').value),
+      payment_method: document.getElementById('paymentMethod').value,
+      recipient: document.getElementById('recipient').value,
+      invoice_no: document.getElementById('invoiceNo').value,
+      note: document.getElementById('note').value,
+      created_at: new Date().toISOString()
+    };
+
+    await fetch(`${SUPABASE_URL}/rest/v1/expenses`, {
+      method: 'POST',
+      headers: H,
+      body: JSON.stringify(formData)
+    });
+
+    alert('✅ 儲存成功！');
+    
+    // 重置表單但保留目前選擇的日期
+    const curDate = document.getElementById('date').value;
+    document.getElementById('expenseForm').reset();
+    document.getElementById('date').value = curDate;
+    
+    // 自動刷新列表
+    loadList();
+
+  } catch (err) {
+    alert('❌ 儲存失敗：' + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.innerText = originalText;
+  }
+});
+
+// 刪除功能
+async function deleteItem(expId, itemName) {
+  if (!confirm(`⚠️ 確定要刪除「${itemName}」這筆支出嗎？`)) return;
+
+  const listDiv = document.getElementById('listArea');
+  listDiv.innerHTML = '<div class="loading-overlay"><div class="spinner"></div>刪除中...</div>';
+
+  try {
+    await fetch(`${SUPABASE_URL}/rest/v1/expenses?id=eq.${expId}`, {
+      method: 'DELETE',
+      headers: H
+    });
+    alert('✅ 已刪除');
+  } catch (err) {
+    alert('❌ 刪除失敗：' + err.message);
+  }
+  
+  loadList(); // 不管成功或失敗都重新讀取列表
+}
+</script>
+
+</body>
+</html>

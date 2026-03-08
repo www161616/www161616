@@ -1,0 +1,970 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  
+  <style>
+    /* ========== 全域設定 ========== */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: "Microsoft JhengHei", "微軟正黑體", Arial, sans-serif; font-size: 14px; background: #f0f2f5; height: 100vh; overflow: hidden; padding: 15px; display: flex;          /* 新增 */
+  flex-direction: column;}
+    
+    /* 主佈局：雙欄式 (左40% 右60%) */
+    .main-layout {
+      display: grid;
+      grid-template-columns: 4fr 6fr; 
+      gap: 15px;
+      flex: 1;         /* 新增：自動佔據剩下的所有高度 */
+  overflow: hidden; /* 防止內容撐開 */
+  
+  display: grid;
+  grid-template-columns: 4fr 6fr; 
+  gap: 15px;
+    }
+
+    /* 面板通用樣式 */
+    .panel {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      height: 100%;
+    }
+
+    /* 頂部標題列 */
+    .header-bar {
+      flex: 0 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+      background: white;
+      padding: 10px 20px;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      border-left: 5px solid #1976D2;
+    }
+    .header-title { font-size: 20px; font-weight: bold; color: #1976D2; }
+
+    /* ========== 左側：商品目錄區 ========== */
+    .panel-left { border-top: 4px solid #FF9800; }
+    
+    .search-header { padding: 10px; background: #fff8e1; border-bottom: 1px solid #ffe0b2; }
+    .filter-row { display: flex; gap: 5px; margin-bottom: 5px; }
+    .product-list-scroll { flex: 1; overflow-y: auto; padding: 0; position: relative; }
+
+    /* 商品列表表格 */
+    .product-table { width: 100%; border-collapse: collapse; }
+    .product-table th { position: sticky; top: 0; background: #FF9800; color: white; padding: 8px; text-align: left; z-index: 2; font-size: 13px; }
+    .product-table td { padding: 8px; border-bottom: 1px solid #eee; font-size: 13px; cursor: pointer; }
+    .product-table tr:hover { background-color: #fff3e0; }
+    .price-col { color: #e65100; font-weight: bold; text-align: right; }
+    .add-btn-small { background: #4CAF50; color: white; border: none; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; }
+
+    /* ========== 右側：訂單詳情區 ========== */
+    .panel-right { border-top: 4px solid #4CAF50; }
+
+    /* 客戶與日期區 */
+    .order-header { padding: 12px; background: #e8f5e9; border-bottom: 1px solid #c8e6c9; display: grid; grid-template-columns: 1fr 2fr; gap: 10px; align-items: center; }
+    
+    /* 購物車工具列 */
+    .cart-toolbar { padding: 8px 12px; background: #f1f8f4; border-bottom: 1px solid #ddd; display: flex; justify-content: space-between; align-items: center; font-size: 13px; }
+    
+    /* 購物車列表 */
+    .cart-scroll { flex: 1; overflow-y: auto; padding: 0; background: #fff; }
+    .items-table { width: 100%; border-collapse: collapse; }
+    .items-table th { position: sticky; top: 0; background: #4CAF50; color: white; padding: 8px; text-align: center; z-index: 2; font-size: 13px; }
+    .items-table td { padding: 6px; border-bottom: 1px solid #eee; text-align: center; font-size: 13px; vertical-align: middle; }
+    
+    /* 輸入框樣式 */
+    .qty-input { width: 50px; text-align: center; padding: 4px; border: 2px solid #4CAF50; border-radius: 4px; font-weight: bold; }
+    .price-edit-input { width: 70px; text-align: right; padding: 4px; border: 1px solid #FF9800; background: #fff3e0; color: #E65100; font-weight: bold; border-radius: 4px; }
+    .note-input { width: 100%; padding: 4px; border: 1px dashed #ccc; border-radius: 4px; font-size: 12px; }
+    
+    /* 底部結算區 */
+    .order-footer { padding: 10px 15px; background: #f9f9f9; border-top: 2px solid #ddd; }
+    .summary-grid { display: grid; grid-template-columns: 60% 40%; gap: 15px; font-size: 14px; margin-bottom: 10px; }
+    .summary-item { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
+    .total-display { font-size: 20px; font-weight: bold; color: #1565C0; text-align: right; border-top: 1px solid #ccc; padding-top: 5px; margin-top: 5px; }
+    
+    .action-buttons { display: flex; justify-content: space-between; gap: 10px; padding-top: 10px; border-top: 1px dashed #ccc; }
+
+    /* 通用元件 */
+    input, select { padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; width: 100%; }
+    input:focus, select:focus { outline: none; border-color: #1976D2; }
+    
+    .btn { padding: 8px 16px; font-size: 14px; font-weight: bold; border: none; border-radius: 6px; cursor: pointer; color: white; display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+    .btn-primary { background: #1976D2; } .btn-success { background: #4CAF50; }
+    .btn-warning { background: #ff9800; } .btn-secondary { background: #757575; }
+    .btn-danger { background: #f44336; }
+    
+    .badge-tag { font-size: 10px; padding: 2px 5px; border-radius: 4px; color: white; margin-left: 3px; }
+    .badge-exclusive { background: #E91E63; }
+    .selected-row { background-color: #e8f5e9 !important; border-left: 4px solid #4CAF50; }
+    .remove-btn { background: #f44336; color: white; border: none; width: 24px; height: 24px; border-radius: 50%; cursor: pointer; font-size: 14px; display: flex; justify-content: center; align-items: center; }
+
+    /* Loading & Modal */
+    .hidden { display: none !important; }
+    .loading-mask { position: absolute; top:0; left:0; width:100%; height:100%; background:rgba(255,255,255,0.8); z-index:5; display:flex; justify-content:center; align-items:center; font-weight:bold; color:#1976D2; }
+    .loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.8); display: flex; justify-content: center; align-items: center; z-index: 2000; font-size: 18px; color: #1976D2; font-weight: bold; }
+    .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 3000; display: flex; justify-content: center; align-items: center; }
+    .modal-content { background: white; width: 500px; padding: 20px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); max-height: 90vh; overflow-y: auto; }
+
+    /* RWD 手機版自動轉單欄 */
+    @media (max-width: 900px) {
+      .main-layout { grid-template-columns: 1fr; display: block; overflow-y: auto; height: auto; }
+      .panel { height: 500px; margin-bottom: 20px; }
+      body { height: auto; overflow-y: auto; }
+    }
+
+/* --- 彈窗本體優化 --- */
+.modal-content-lg { 
+  background: white; 
+  width: 780px; 
+  max-width: 95%; 
+  padding: 0; /* 改為 0 讓標題貼齊 */
+  border-radius: 16px; 
+  box-shadow: 0 15px 40px rgba(0,0,0,0.2); 
+  max-height: 90vh; 
+  overflow: hidden; /* 防止內容溢出圓角 */
+  position: relative;
+  z-index: 3100;
+  display: flex;
+  flex-direction: column;
+}
+
+/* --- 標題列美化 --- */
+.modal-header-fancy {
+  background: linear-gradient(135deg, #1976D2, #1565C0);
+  padding: 18px 25px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: white;
+}
+.modal-header-fancy h3 { margin: 0; font-size: 20px; font-weight: bold; letter-spacing: 1px; }
+
+/* --- 表單區塊排列 --- */
+.modal-body-container { padding: 25px; overflow-y: auto; }
+.modal-body-grid { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 20px; }
+.panel-section { background: #f8f9fa; padding: 20px; border-radius: 12px; border: 1px solid #eee; }
+.section-label { font-weight: 800; color: #1976D2; margin-bottom: 15px; border-bottom: 2px solid #e3f2fd; padding-bottom: 5px; display: flex; align-items: center; gap: 8px; font-size: 15px; }
+
+/* --- 輸入框微調 --- */
+.form-group { margin-bottom: 12px; }
+.form-group label { display: block; font-size: 13px; color: #555; margin-bottom: 5px; font-weight: bold; }
+.modal-content-lg input, .modal-content-lg select, .modal-content-lg textarea {
+  border: 1.5px solid #dce0e4;
+  border-radius: 8px;
+  padding: 8px 12px;
+  transition: all 0.2s;
+}
+.modal-content-lg input:focus { border-color: #1976D2; outline: none; box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.1); }
+
+/* --- 底部按鈕區 --- */
+.modal-footer-fancy {
+  padding: 15px 25px;
+  background: #f1f3f5;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  border-top: 1px solid #dee2e6;
+}
+
+  </style>
+</head>
+<body>
+
+  <div id="loadingOverlay" class="loading-overlay hidden">
+    <div>🔄 處理中...</div>
+  </div>
+
+  <div class="header-bar">
+    <div class="header-title">📝 開立銷貨單</div>
+    <button type="button" onclick="returnToSearch()" class="btn btn-secondary" style="background-color: #757575;">
+      ↩️ 返回查詢
+    </button>
+  </div>
+
+  <div class="main-layout">
+    
+  <div class="panel panel-left">
+  <div class="search-header">
+    <div style="font-weight:bold; color:#e65100; margin-bottom:5px; font-size:16px;">🔍 商品目錄</div>
+    <div class="filter-row">
+      <select id="categoryFilter" onchange="filterProd()" disabled style="flex:1;">
+        <option value="">全部類別</option>
+      </select>
+      <input type="text" id="pSearch" placeholder="搜尋名稱/編號..." onkeyup="filterProd()" disabled style="flex:1.5;">
+    </div>
+    <button type="button" class="btn btn-success" style="width:100%; justify-content:center; margin-top:5px;" onclick="openAddProductModal()">
+      ➕ 快速新增商品
+    </button>
+  </div>
+  
+  <!-- ✅ 修正：移除 product-list-container -->
+  <div id="pList" class="product-list-scroll">
+    <div id="prodLoading" class="loading-mask">⏳ 正在讀取商品資料...</div>
+  </div>
+</div>
+
+    <div class="panel panel-right">
+      
+      <div class="order-header">
+        <div>
+          <label style="font-size:12px; color:#666;">訂單日期</label>
+          <input type="date" id="orderDate">
+        </div>
+        <div>
+          <label style="font-size:12px; color:#666;">選擇客戶</label>
+          <div style="display:flex; gap:5px;">
+            <input type="text" id="custSearch" placeholder="快搜..." onkeyup="filterCustomer()" style="width:80px;">
+            <select id="customer" style="flex:1;" onchange="updateCustomerPrices()">
+              <option value="">-- 先選客戶 --</option>
+            </select>
+            <button type="button" class="btn btn-warning" style="padding:4px 10px; font-size:12px;" onclick="openSpecialPriceModal()">
+               ➕ 特價
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="cart-toolbar">
+        <div style="font-weight:bold; color:#2e7d32;">🛒 已選清單</div>
+        <div style="display:flex; align-items:center; gap:5px;">
+          <input type="number" id="discountInput" value="100" min="1" max="100" style="width:50px; padding:2px; text-align:center;"> %
+          <button class="btn btn-warning" style="padding:4px 8px; font-size:12px;" onclick="applyDiscountToAll(Number(document.getElementById('discountInput').value)/100)">折</button>
+          <button class="btn btn-secondary" style="padding:4px 8px; font-size:12px;" onclick="resetPriceToBase()">原</button>
+        </div>
+      </div>
+
+      <div class="cart-scroll">
+        <div id="cartItems">
+          <div style="text-align:center; padding:50px; color:#ccc;">
+            請從左側點選商品加入
+          </div>
+        </div>
+      </div>
+
+      <div class="order-footer">
+        <div class="summary-grid">
+          <div>
+            <div class="summary-item">
+              <span>運費:</span> <input type="number" id="shippingFee" value="0" min="0" onchange="calc()" style="width:80px; text-align:right;">
+            </div>
+            <div class="summary-item">
+              <span>扣款:</span> <input type="number" id="otherDeduction" value="0" min="0" onchange="calc()" style="width:80px; text-align:right; color:red;">
+            </div>
+            <div class="summary-item" style="margin-top:5px;">
+              <input type="text" id="orderNote" placeholder="整單備註 (如: 貨到電聯)" style="width:100%;">
+            </div>
+          </div>
+          <div style="text-align:right; padding-left:10px;">
+            <div style="font-size:13px; color:#666; margin-bottom:2px;">未稅: <span id="subtotalTxt">$0</span></div>
+            <div style="font-size:13px; color:#666; margin-bottom:5px;">
+              稅金(<span id="taxTypeBadge">免稅</span>): <span id="taxTxt">$0</span>
+            </div>
+            <div class="total-display" id="grandTotalTxt">$0</div>
+          </div>
+        </div>
+
+        <div class="action-buttons">
+          <div style="display:flex; gap:10px;">
+             <button type="button" class="btn btn-secondary" onclick="resetToNewOrder()">🔄 重置</button>
+             <button type="button" class="btn btn-warning" onclick="exportToExcel()">📊 Excel</button>
+          </div>
+          <div style="display:flex; gap:10px;">
+             <button type="button" class="btn btn-success" onclick="saveOrder(false)">💾 儲存</button>
+             <button type="button" class="btn btn-primary" onclick="saveOrder(true)">🖨️ 列印</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div id="addProductModal" class="modal-overlay hidden">
+  <div class="modal-content-lg">
+    <div class="modal-header-fancy">
+      <h3>✨ 快速新增商品</h3>
+      <button type="button" onclick="closeAddProductModal()" style="border:none; background:none; color:white; font-size:28px; cursor:pointer;">×</button>
+    </div>
+    
+    <div class="modal-body-container">
+      <form id="quickProductForm" onsubmit="return false;">
+        <div class="modal-body-grid">
+          <div class="panel-section">
+            <span class="section-label">📋 基本資料項目</span>
+            <div class="form-group"><label>名稱 *</label><input type="text" id="newName" required placeholder="請輸入商品名稱"></div>
+            <div class="form-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+               <div class="form-group"><label>類別</label><input type="text" id="newCat" list="categoryList" placeholder="請選擇或輸入"></div>
+               <div class="form-group"><label>商品編號</label><input type="text" id="newId" placeholder="留空自動編號"></div>
+            </div>
+            <div class="form-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+               <div class="form-group"><label>規格</label><input type="text" id="newSpec" placeholder="例如: 500g/包"></div>
+               <div class="form-group"><label>單位 *</label><input type="text" id="newUnit" value="個"></div>
+            </div>
+            <div class="form-group"><label>備註</label><textarea id="newNote" rows="2" style="width:100%"></textarea></div>
+          </div>
+
+          <div class="panel-section" style="background:white; border: 1px solid #dce0e4;">
+            <span class="section-label" style="color:#E65100;">💰 售價與成本設定</span>
+            <div class="price-block" style="background:#fff9f0; padding:15px; border-radius:10px; border:1px dashed #ffd8a8; margin-bottom:15px;">
+              <div class="price-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                <div class="form-group"><label>一般價</label><input type="number" id="newPrice" value="0"></div>
+                <div class="form-group"><label>總倉價</label><input type="number" id="newBranchPrice" value="0"></div>
+                <div class="form-group"><label>店家價</label><input type="number" id="newStorePrice" value="0"></div>
+                <div class="form-group"><label>餐廳價</label><input type="number" id="newRestPrice" value="0"></div>
+              </div>
+            </div>
+            <div class="form-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+              <div class="form-group"><label>成本</label><input type="number" id="newCost" value="0"></div>
+              <div class="form-group"><label>最低庫存</label><input type="number" id="newAlert" value="10"></div>
+            </div>
+            <div class="form-group"><label>預設供應商</label><input type="text" id="newSupplier"></div>
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <div class="modal-footer-fancy">
+      <button type="button" class="btn btn-secondary" onclick="closeAddProductModal()" style="background:#adb5bd">取消</button>
+      <button type="button" class="btn btn-warning" onclick="saveNewProduct(true)" style="background:#FF9800">✅ 儲存並新增下一筆</button>
+      <button type="button" class="btn btn-success" onclick="saveNewProduct(false)" style="background:#2E7D32">💾 儲存並關閉</button>
+    </div>
+  </div>
+</div>
+
+<div id="addSpecialModal" class="modal-overlay hidden">
+  <div class="modal-content-lg" style="width: 600px;">
+    <div class="modal-header-fancy" style="background: linear-gradient(135deg, #FF9800, #F57C00);">
+      <h3>🏷️ 快速新增客戶特價</h3>
+      <button type="button" onclick="closeSpecialModal()" style="border:none; background:none; color:white; font-size:28px; cursor:pointer;">×</button>
+    </div>
+    
+    <div class="modal-body-container">
+      <form id="quickSpecialForm" onsubmit="return false;">
+        <div class="panel-section">
+          <span class="section-label" style="color:#E65100;">🎯 設定對象與商品</span>
+          
+          <div class="form-group">
+            <label>客戶名稱</label>
+            <select id="spCustomer" style="background:#f9f9f9;"></select>
+          </div>
+
+          <div class="form-group">
+            <label>選擇商品 (輸入關鍵字快搜)</label>
+            <input type="text" id="spProductInput" list="spProductList" placeholder="請輸入商品名稱或編號..." onchange="autoFillBasePrice()">
+            <datalist id="spProductList"></datalist>
+            <input type="hidden" id="spProductId">
+          </div>
+
+          <div class="form-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-top:15px;">
+             <div class="form-group">
+               <label>目前原價 (參考)</label>
+               <input type="text" id="spBasePrice" disabled style="background:#eee; color:#666;">
+             </div>
+             <div class="form-group">
+               <label style="color:#d32f2f;">設定特價 *</label>
+               <input type="number" id="spPrice" style="border:2px solid #FF9800; font-weight:bold; color:#d32f2f;" placeholder="輸入特價金額">
+             </div>
+          </div>
+        </div>
+
+        <div class="panel-section" style="margin-top:15px; background:white; border:1px solid #eee;">
+          <span class="section-label">📅 有效期間 (選填)</span>
+          <div class="form-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:15px;">
+            <div class="form-group"><label>開始日期</label><input type="date" id="spStartDate"></div>
+            <div class="form-group"><label>結束日期</label><input type="date" id="spEndDate"></div>
+          </div>
+          <div style="font-size:12px; color:#888; margin-top:5px;">※ 留空代表永久有效</div>
+        </div>
+      </form>
+    </div>
+
+    <div class="modal-footer-fancy">
+      <button type="button" class="btn btn-secondary" onclick="closeSpecialModal()">取消</button>
+      <button type="button" class="btn btn-success" onclick="saveSpecialPrice()">💾 儲存並生效</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ========== 1. 全域變數 ==========
+let allP=[], allC=[], specialPrices=[], cart=[], categories=[], currentTaxType='免稅';
+let salesDebounceTimer;
+let editingOrderId = null; 
+let hasUnsavedChanges = false;
+
+window.onload = function() {
+  setTodayDate();
+  loadAllData();
+};
+
+function setTodayDate() {
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('orderDate').value = today;
+}
+
+// ========== 2. 載入資料區 ==========
+function loadAllData() {
+  document.getElementById('prodLoading').classList.remove('hidden');
+  
+  google.script.run.withSuccessHandler(function(data) {
+      allC = data.customers || [];
+      allP = data.products || [];
+      specialPrices = data.specialPrices || [];
+      
+      renderCustomerSelect(allC);
+      extractCategories();
+      renderCategoryFilter();
+      document.getElementById('categoryFilter').disabled = false;
+      document.getElementById('pSearch').disabled = false;
+      document.getElementById('prodLoading').classList.add('hidden');
+      
+      filterProd();
+      
+      // ✅ 直接處理 copyData
+      if (data.copyData) {
+        loadEditData({ success: true, data: data.copyData });
+      }
+      
+  }).getDataForSalesOrder();
+}
+function loadEditData(result) {
+    if (!result || !result.success || !result.data) return;
+    const data = result.data;
+    if (data.isEditMode) {
+        editingOrderId = data.oldOrderId;
+        document.querySelector('.header-title').innerText = "✏️ 修改銷貨單 (" + editingOrderId + ")";
+        if(document.querySelector('.btn-success')) document.querySelector('.btn-success').innerText = "💾 更新銷貨單";
+    }
+    if (data.date) document.getElementById('orderDate').value = data.date.substring(0,10);
+    if (data.customerId) {
+        document.getElementById('customer').value = data.customerId;
+        updateCustomerPrices();
+    }
+    document.getElementById('shippingFee').value = data.shipping || 0;
+    document.getElementById('otherDeduction').value = data.deduction || 0;
+    document.getElementById('orderNote').value = data.note || '';
+    cart = (data.items || []).map(it => ({ 
+        id: it.productId, name: it.productName, price: Number(it.price), 
+        basePrice: Number(it.price), qty: Number(it.qty), unit: it.unit, 
+        cost: Number(it.cost) || 0, note: it.note || '' 
+    }));
+    renderCart();
+    
+    hasUnsavedChanges = false; // ✅ 舊單剛載入，標記為尚未改動
+}
+
+// ========== 3. 價格核心邏輯 ==========
+
+function updateCustomerPrices() {
+  const cId = document.getElementById('customer').value;
+  const c = allC.find(x => x.id === cId);
+  currentTaxType = c ? (c.taxType || '免稅') : '免稅';
+  cart.forEach(i => { 
+    const newPrice = getActualPrice(i.id);
+    i.basePrice = newPrice;
+    i.price = newPrice; 
+  });
+  renderCart();
+  filterProd();
+}
+
+function getActualPrice(pid) {
+  const cId = document.getElementById('customer').value;
+  const orderDate = document.getElementById('orderDate').value;
+  const p = allP.find(i => i.id === pid);
+  if(!p) return 0;
+
+  if(cId) {
+    const timedSp = specialPrices.find(s => s.custId === cId && s.prodId === pid && s.startDate && s.endDate && orderDate >= s.startDate && orderDate <= s.endDate);
+    if(timedSp) return timedSp.price;
+    
+    const permanentSp = specialPrices.find(s => s.custId === cId && s.prodId === pid && (!s.endDate || s.endDate === ""));
+    if(permanentSp) return permanentSp.price;
+
+    const cust = allC.find(c => c.id === cId);
+    if(cust && cust.priceGroup) {
+       const grp = cust.priceGroup;
+       if(grp.indexOf("總倉") > -1 && p.priceBranch > 0) return p.priceBranch;
+       if(grp.indexOf("店家") > -1 && p.priceWholesale > 0) return p.priceWholesale;
+       if(grp.indexOf("餐廳") > -1 && p.priceGroupBuy > 0) return p.priceGroupBuy;
+    }
+  }
+  return p.price || 0;
+}
+
+// ========== 4. 購物車操作 ==========
+
+function updateQty(index, val) {
+  let newQty = Number(val);
+  if (newQty < 1) newQty = 1;
+  cart[index].qty = newQty;
+  const rowTotalObj = document.getElementById(`row-total-${index}`);
+  if (rowTotalObj) rowTotalObj.innerText = '$' + (cart[index].qty * cart[index].price).toLocaleString();
+  calc();
+}
+
+function handleQtyEnter(e, index) {
+  if (e.key === "Enter") {
+    e.preventDefault();
+    updateQty(index, e.target.value);
+    const nextInput = document.getElementById(`qty-${index + 1}`);
+    if (nextInput) { nextInput.focus(); nextInput.select(); }
+  }
+}
+
+function renderCart() {
+  const div = document.getElementById('cartItems');
+  if (cart.length === 0) { div.innerHTML = '<div style="text-align:center; padding:50px; color:#ccc;">尚未選取商品</div>'; calc(); updateListHighlights(); return; }
+
+  let html = '<table class="items-table"><thead><tr><th width="30">#</th><th>品名</th><th width="60">數量</th><th width="80">單價</th><th width="80">小計</th><th width="30"></th></tr></thead><tbody>';
+  cart.forEach((it, i) => {
+    html += `<tr><td>${i+1}</td><td style="text-align:left;"><div style="font-weight:bold; color:#1565C0;">${it.name}</div><input type="text" class="note-input" value="${it.note||''}" placeholder="備註" onchange="cart[${i}].note=this.value"></td><td><input type="number" id="qty-${i}" class="qty-input" value="${it.qty}" min="1" onkeydown="handleQtyEnter(event, ${i})" onchange="updateQty(${i}, this.value)"></td><td><input type="number" class="price-edit-input" value="${it.price}" onchange="cart[${i}].price=Number(this.value); renderCart()"></td><td style="font-weight:bold;" id="row-total-${i}">$${(it.qty*it.price).toLocaleString()}</td><td><button class="remove-btn" onclick="cart.splice(${i},1); renderCart()">×</button></td></tr>`;
+  });
+  div.innerHTML = html + '</tbody></table>';
+  calc(); updateListHighlights();
+}
+
+// ========== 5. 商品目錄 ==========
+
+function filterProd() {
+  clearTimeout(salesDebounceTimer);
+  salesDebounceTimer = setTimeout(function() {
+    const cat = document.getElementById('categoryFilter').value;
+    const k = document.getElementById('pSearch').value.toLowerCase();
+    const cId = document.getElementById('customer').value;
+    const cust = allC.find(c => c.id === cId);
+    if (!allP || allP.length === 0) return;
+
+    let fb = allP.filter(p => (cat === "" || p.category === cat) && ((p.name && p.name.toLowerCase().includes(k)) || (p.id && p.id.toLowerCase().includes(k))));
+
+    if (cId) {
+      const mySpecials = specialPrices.filter(sp => sp.custId === cId);
+      const specialProdIds = mySpecials.map(sp => sp.prodId);
+      let specialList = [], groupList = [], otherList = [];
+      fb.forEach(p => {
+        if (specialProdIds.includes(p.id)) {
+           const spData = mySpecials.find(s => s.prodId === p.id);
+           p._sortOrder = spData ? spData.sortOrder : 999;
+           specialList.push(p);
+        } else if (cust && cust.priceGroup && ((cust.priceGroup.indexOf("總倉") > -1 && p.priceBranch > 0) || (cust.priceGroup.indexOf("店家") > -1 && p.priceWholesale > 0) || (cust.priceGroup.indexOf("餐廳") > -1 && p.priceGroupBuy > 0))) {
+           groupList.push(p);
+        } else { otherList.push(p); }
+      });
+      specialList.sort((a, b) => (a._sortOrder || 999) - (b._sortOrder || 999));
+      const categoryOrder = ['港點', '港點盒裝', '冷凍海鮮', '包子饅頭'];
+      groupList.sort((a, b) => {
+        const ai = categoryOrder.indexOf(a.category); const bi = categoryOrder.indexOf(b.category);
+        return (ai > -1 ? ai : 999) - (bi > -1 ? bi : 999);
+      });
+      fb = specialList.concat(groupList).concat(otherList);
+    }
+    renderPList(fb.slice(0, 30));
+  }, 100);
+}
+
+function renderPList(list) {
+  const cId = document.getElementById('customer').value;
+  const cust = allC.find(c => c.id === cId);
+  const cartIds = cart.map(item => String(item.id)); 
+  const specialProdIds = specialPrices.filter(s => s.custId === cId).map(s => s.prodId);
+  let div = document.getElementById('pList');
+  if (list.length === 0) { div.innerHTML = '<div style="text-align:center; color:#999; padding:30px;">查無商品 🔍</div>'; return; }
+
+  let html = '<table class="product-table"><thead><tr><th width="50%">品名/編號</th><th width="25%" style="text-align:right;">售價</th><th width="25%"></th></tr></thead><tbody>';
+  list.forEach(p => {
+      const finalPrice = getActualPrice(p.id);
+      let badges = '';
+      if (specialProdIds.includes(p.id)) {
+        badges += '<span class="badge-tag badge-exclusive">特</span>';
+      } else if (cust && cust.priceGroup) {
+        if (cust.priceGroup.indexOf("總倉") > -1 && p.priceBranch > 0) badges += '<span class="badge-tag" style="background:#607d8b;">倉</span>';
+        else if (cust.priceGroup.indexOf("店家") > -1 && p.priceWholesale > 0) badges += '<span class="badge-tag" style="background:#795548;">店</span>';
+        else if (cust.priceGroup.indexOf("餐廳") > -1 && p.priceGroupBuy > 0) badges += '<span class="badge-tag" style="background:#ff5722;">餐</span>';
+      }
+      const isSelected = cartIds.includes(String(p.id)) ? 'selected-row' : '';
+      html += `<tr id="row-${p.id}" class="${isSelected}" onclick="addOne('${p.id}')"><td><div style="font-weight:bold; color:#1565C0;">${p.name} ${badges}</div><div style="color:#666; font-size:11px;">${p.id} ${p.spec?`(${p.spec})`:''}</div></td><td class="price-col">$${finalPrice.toLocaleString()}</td><td style="text-align:center;"><button type="button" class="add-btn-small">加入</button></td></tr>`;
+  });
+  div.innerHTML = html + '</tbody></table>';
+}
+
+// ========== 6. 快速新增與特價 ==========
+
+function openAddProductModal() {
+  resetQuickAddForm();
+  const sel = document.getElementById('categoryList');
+  if (sel) {
+    sel.innerHTML = ''; 
+    if (!categories || categories.length === 0) extractCategories();
+    categories.forEach(cat => sel.innerHTML += `<option value="${cat}">`);
+  }
+  document.getElementById('addProductModal').classList.remove('hidden');
+  document.getElementById('newName').focus();
+}
+
+function saveNewProduct(stayOpen) {
+  const name = document.getElementById('newName').value.trim();
+  const unit = document.getElementById('newUnit').value.trim();
+  if (!name || !unit) { Swal.fire({ icon: 'warning', title: '提醒', text: '名稱與單位必填' }); return; }
+  const data = {
+    id: document.getElementById('newId').value.trim() || "AUTO",
+    name: name, category: document.getElementById('newCat').value || "未分類",
+    spec: document.getElementById('newSpec').value.trim(), unit: unit,
+    price: Number(document.getElementById('newPrice').value) || 0,
+    priceBranch: Number(document.getElementById('newBranchPrice').value) || 0,
+    priceStore: Number(document.getElementById('newStorePrice').value) || 0,
+    priceRest: Number(document.getElementById('newRestPrice').value) || 0,
+    cost: Number(document.getElementById('newCost').value) || 0,
+    supplier: document.getElementById('newSupplier').value.trim(), status: '啟用', note: document.getElementById('newNote').value || '銷貨單快速新增'
+  };
+  document.getElementById('loadingOverlay').classList.remove('hidden');
+  google.script.run.withSuccessHandler(function(result) {
+    document.getElementById('loadingOverlay').classList.add('hidden');
+    if (result.success) {
+        Swal.fire({ icon: 'success', title: '新增成功', timer: 1000, showConfirmButton: false });
+        loadAllData(); 
+        if (stayOpen) resetQuickAddForm(); else closeAddProductModal();
+    } else { Swal.fire('失敗', result.error, 'error'); }
+  }).quickAddItem(data, 'PRODUCT'); 
+}
+
+function resetQuickAddForm() {
+  const ids = ['newId', 'newName', 'newSpec', 'newPrice', 'newBranchPrice', 'newStorePrice', 'newRestPrice', 'newCost', 'newSupplier', 'newNote'];
+  ids.forEach(id => { const el = document.getElementById(id); if(el) el.value = (el.type==='number')?0:''; });
+  document.getElementById('newUnit').value = '個';
+  document.getElementById('newName').focus();
+}
+
+function closeAddProductModal() { document.getElementById('addProductModal').classList.add('hidden'); }
+
+// 特價功能
+function openSpecialPriceModal() {
+  const spCustSel = document.getElementById('spCustomer');
+  spCustSel.innerHTML = '';
+  allC.forEach(c => { spCustSel.innerHTML += `<option value="${c.id}">${c.name}</option>`; });
+  const currentCustId = document.getElementById('customer').value;
+  if(currentCustId) spCustSel.value = currentCustId;
+  const dl = document.getElementById('spProductList');
+  dl.innerHTML = '';
+  allP.forEach(p => { dl.innerHTML += `<option value="${p.name} [${p.id}]" data-id="${p.id}" data-price="${p.price}">`; });
+  document.getElementById('spProductInput').value = '';
+  document.getElementById('spProductId').value = '';
+  document.getElementById('spBasePrice').value = '';
+  document.getElementById('spPrice').value = '';
+  document.getElementById('spStartDate').value = document.getElementById('orderDate').value;
+  document.getElementById('spEndDate').value = '';
+  document.getElementById('addSpecialModal').classList.remove('hidden');
+}
+
+function closeSpecialModal() { document.getElementById('addSpecialModal').classList.add('hidden'); }
+
+function autoFillBasePrice() {
+  const val = document.getElementById('spProductInput').value;
+  const list = document.getElementById('spProductList').options;
+  let found = false;
+  for(let i=0; i<list.length; i++) {
+    if(list[i].value === val) {
+      const pid = list[i].getAttribute('data-id');
+      const price = list[i].getAttribute('data-price');
+      document.getElementById('spProductId').value = pid;
+      document.getElementById('spBasePrice').value = price;
+      found = true;
+      break;
+    }
+  }
+  if(!found) { document.getElementById('spProductId').value = ''; document.getElementById('spBasePrice').value = ''; }
+}
+
+function saveSpecialPrice() {
+  const custId = document.getElementById('spCustomer').value;
+  const prodId = document.getElementById('spProductId').value;
+  const price = document.getElementById('spPrice').value;
+  const prodName = document.getElementById('spProductInput').value;
+  if(!custId || !prodId || !price) { Swal.fire({ icon: 'warning', title: '資料不全', text: '請確認客戶、商品與特價金額皆已填寫' }); return; }
+  const itemsPayload = [{ id: prodId, price: Number(price), sortOrder: 1 }];
+  document.getElementById('loadingOverlay').classList.remove('hidden');
+  google.script.run.withSuccessHandler(function(res) {
+    document.getElementById('loadingOverlay').classList.add('hidden');
+    if(res.success) {
+      Swal.fire({ icon: 'success', title: '已儲存', text: `${prodName} 特價 $${price}`, timer: 1000, showConfirmButton: false, toast: true, position: 'top-end' });
+      specialPrices = specialPrices.filter(sp => !(sp.custId === custId && sp.prodId === prodId));
+      specialPrices.push({ custId: custId, prodId: prodId, price: Number(price), prodName: prodName, sortOrder: 1 });
+      filterProd(); updateCustomerPrices(); 
+      document.getElementById('spProductInput').value = ''; document.getElementById('spProductId').value = ''; document.getElementById('spBasePrice').value = ''; document.getElementById('spPrice').value = '';
+      document.getElementById('spProductInput').focus();
+      loadAllData(); 
+    } else { Swal.fire('失敗', res.error, 'error'); }
+  }).saveSpecialPricesBatch(custId, itemsPayload);
+}
+
+// ========== 7. 存檔與 UI ==========
+
+function saveOrder(autoPrint) {
+    const cId = document.getElementById('customer').value;
+    if(!cId) { Swal.fire({ icon: 'warning', title: '請選擇客戶' }); return; }
+    if(cart.length === 0) { Swal.fire({ icon: 'warning', title: '購物車是空的' }); return; }
+    const c = allC.find(x => x.id === cId);
+    const odata = {
+      date: document.getElementById('orderDate').value,
+      customer: { id: c.id, name: c.name },
+      items: cart.map(i => ({ productId: i.id, productName: i.name, qty: i.qty, price: i.price, unit: i.unit, cost: i.cost, note: i.note || '' })),
+      totalAmount: cart.reduce((s, i) => s + (i.price * i.qty), 0),
+      shipping: Number(document.getElementById('shippingFee').value) || 0,
+      deduction: Number(document.getElementById('otherDeduction').value) || 0,
+      note: document.getElementById('orderNote').value || ''
+    };
+    document.getElementById('loadingOverlay').classList.remove('hidden');
+    const saveFunc = editingOrderId ? 'updateSalesOrder' : 'saveSalesOrder';
+    const params = editingOrderId ? [editingOrderId, odata] : [odata];
+    google.script.run.withSuccessHandler(r => handleSaveResponse(r, autoPrint)).withFailureHandler(e => { document.getElementById('loadingOverlay').classList.add('hidden'); Swal.fire('錯誤', e.message, 'error'); })[saveFunc](...params);
+}
+
+function handleSaveResponse(r, autoPrint) {
+    document.getElementById('loadingOverlay').classList.add('hidden');
+    if(r.success) {
+        hasUnsavedChanges = false; // ✅ 存檔成功，標記為已儲存
+        Swal.fire({ icon: 'success', title: '儲存成功', timer: 1500, showConfirmButton: false });
+        
+        if (!editingOrderId) {
+            executeActualReset(); 
+        } else {
+            document.querySelector('.header-title').innerText = "✏️ 修改銷貨單 (" + editingOrderId + ") - 已儲存 ✅";
+        }
+        
+        if(autoPrint) fetchAndPrint(r.orderId || editingOrderId);
+    } else { 
+        Swal.fire('儲存失敗', r.error, 'error'); 
+    }
+}
+
+function resetToNewOrder() {
+    if (cart.length === 0) { executeActualReset(); return; }
+    Swal.fire({ title: '確定要清空嗎？', text: "目前的訂單內容將會消失", icon: 'warning', showCancelButton: true, confirmButtonText: '確定清空', cancelButtonText: '取消' })
+    .then((result) => { if (result.isConfirmed) { executeActualReset(); } });
+}
+
+function executeActualReset() {
+  cart = []; editingOrderId = null;
+  document.querySelector('.header-title').innerText = "📝 開立銷貨單";
+  ['customer', 'custSearch', 'pSearch', 'orderNote'].forEach(id => document.getElementById(id).value = '');
+  ['shippingFee', 'otherDeduction'].forEach(id => document.getElementById(id).value = 0);
+  document.getElementById('discountInput').value = 100;
+  setTodayDate(); renderCart(); calc(); filterProd(); updateListHighlights();
+  
+  hasUnsavedChanges = false; // ✅ 新訂單剛清空，沒有未儲存的變更
+}
+
+function calc() {
+  hasUnsavedChanges = true; // ✅ 只要有計算(新增商品、改數量、改運費)，就標記為未儲存
+  
+  // 如果原本顯示已儲存，一旦有變更就拿掉勾勾提醒你
+  let titleEl = document.querySelector('.header-title');
+  if (titleEl && titleEl.innerText.includes('已儲存 ✅')) {
+      titleEl.innerText = titleEl.innerText.replace(' - 已儲存 ✅', '');
+  }
+
+  const st = cart.reduce((s, i) => s + (i.price * i.qty), 0);
+  let tx = 0; if (currentTaxType.indexOf('外加') > -1) tx = Math.round(st * 0.05);
+  const ship = Number(document.getElementById('shippingFee').value) || 0;
+  const ded = Number(document.getElementById('otherDeduction').value) || 0;
+  const gt = st + tx + ship - ded;
+  document.getElementById('subtotalTxt').innerText = '$' + st.toLocaleString();
+  document.getElementById('taxTxt').innerText = '$' + tx.toLocaleString();
+  document.getElementById('grandTotalTxt').innerText = '$' + gt.toLocaleString();
+  const badge = document.getElementById('taxTypeBadge');
+  badge.innerText = currentTaxType; badge.style.background = (currentTaxType.indexOf('外加') > -1) ? '#ff9800' : '#ccc';
+}
+
+function addOne(id) {
+  const cp = getActualPrice(id);
+  const p = allP.find(i => i.id === id);
+  const exist = cart.find(x => x.id === id);
+  if(exist) exist.qty++; 
+  else cart.push({ id: p.id, name: p.name, price: cp, basePrice: cp, unit: p.unit, qty: 1, cost: p.cost, note: '' });
+  renderCart();
+}
+
+function extractCategories() { let s = new Set(); allP.forEach(p => { if(p.category) s.add(p.category.trim()); }); categories = Array.from(s).sort(); }
+function renderCategoryFilter() { let sel = document.getElementById('categoryFilter'); sel.innerHTML = '<option value="">全部類別</option>'; categories.forEach(c => sel.innerHTML += `<option value="${c}">${c}</option>`); }
+function renderCustomerSelect(list) { let sel = document.getElementById('customer'); sel.innerHTML = '<option value="">-- 先選客戶 --</option>'; list.forEach(c => sel.innerHTML += `<option value="${c.id}">${c.id} | ${c.name}</option>`); }
+function filterCustomer() { let k = document.getElementById('custSearch').value.toLowerCase(); let f = allC.filter(c => c.name.toLowerCase().includes(k) || c.id.toLowerCase().includes(k)); renderCustomerSelect(f); if(f.length === 1) { document.getElementById('customer').value = f[0].id; updateCustomerPrices(); } }
+function updateListHighlights() { let cartIds = cart.map(i => String(i.id)); document.querySelectorAll('tr[id^="row-"]').forEach(row => { if (cartIds.includes(row.id.replace('row-', ''))) row.classList.add('selected-row'); else row.classList.remove('selected-row'); }); }
+function applyDiscountToAll(rate) { cart.forEach(it => it.price = Math.round((it.basePrice || it.price) * rate)); renderCart(); }
+function resetPriceToBase() { cart.forEach(it => it.price = getActualPrice(it.id)); renderCart(); }
+function exportToExcel() {
+  if (cart.length === 0) {
+    Swal.fire({ icon: 'warning', title: '購物車是空的', text: '沒有資料可以匯出' });
+    return;
+  }
+
+  // 1. 取得基本資訊
+  const orderDate = document.getElementById('orderDate').value;
+  const customerSelect = document.getElementById('customer');
+  // 取得選單文字 (例如 "C00005 | 賢峰有限公司"，我們只要後面的名字)
+  let customerName = customerSelect.options[customerSelect.selectedIndex].text;
+  if (customerName.includes(' | ')) {
+      customerName = customerName.split(' | ')[1];
+  }
+  const orderIdText = editingOrderId ? editingOrderId : "新單據未存檔";
+
+  // 2. 準備匯出內容 (\uFEFF 是為了解決 Excel 開啟中文會亂碼的問題)
+  let csvContent = "\uFEFF"; 
+  
+  // 加入表頭資訊
+  csvContent += `訂單編號,${orderIdText}\n`;
+  csvContent += `訂單日期,${orderDate}\n`;
+  csvContent += `客戶名稱,${customerName}\n\n`;
+  
+  // 加入明細欄位名稱
+  csvContent += "項次,商品編號,品名,數量,單位,單價,小計,備註\n";
+  
+  // 3. 迴圈將購物車商品轉為文字
+  cart.forEach((item, index) => {
+    const subtotal = item.qty * item.price;
+    // 處理商品名稱或備註中如果自帶逗號會導致錯位的問題
+    const safeName = item.name ? `"${item.name.replace(/"/g, '""')}"` : "";
+    const safeNote = item.note ? `"${item.note.replace(/"/g, '""')}"` : "";
+    
+    csvContent += `${index + 1},${item.id},${safeName},${item.qty},${item.unit},${item.price},${subtotal},${safeNote}\n`;
+  });
+  
+  // 4. 加入底部結算金額
+  csvContent += `\n,,,,,未稅小計,${document.getElementById('subtotalTxt').innerText.replace(/,/g, '')}\n`;
+  csvContent += `,,,,,運費,${document.getElementById('shippingFee').value}\n`;
+  csvContent += `,,,,,扣款,${document.getElementById('otherDeduction').value}\n`;
+  csvContent += `,,,,,稅金,${document.getElementById('taxTxt').innerText.replace(/,/g, '')}\n`;
+  csvContent += `,,,,,含稅總計,${document.getElementById('grandTotalTxt').innerText.replace(/,/g, '')}\n`;
+  csvContent += `,,,,,整單備註,${document.getElementById('orderNote').value}\n`;
+
+  // 5. 觸發自動下載
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement("a");
+  const url = URL.createObjectURL(blob);
+  
+  // 設定下載檔案名稱 (例如：銷貨單_賢峰有限公司_2026-02-25.csv)
+  link.setAttribute("href", url);
+  link.setAttribute("download", `銷貨單_${customerName}_${orderDate}.csv`);
+  link.style.visibility = 'hidden';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+function returnToSearch() { 
+  // 改成檢查 hasUnsavedChanges
+  if (hasUnsavedChanges && cart.length > 0 && !confirm('⚠️ 資料有變動但尚未儲存，確定要返回查詢頁面嗎？')) return; 
+  google.script.run.showSearchSalesPanel(); 
+}
+
+// ========== 8. 🖨️ 專業列印（標準 vs 配送單） ==========
+
+function fetchAndPrint(orderId) {
+  // 先彈出選擇格式
+  Swal.fire({
+    title: '📋 選擇列印格式',
+    html: `
+      <div style="display:flex; flex-direction:column; gap:15px; margin-top:20px;">
+        <button onclick="executePrint('${orderId}', 'STANDARD')" class="swal2-confirm swal2-styled" style="background:#1976D2; width:100%;">
+          🧾 標準銷貨單<br><small style="font-weight:normal;">含金額、稅額、總計</small>
+        </button>
+        <button onclick="executePrint('${orderId}', 'DELIVERY')" class="swal2-confirm swal2-styled" style="background:#2E7D32; width:100%;">
+          📦 配送單/裝箱單<br><small style="font-weight:normal;">僅顯示數量（代寄用）</small>
+        </button>
+      </div>
+    `,
+    showConfirmButton: false,
+    showCancelButton: true,
+    cancelButtonText: '取消'
+  });
+}
+
+function executePrint(orderId, format) {
+  Swal.close();
+  
+  if (format === 'STANDARD') {
+    // 📝 標準銷貨單：直接列印
+    document.getElementById('loadingOverlay').classList.remove('hidden');
+    
+    google.script.run
+      .withSuccessHandler(function(html) {
+        document.getElementById('loadingOverlay').classList.add('hidden');
+        var win = window.open('', '_blank', 'width=850,height=1100');
+        win.document.write(html);
+        win.document.close();
+      })
+      .withFailureHandler(function(e) {
+        document.getElementById('loadingOverlay').classList.add('hidden');
+        Swal.fire('列印失敗', e.message, 'error');
+      })
+      .generateSalesPrintHTML(orderId);
+      
+  } else {
+    // 📦 配送單：先填寫收件資訊
+    Swal.fire({
+      title: '📦 配送單收件資訊',
+      html: `
+        <div style="text-align:left; margin-top:15px;">
+          <label style="font-weight:bold; margin-bottom:5px; display:block;">收件人姓名：</label>
+          <input type="text" id="recipientName" class="swal2-input" style="width:90%; margin:0 0 10px 0;" placeholder="請輸入收件人">
+          
+          <label style="font-weight:bold; margin-bottom:5px; display:block;">聯絡電話：</label>
+          <input type="text" id="recipientPhone" class="swal2-input" style="width:90%; margin:0 0 10px 0;" placeholder="請輸入電話">
+          
+          <label style="font-weight:bold; margin-bottom:5px; display:block;">收件地址：</label>
+          <input type="text" id="recipientAddress" class="swal2-input" style="width:90%; margin:0 0 10px 0;" placeholder="請輸入地址">
+          
+          <label style="font-weight:bold; margin-bottom:5px; display:block;">備註（選填）：</label>
+          <input type="text" id="recipientNote" class="swal2-input" style="width:90%; margin:0;" placeholder="例如：請放管理室">
+        </div>
+      `,
+      showCancelButton: true,
+      confirmButtonText: '✅ 確認列印',
+      cancelButtonText: '取消',
+      confirmButtonColor: '#2E7D32',
+      preConfirm: () => {
+        const name = document.getElementById('recipientName').value.trim();
+        const phone = document.getElementById('recipientPhone').value.trim();
+        const address = document.getElementById('recipientAddress').value.trim();
+        const note = document.getElementById('recipientNote').value.trim();
+        
+        if (!name || !phone || !address) {
+          Swal.showValidationMessage('請填寫完整的收件資訊（姓名、電話、地址）');
+          return false;
+        }
+        
+        return { name, phone, address, note };
+      }
+    }).then((result) => {
+      if (result.isConfirmed) {
+        // 拿到收件資訊後，呼叫後端列印
+        document.getElementById('loadingOverlay').classList.remove('hidden');
+        
+        google.script.run
+          .withSuccessHandler(function(html) {
+            document.getElementById('loadingOverlay').classList.add('hidden');
+            var win = window.open('', '_blank', 'width=850,height=1100');
+            win.document.write(html);
+            win.document.close();
+          })
+          .withFailureHandler(function(e) {
+            document.getElementById('loadingOverlay').classList.add('hidden');
+            Swal.fire('列印失敗', e.message, 'error');
+          })
+          .generateDeliveryPrintHTML(orderId, result.value.name, result.value.phone, result.value.address, result.value.note);
+      }
+    });
+  }
+}
+
+
+
+</script>  <!-- ✅ 這裡才是真正的 script 結尾 -->
+</body>
+</html>

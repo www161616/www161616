@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body { padding: 20px; background-color: #f8f9fa; font-family: "Microsoft JhengHei", sans-serif; }
+    .form-container { background: white; padding: 25px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+    .header { border-bottom: 2px solid #007bff; margin-bottom: 20px; padding-bottom: 10px; }
+    .row-margin { margin-bottom: 15px; }
+    /* 強制發票號碼顯示為大寫 */
+    #invoiceNo { text-transform: uppercase; font-weight: bold; color: #007bff; }
+  </style>
+</head>
+<body>
+  <div class="form-container">
+    <div class="header">
+      <h3 id="formTitle">📄 發票紀錄系統</h3>
+    </div>
+    
+    <form id="invoiceForm">
+      <div class="row row-margin">
+        <div class="col-6">
+          <label class="form-label">發票日期</label>
+          <input type="date" id="date" class="form-control" required>
+        </div>
+        <div class="col-6">
+          <label class="form-label">發票號碼 (2英+8數)</label>
+          <input type="text" id="invoiceNo" class="form-control" 
+                 placeholder="例: GU12345678" 
+                 maxlength="10" 
+                 oninput="this.value = this.value.toUpperCase()"
+                 required>
+        </div>
+      </div>
+
+      <div class="row row-margin">
+        <div class="col-6">
+          <label class="form-label">對象名稱</label>
+          <input type="text" id="targetName" class="form-control" placeholder="客戶或供應商名稱" required>
+        </div>
+        <div class="col-6">
+          <label class="form-label">統一編號</label>
+          <input type="text" id="taxId" class="form-control" maxlength="8" placeholder="8位數字">
+        </div>
+      </div>
+
+      <div class="row row-margin">
+        <div class="col-4">
+          <label class="form-label">課稅別</label>
+          <select id="taxType" class="form-select" onchange="calculateTax()">
+            <option value="應稅">應稅(5%)</option>
+            <option value="零稅率">零稅率</option>
+            <option value="免稅">免稅</option>
+          </select>
+        </div>
+        <div class="col-8">
+          <label class="form-label">關聯單號 (選填)</label>
+          <input type="text" id="refNo" class="form-control" placeholder="如: SO00001 或 EXP00001">
+        </div>
+      </div>
+
+      <hr>
+
+      <div class="row row-margin">
+        <div class="col-4">
+          <label class="form-label">未稅金額</label>
+          <input type="number" id="amount" class="form-control" oninput="calculateTax()" required>
+        </div>
+        <div class="col-4">
+          <label class="form-label">稅額 (5%)</label>
+          <input type="number" id="tax" class="form-control" oninput="calculateTotal()">
+        </div>
+        <div class="col-4">
+          <label class="form-label">含稅總計</label>
+          <input type="number" id="total" class="form-control" required>
+        </div>
+      </div>
+
+      <div class="row-margin">
+        <label class="form-label">備註</label>
+        <textarea id="note" class="form-control" rows="2" placeholder="選填項目..."></textarea>
+      </div>
+
+      <div class="mt-4 d-flex justify-content-end">
+        <button type="button" class="btn btn-secondary me-2" onclick="google.script.host.close()">取消</button>
+        <button type="submit" id="saveBtn" class="btn btn-primary">確認儲存發票</button>
+      </div>
+    </form>
+  </div>
+
+  <script>
+    // 稅額自動計算
+    function calculateTax() {
+      const amount = parseFloat(document.getElementById('amount').value) || 0;
+      const taxType = document.getElementById('taxType').value;
+      let tax = 0;
+      if (taxType === '應稅') {
+        tax = Math.round(amount * 0.05);
+      } else {
+        tax = 0; // 零稅率或免稅
+      }
+      document.getElementById('tax').value = tax;
+      calculateTotal();
+    }
+
+    function calculateTotal() {
+      const amount = parseFloat(document.getElementById('amount').value) || 0;
+      const tax = parseFloat(document.getElementById('tax').value) || 0;
+      document.getElementById('total').value = amount + tax;
+    }
+
+    // 儲存邏輯
+    document.getElementById('invoiceForm').onsubmit = function(e) {
+      e.preventDefault();
+      
+      const saveBtn = document.getElementById('saveBtn');
+      saveBtn.disabled = true;
+      saveBtn.innerText = '處理中...';
+
+      const data = {
+        date: document.getElementById('date').value,
+        invoiceNo: document.getElementById('invoiceNo').value.trim().toUpperCase(),
+        targetName: document.getElementById('targetName').value,
+        taxId: document.getElementById('taxId').value,
+        taxType: document.getElementById('taxType').value,
+        amount: document.getElementById('amount').value,
+        tax: document.getElementById('tax').value,
+        total: document.getElementById('total').value,
+        refNo: document.getElementById('refNo').value,
+        note: document.getElementById('note').value
+      };
+
+      // 修正：將 const 改為 let 才能在下方修改變數內容
+      let type = new URLSearchParams(window.location.search).get('type') || 'ISSUED';
+      
+      // 自動判斷：如果是支出單 (EXP) 補錄，自動存入進項 (RECEIVED)
+      if (data.refNo && data.refNo.toUpperCase().indexOf('EXP') > -1) {
+        type = 'RECEIVED';
+      }
+
+      google.script.run
+        .withSuccessHandler(function(res) {
+          if(res.success) {
+            alert('✅ 發票紀錄已成功儲存至系統！');
+            google.script.host.close();
+          } else {
+            alert('❌ 儲存失敗：' + res.error);
+            saveBtn.disabled = false;
+            saveBtn.innerText = '確認儲存';
+          }
+        })
+        .withFailureHandler(function(err) {
+          alert('❌ 系統通訊錯誤：' + err);
+          saveBtn.disabled = false;
+        })
+        .saveInvoiceData(data, type);
+    };
+
+    // 初始化頁面
+    window.onload = function() {
+      // 1. 設定預設日期
+      document.getElementById('date').value = new Date().toISOString().split('T')[0];
+      
+      // 2. 讀取待處理資料 (自動帶入銷貨單或支出單資料)
+      google.script.run.withSuccessHandler(function(data) {
+        if (data) {
+          if (data.date) document.getElementById('date').value = data.date;
+          if (data.targetName) document.getElementById('targetName').value = data.targetName;
+          if (data.amount) document.getElementById('amount').value = data.amount;
+          if (data.tax) document.getElementById('tax').value = data.tax;
+          if (data.total) document.getElementById('total').value = data.total;
+          if (data.refNo) document.getElementById('refNo').value = data.refNo;
+          if (data.invoiceNo) document.getElementById('invoiceNo').value = data.invoiceNo;
+          
+          // 稅制判斷
+          if (data.taxType && data.taxType.indexOf('外加') > -1) {
+            document.getElementById('taxType').value = '應稅';
+          } else if (data.taxType === '免稅') {
+            document.getElementById('taxType').value = '免稅';
+          }
+        }
+      }).getPendingInvoiceData();
+    };
+  </script>
+</body>
+</html>

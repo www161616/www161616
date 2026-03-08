@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: "Microsoft JhengHei", Arial, sans-serif; font-size: 16px; padding: 20px; background: #f5f5f5; }
+    .container { background: white; padding: 25px; border-radius: 10px; }
+    h2 { color: #00897B; font-size: 24px; margin-bottom: 20px; border-bottom: 3px solid #00897B; padding-bottom: 10px; }
+    .search-box { background: #e0f2f1; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+    input { width: 100%; padding: 12px; font-size: 17px; border: 2px solid #ddd; border-radius: 6px; }
+    .inventory-item { background: white; border: 2px solid #e0e0e0; border-radius: 8px; padding: 15px; margin-bottom: 10px; }
+    .inventory-item.low-stock { border-color: #FF9800; background: #fff3e0; }
+    .inventory-item.out-of-stock { border-color: #F44336; background: #ffebee; }
+    .item-name { font-size: 18px; font-weight: bold; margin-bottom: 5px; }
+    .item-stock { font-size: 20px; font-weight: bold; color: #00897B; }
+    .item-stock.low { color: #FF9800; }
+    .item-stock.out { color: #F44336; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>📋 庫存查詢</h2>
+    <div class="search-box">
+      <input type="text" id="search" placeholder="🔍 搜尋商品..." onkeyup="filterInventory()">
+    </div>
+    <div id="inventoryList"></div>
+  </div>
+  <script>
+    let inventory = [];
+    window.onload = function() {
+      google.script.run.withSuccessHandler(displayInventory).getInventory();
+    };
+    function displayInventory(data) {
+      inventory = data;
+      renderInventory(data);
+    }
+    function renderInventory(items) {
+      const html = items.map(item => {
+        let cssClass = 'inventory-item';
+        let stockClass = 'item-stock';
+        if (item.currentStock <= 0) {
+          cssClass += ' out-of-stock';
+          stockClass += ' out';
+        } else if (item.currentStock < item.safetyStock) {
+          cssClass += ' low-stock';
+          stockClass += ' low';
+        }
+        return `
+          <div class="${cssClass}">
+            <div class="item-name">📦 ${item.productName}</div>
+            <div style="display: flex; justify-content: space-between; margin-top: 8px;">
+              <span>庫存: <span class="${stockClass}">${item.currentStock} ${item.unit}</span></span>
+              <span>安全庫存: ${item.safetyStock} ${item.unit}</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+      document.getElementById('inventoryList').innerHTML = html || '<p style="text-align:center;color:#999;">無庫存資料</p>';
+    }
+    function filterInventory() {
+      const keyword = document.getElementById('search').value.toLowerCase();
+      const filtered = inventory.filter(item => 
+        item.productName.toLowerCase().includes(keyword) || 
+        item.productId.toLowerCase().includes(keyword)
+      );
+      renderInventory(filtered);
+    }
+  </script>
+</body>
+</html>

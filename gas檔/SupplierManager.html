@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { 
+      font-family: 'Segoe UI', 'Microsoft JhengHei', Arial, sans-serif; 
+      background: linear-gradient(135deg, #E53935 0%, #FF7043 100%);
+      min-height: 100vh;
+      padding: 15px;
+    }
+    .container {
+      max-width: 750px; margin: 0 auto; background: white;
+      border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); overflow: hidden;
+    }
+    .header {
+      background: linear-gradient(135deg, #E53935 0%, #FF7043 100%);
+      color: white; padding: 25px 30px; text-align: center;
+    }
+    .header h1 { font-size: 28px; font-weight: 700; margin-bottom: 5px; }
+    .header p { opacity: 0.9; font-size: 14px; }
+    .tabs { display: flex; background: #f8f9fa; border-bottom: 2px solid #e9ecef; }
+    .tab-btn {
+      flex: 1; padding: 18px 20px; border: none; background: transparent;
+      font-size: 15px; font-weight: 600; color: #6c757d; cursor: pointer; transition: all 0.3s ease; position: relative;
+    }
+    .tab-btn:hover { background: #e9ecef; color: #495057; }
+    .tab-btn.active { color: #E53935; background: white; }
+    .tab-btn.active::after {
+      content: ''; position: absolute; bottom: -2px; left: 0; right: 0; height: 3px;
+      background: linear-gradient(135deg, #E53935 0%, #FF7043 100%);
+    }
+    .tab-content { display: none; padding: 25px 30px; animation: fadeIn 0.3s ease; }
+    .tab-content.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .search-box { display: flex; gap: 12px; margin-bottom: 20px; }
+    .search-box input { flex: 1; padding: 14px 18px; border: 2px solid #e9ecef; border-radius: 10px; font-size: 15px; }
+    .search-box input:focus { border-color: #E53935; outline: none; }
+    .btn { padding: 14px 28px; border: none; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; }
+    .btn-primary { background: linear-gradient(135deg, #E53935 0%, #FF7043 100%); color: white; }
+    .btn-success { background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); color: white; }
+    .btn-danger { background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%); color: white; }
+    .btn-secondary { background: #6c757d; color: white; }
+    .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+    .result-list { max-height: 280px; overflow-y: auto; border: 2px solid #e9ecef; border-radius: 10px; }
+    .result-item { display: flex; justify-content: space-between; align-items: center; padding: 15px 18px; border-bottom: 1px solid #e9ecef; cursor: pointer; }
+    .result-item:hover { background: rgba(229,57,53,0.1); }
+    .form-section { display: none; animation: slideIn 0.4s ease; }
+    .form-section.active { display: block; }
+    @keyframes slideIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+    .form-header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 20px; margin-bottom: 20px; border-bottom: 2px solid #e9ecef; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+    .form-group { display: flex; flex-direction: column; }
+    .form-group.full-width { grid-column: 1 / -1; }
+    .form-group label { font-size: 13px; font-weight: 600; color: #495057; margin-bottom: 8px; }
+    .form-group input, .form-group select, .form-group textarea { padding: 12px 15px; border: 2px solid #e9ecef; border-radius: 8px; font-size: 14px; }
+    .button-row { display: flex; gap: 12px; margin-top: 25px; justify-content: flex-end; }
+    .button-row.space-between { justify-content: space-between; }
+    .back-link { display: inline-flex; align-items: center; gap: 6px; color: #E53935; font-weight: 600; cursor: pointer; margin-bottom: 20px; }
+    .toast-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); display: flex; justify-content: center; align-items: center; z-index: 9999; opacity: 0; visibility: hidden; transition: all 0.3s; }
+    .toast-overlay.show { opacity: 1; visibility: visible; }
+    .toast-box { background: white; padding: 40px 50px; border-radius: 20px; text-align: center; transform: scale(0.8); transition: transform 0.3s; }
+    .toast-overlay.show .toast-box { transform: scale(1); }
+    .toast-title { font-size: 24px; font-weight: 700; margin-bottom: 12px; }
+    .toast-btn { background: #E53935; color: white; border: none; padding: 10px 30px; border-radius: 20px; cursor: pointer; margin-top: 20px; font-size: 16px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🏢 供應商管理</h1>
+      <p>新增、修改、刪除供應商資料</p>
+    </div>
+    
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab('add')">➕ 新增供應商</button>
+      <button class="tab-btn" onclick="switchTab('edit')">✏️ 修改/刪除</button>
+    </div>
+    
+    <div id="tab-add" class="tab-content active">
+      <form id="addForm" onsubmit="submitAddForm(event)">
+        <div class="form-grid">
+          <div class="form-group"><label>供應商名稱 *</label><input type="text" id="add-name" required></div>
+          <div class="form-group"><label>聯絡人</label><input type="text" id="add-contact"></div>
+          <div class="form-group"><label>電話</label><input type="text" id="add-phone"></div>
+          <div class="form-group"><label>手機</label><input type="text" id="add-mobile"></div>
+          <div class="form-group full-width"><label>地址</label><input type="text" id="add-address"></div>
+          <div class="form-group"><label>Email</label><input type="email" id="add-email"></div>
+          <div class="form-group"><label>統一編號</label><input type="text" id="add-taxId"></div>
+          <div class="form-group">
+            <label>付款條件 *</label>
+            <select id="add-paymentTerm" required>
+              <option value="貨到付現">貨到付現</option>
+              <option value="月結30天">月結30天</option><option value="月結60天">月結60天</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>付款方式 *</label>
+            <select id="add-paymentMethod" required>
+              <option value="現金">現金</option><option value="轉帳匯款">轉帳匯款</option>
+            </select>
+          </div>
+          <div class="form-group"><label>銀行帳號</label><input type="text" id="add-bankAccount"></div>
+          <div class="form-group">
+            <label>供應商類型 *</label>
+            <select id="add-supplierType" required>
+              <option value="進貨供應商">進貨供應商</option><option value="其他">其他</option>
+            </select>
+          </div>
+          <div class="form-group full-width"><label>備註</label><textarea id="add-note"></textarea></div>
+        </div>
+        <div class="button-row">
+          <button type="button" class="btn btn-secondary" onclick="document.getElementById('addForm').reset()">🔄 清除</button>
+          <button type="submit" class="btn btn-success" id="addBtn">✅ 儲存供應商</button>
+        </div>
+      </form>
+    </div>
+    
+    <div id="tab-edit" class="tab-content">
+      <div id="searchSection">
+        <div class="search-box">
+          <input type="text" id="searchInput" placeholder="輸入關鍵字..." onkeypress="if(event.key==='Enter') searchSupplier()">
+          <button class="btn btn-primary" onclick="searchSupplier()">搜尋</button>
+        </div>
+        <div id="searchResults"></div>
+      </div>
+      
+      <div id="editFormSection" class="form-section">
+        <div class="back-link" onclick="backToSearch()">← 返回搜尋</div>
+        <div class="form-header"><h3>✏️ 編輯供應商</h3><span id="displayId" style="font-weight:bold; color:#E53935;"></span></div>
+        <input type="hidden" id="edit-id"><input type="hidden" id="edit-rowIndex">
+        
+        <div class="form-grid">
+          <div class="form-group"><label>供應商名稱 *</label><input type="text" id="edit-name" required></div>
+          <div class="form-group"><label>聯絡人</label><input type="text" id="edit-contact"></div>
+          <div class="form-group"><label>電話</label><input type="text" id="edit-phone"></div>
+          <div class="form-group"><label>手機</label><input type="text" id="edit-mobile"></div>
+          <div class="form-group full-width"><label>地址</label><input type="text" id="edit-address"></div>
+          <div class="form-group"><label>Email</label><input type="email" id="edit-email"></div>
+          <div class="form-group"><label>統一編號</label><input type="text" id="edit-taxId"></div>
+          <div class="form-group">
+            <label>付款條件</label>
+            <select id="edit-paymentTerm">
+              <option value="貨到付現">貨到付現</option><option value="月結15天">月結15天</option>
+              <option value="月結30天">月結30天</option><option value="月結45天">月結45天</option><option value="月結60天">月結60天</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>付款方式</label>
+            <select id="edit-paymentMethod">
+              <option value="現金">現金</option><option value="轉帳">轉帳</option><option value="支票">支票</option>
+            </select>
+          </div>
+          <div class="form-group"><label>銀行帳號</label><input type="text" id="edit-bankAccount"></div>
+          
+          <div class="form-group">
+            <label>供應商類型</label>
+            <select id="edit-supplierType">
+              <option value="進貨供應商">進貨供應商</option><option value="公用事業">公用事業</option>
+              <option value="房東">房東</option><option value="餐飲">餐飲</option><option value="其他">其他</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>狀態</label>
+            <select id="edit-status"><option value="啟用">啟用</option><option value="停用">停用</option></select>
+          </div>
+          <div class="form-group full-width"><label>備註</label><textarea id="edit-note"></textarea></div>
+        </div>
+        
+        <div class="button-row space-between">
+          <button type="button" class="btn btn-danger" id="deleteBtn" onclick="deleteSupplier()">🗑️ 刪除</button>
+          <button type="button" class="btn btn-success" id="saveBtn" onclick="saveChanges()">💾 儲存</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="toastOverlay" class="toast-overlay">
+    <div class="toast-box">
+      <div id="toastTitle" class="toast-title"></div>
+      <div id="toastMessage"></div>
+      <button class="toast-btn" onclick="document.getElementById('toastOverlay').classList.remove('show')">確定</button>
+    </div>
+  </div>
+
+  <script>
+    function switchTab(tab) {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      event.target.classList.add('active');
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      document.getElementById('tab-' + tab).classList.add('active');
+      if(tab === 'edit') backToSearch();
+    }
+
+    function showToast(title, msg) {
+      document.getElementById('toastTitle').innerText = title;
+      document.getElementById('toastMessage').innerText = msg;
+      document.getElementById('toastOverlay').classList.add('show');
+    }
+
+    function submitAddForm(e) {
+      e.preventDefault();
+      var btn = document.getElementById('addBtn');
+      btn.disabled = true; btn.innerText = '⏳ 儲存中...';
+      
+      var data = {
+        name: document.getElementById('add-name').value,
+        contact: document.getElementById('add-contact').value,
+        phone: document.getElementById('add-phone').value,
+        mobile: document.getElementById('add-mobile').value,
+        address: document.getElementById('add-address').value,
+        email: document.getElementById('add-email').value,
+        taxId: document.getElementById('add-taxId').value,
+        paymentTerm: document.getElementById('add-paymentTerm').value,
+        paymentMethod: document.getElementById('add-paymentMethod').value,
+        bankAccount: document.getElementById('add-bankAccount').value,
+        supplierType: document.getElementById('add-supplierType').value,
+        note: document.getElementById('add-note').value
+      };
+
+      google.script.run.withSuccessHandler(function(res) {
+        btn.disabled = false; btn.innerText = '✅ 儲存供應商';
+        if (res.success) { showToast('成功', '已新增供應商！'); document.getElementById('addForm').reset(); }
+        else { showToast('失敗', res.error); }
+      }).withFailureHandler(function(e){ btn.disabled = false; showToast('錯誤', e.message); }).addSupplier(data);
+    }
+
+    function searchSupplier() {
+      var key = document.getElementById('searchInput').value;
+      document.getElementById('searchResults').innerHTML = '<div style="text-align:center;padding:20px;">⏳ 搜尋中...</div>';
+      google.script.run.withSuccessHandler(renderResults).searchSuppliersByKeyword(key);
+    }
+
+    function renderResults(results) {
+      var html = '';
+      if (!results || results.length === 0) html = '<div class="no-result">無符合資料</div>';
+      else {
+        html = '<div class="result-list">';
+        results.forEach(s => {
+          html += `<div class="result-item" onclick="loadSupplier('${s.id}')">
+            <div><div class="name">${s.name}</div><div class="detail">${s.id}</div></div>
+            <div class="arrow">→</div></div>`;
+        });
+        html += '</div>';
+      }
+      document.getElementById('searchResults').innerHTML = html;
+    }
+
+    function loadSupplier(id) {
+      google.script.run.withSuccessHandler(function(res) {
+        if (res.success) {
+          var s = res.supplier;
+          document.getElementById('edit-id').value = s.id;
+          document.getElementById('edit-rowIndex').value = s.rowIndex;
+          document.getElementById('displayId').innerText = s.id;
+          document.getElementById('edit-name').value = s.name;
+          document.getElementById('edit-contact').value = s.contact;
+          document.getElementById('edit-phone').value = s.phone;
+          document.getElementById('edit-mobile').value = s.mobile;
+          document.getElementById('edit-address').value = s.address;
+          document.getElementById('edit-email').value = s.email;
+          document.getElementById('edit-taxId').value = s.taxId;
+          document.getElementById('edit-paymentTerm').value = s.paymentTerm;
+          document.getElementById('edit-paymentMethod').value = s.paymentMethod;
+          document.getElementById('edit-bankAccount').value = s.bankAccount;
+          // 這行就是之前導致錯誤的原因，現在 HTML 有這個欄位了，所以不會報錯
+          document.getElementById('edit-supplierType').value = s.supplierType || '進貨供應商';
+          document.getElementById('edit-status').value = s.status;
+          document.getElementById('edit-note').value = s.note;
+          
+          document.getElementById('searchSection').style.display = 'none';
+          document.getElementById('editFormSection').classList.add('active');
+        } else { showToast('錯誤', res.error); }
+      }).getSupplierById(id);
+    }
+
+    function backToSearch() {
+      document.getElementById('editFormSection').classList.remove('active');
+      document.getElementById('searchSection').style.display = 'block';
+    }
+
+    function saveChanges() {
+      var btn = document.getElementById('saveBtn');
+      btn.disabled = true; btn.innerText = '⏳ 儲存中...';
+      var data = {
+        id: document.getElementById('edit-id').value,
+        rowIndex: Number(document.getElementById('edit-rowIndex').value),
+        name: document.getElementById('edit-name').value,
+        contact: document.getElementById('edit-contact').value,
+        phone: document.getElementById('edit-phone').value,
+        mobile: document.getElementById('edit-mobile').value,
+        address: document.getElementById('edit-address').value,
+        email: document.getElementById('edit-email').value,
+        taxId: document.getElementById('edit-taxId').value,
+        paymentTerm: document.getElementById('edit-paymentTerm').value,
+        paymentMethod: document.getElementById('edit-paymentMethod').value,
+        bankAccount: document.getElementById('edit-bankAccount').value,
+        supplierType: document.getElementById('edit-supplierType').value,
+        status: document.getElementById('edit-status').value,
+        note: document.getElementById('edit-note').value
+      };
+      google.script.run.withSuccessHandler(function(res){
+        btn.disabled = false; btn.innerText = '💾 儲存';
+        if(res.success) showToast('成功', '資料已更新');
+        else showToast('失敗', res.error);
+      }).updateSupplier(data);
+    }
+
+    function deleteSupplier() {
+      if(!confirm('⚠️ 確定要刪除此供應商嗎？無法復原！')) return;
+      var id = document.getElementById('edit-id').value;
+      var btn = document.getElementById('deleteBtn');
+      btn.disabled = true; btn.innerText = '⏳ 刪除中...';
+      google.script.run.withSuccessHandler(function(res){
+        btn.disabled = false; btn.innerText = '🗑️ 刪除';
+        if(res.success) {
+          showToast('成功', '供應商已刪除');
+          backToSearch();
+          searchSupplier(); // 重新整理列表
+        } else showToast('失敗', res.error);
+      }).deleteSupplier(id);
+    }
+  </script>
+</body>
+</html>

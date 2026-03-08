@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>收款提醒</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#fffbf0;--surface:#ffffff;--surface2:#fdf5d8;--border:#f5e0a0;
+  --text:#3d2a00;--text2:#92660a;--accent:#b45309;--danger:#c53030;
+  --success:#276749;--warning:#b7791f;--orange:#c05621;--accent-light:#fef3c7;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding:20px;}
+
+.page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;}
+.page-title{font-size:18px;font-weight:700;}
+.header-actions{display:flex;gap:8px;}
+
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px;}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;}
+.stat-val{font-size:20px;font-weight:700;margin-bottom:2px;}
+.stat-lbl{font-size:11px;color:var(--text2);}
+
+.tabs{display:flex;gap:4px;margin-bottom:16px;}
+.tab{padding:7px 16px;border-radius:7px;border:1px solid var(--border);background:var(--surface);color:var(--text2);font-size:13px;cursor:pointer;font-family:inherit;}
+.tab.active{background:var(--accent);color:#fff;border-color:var(--accent);}
+
+.table-wrap{border-radius:10px;overflow:hidden;border:1px solid var(--border);}
+table{width:100%;border-collapse:collapse;background:var(--surface);}
+th{padding:10px 14px;text-align:left;font-size:11px;color:var(--text2);background:var(--surface2);border-bottom:1px solid var(--border);}
+td{padding:10px 14px;font-size:13px;border-bottom:1px solid var(--border);}
+tr:last-child td{border-bottom:none;}
+tbody tr:hover{background:var(--surface2);}
+.text-right{text-align:right;}
+
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;}
+.badge-danger{background:#fee2e2;color:var(--danger);}
+.badge-warning{background:#fef3c7;color:var(--warning);}
+.badge-success{background:#d1fae5;color:var(--success);}
+
+.btn{padding:6px 12px;border-radius:6px;border:none;font-size:12px;font-family:inherit;cursor:pointer;font-weight:500;transition:all 0.15s;}
+.btn-sm{padding:4px 10px;font-size:11px;}
+.btn-primary{background:var(--accent);color:#fff;}
+.btn-primary:hover{opacity:0.85;}
+.btn-success{background:#d1fae5;color:var(--success);border:1px solid rgba(56,232,197,0.3);}
+.btn-danger{background:#fee2e2;color:var(--danger);border:1px solid rgba(229,62,62,0.2);}
+.btn-secondary{background:var(--surface2);color:var(--text2);border:1px solid var(--border);}
+
+.empty{text-align:center;padding:40px;color:var(--text2);font-size:13px;}
+.overdue{color:var(--danger);font-weight:600;}
+
+.toast{position:fixed;bottom:24px;right:24px;padding:12px 20px;border-radius:9px;font-size:13px;font-weight:500;z-index:10000;animation:slideIn 0.3s ease;}
+.toast.success{background:#d1fae5;border:1px solid var(--success);color:var(--success);}
+.toast.error{background:#fee2e2;border:1px solid var(--danger);color:var(--danger);}
+@keyframes slideIn{from{transform:translateX(120%);opacity:0;}to{transform:translateX(0);opacity:1;}}
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <div class="page-title">收款提醒</div>
+  <div class="header-actions">
+    <button class="btn btn-danger btn-sm" onclick="clearCompleted()">清除已完成</button>
+    <button class="btn btn-secondary btn-sm" onclick="clearAll()">全部清除</button>
+  </div>
+</div>
+
+<div class="stats">
+  <div class="stat-card">
+    <div class="stat-val overdue" id="stOverdue">0</div>
+    <div class="stat-lbl">已到期未處理</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-val" style="color:var(--warning);" id="stPending">0</div>
+    <div class="stat-lbl">待提醒</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-val" style="color:var(--success);" id="stDone">0</div>
+    <div class="stat-lbl">已完成</div>
+  </div>
+</div>
+
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('all',this)">全部</button>
+  <button class="tab" onclick="switchTab('overdue',this)">已到期</button>
+  <button class="tab" onclick="switchTab('pending',this)">待提醒</button>
+  <button class="tab" onclick="switchTab('done',this)">已完成</button>
+</div>
+
+<div class="table-wrap">
+  <table>
+    <thead><tr>
+      <th>銷貨單號</th><th>客戶</th><th class="text-right">金額</th><th>開單日期</th><th>提醒日期</th><th>狀態</th><th>操作</th>
+    </tr></thead>
+    <tbody id="tbody"></tbody>
+  </table>
+</div>
+
+<script>
+const today = new Date().toISOString().split('T')[0];
+let currentTab = 'all';
+
+function getReminders() {
+  return JSON.parse(localStorage.getItem('ck_paymentReminders') || '[]');
+}
+function saveReminders(list) {
+  localStorage.setItem('ck_paymentReminders', JSON.stringify(list));
+  try { window.parent.updateReminderBadge(); } catch(e) {}
+  try { window.parent.postMessage('updateReminder','*'); } catch(e) {}
+}
+
+function showToast(msg, type='success') {
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3000);
+}
+
+function switchTab(tab, el) {
+  currentTab = tab;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  render();
+}
+
+function render() {
+  const all = getReminders();
+  const overdue = all.filter(r => r.status === '待提醒' && r.dueDate <= today);
+  const pending = all.filter(r => r.status === '待提醒' && r.dueDate > today);
+  const done = all.filter(r => r.status === '已完成');
+
+  document.getElementById('stOverdue').textContent = overdue.length;
+  document.getElementById('stPending').textContent = pending.length;
+  document.getElementById('stDone').textContent = done.length;
+
+  let list = all;
+  if (currentTab === 'overdue') list = overdue;
+  else if (currentTab === 'pending') list = pending;
+  else if (currentTab === 'done') list = done;
+
+  // Sort: overdue first, then by dueDate
+  list.sort((a, b) => {
+    if (a.status !== b.status) return a.status === '待提醒' ? -1 : 1;
+    return a.dueDate < b.dueDate ? -1 : 1;
+  });
+
+  if (!list.length) {
+    document.getElementById('tbody').innerHTML = '<tr><td colspan="7" class="empty">沒有提醒記錄</td></tr>';
+    return;
+  }
+
+  document.getElementById('tbody').innerHTML = list.map(r => {
+    const isOverdue = r.status === '待提醒' && r.dueDate <= today;
+    const statusHtml = r.status === '已完成'
+      ? '<span class="badge badge-success">已完成</span>'
+      : isOverdue
+        ? '<span class="badge badge-danger">已到期</span>'
+        : '<span class="badge badge-warning">待提醒</span>';
+    const actions = r.status === '待提醒'
+      ? `<button class="btn btn-success btn-sm" onclick="markDone(${r.id})">完成</button> <button class="btn btn-danger btn-sm" onclick="removeOne(${r.id})">刪除</button>`
+      : `<button class="btn btn-danger btn-sm" onclick="removeOne(${r.id})">刪除</button>`;
+    return `<tr>
+      <td><strong style="color:var(--accent)">${r.orderId}</strong></td>
+      <td>${r.customerName}</td>
+      <td class="text-right" style="font-weight:600;color:var(--orange);">NT$ ${Number(r.amount||0).toLocaleString()}</td>
+      <td>${r.orderDate}</td>
+      <td class="${isOverdue ? 'overdue' : ''}">${r.dueDate}</td>
+      <td>${statusHtml}</td>
+      <td>${actions}</td>
+    </tr>`;
+  }).join('');
+}
+
+function markDone(id) {
+  const list = getReminders();
+  const r = list.find(x => x.id === id);
+  if (r) r.status = '已完成';
+  saveReminders(list);
+  showToast('已標記為完成');
+  render();
+}
+
+function removeOne(id) {
+  let list = getReminders();
+  list = list.filter(x => x.id !== id);
+  saveReminders(list);
+  showToast('已刪除');
+  render();
+}
+
+function clearCompleted() {
+  let list = getReminders();
+  const before = list.length;
+  list = list.filter(r => r.status !== '已完成');
+  if (list.length === before) { showToast('沒有已完成的提醒', 'error'); return; }
+  saveReminders(list);
+  showToast('已清除已完成項目');
+  render();
+}
+
+function clearAll() {
+  if (!confirm('確定要清除所有提醒嗎？')) return;
+  saveReminders([]);
+  showToast('已全部清除');
+  render();
+}
+
+render();
+</script>
+</body>
+</html>

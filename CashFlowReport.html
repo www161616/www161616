@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>龍潭央廚 - 收支統計報表</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+:root {
+  --bg:#fffbf0;
+  --surface:#ffffff;
+  --surface2:#fdf5d8;
+  --surface-sidebar:#fef9ec;
+  --border:#f5e0a0;
+  --text:#3d2a00;
+  --text2:#92660a;
+  --accent:#b45309;
+  --accent2:#d97706;
+  --danger:#c53030;
+  --success:#276749;
+  --warning:#b7791f;
+  --orange:#c05621;
+  --purple:#553c9a;
+  --pink:#b83280;
+  --teal:#0e7490;
+  --surface-dark:#f5c842;
+  --text-on-dark:#5a3a00;
+  --accent-light:#fef3c7;
+  --shadow:rgba(180,83,9,0.07);
+}
+body { font-family:'Noto Sans TC',sans-serif; background:var(--bg); color:var(--text); height:100vh; display:flex; flex-direction:column; overflow:hidden; }
+
+/* 導覽列 */
+.navbar { background:var(--surface); border-bottom:1px solid var(--border); padding:0 20px; height:52px; display:flex; align-items:center; justify-content:space-between; flex-shrink:0; }
+.navbar-brand { font-size:15px; font-weight:700; color:var(--accent); }
+.navbar-brand span { color:var(--text2); font-weight:400; font-size:13px; margin-left:10px; }
+.nav-links { display:flex; gap:4px; }
+.nav-btn { padding:6px 14px; border-radius:6px; border:none; background:transparent; color:var(--text2); font-size:13px; cursor:pointer; font-family:inherit; transition:all 0.15s; }
+.nav-btn:hover { background:var(--surface2); color:var(--text); }
+.nav-btn.active { background:var(--accent); color:white; }
+
+/* 主要內容區 */
+.main { flex: 1; overflow-y: auto; padding: 20px; display: flex; justify-content: center; }
+.container { background: var(--surface); padding: 24px; border-radius: 12px; border: 1px solid var(--border); width: 100%; max-width: 800px; height: fit-content; }
+
+h2 { color: var(--accent); margin-bottom: 20px; font-size: 20px; border-bottom: 1px solid var(--border); padding-bottom: 12px; }
+
+/* 搜尋區 */
+.control-group { display: flex; gap: 12px; margin-bottom: 24px; }
+.form-control { flex: 1; padding: 12px 16px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 15px; font-family: inherit; outline: none; transition: border-color 0.15s; color-scheme: dark; }
+.form-control:focus { border-color: var(--accent); }
+.btn-search { padding: 12px 24px; background: var(--accent); color: white; border: none; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
+.btn-search:hover { background: #3d6be8; }
+
+/* 統計區塊 */
+.summary { background: var(--surface2); padding: 20px; border-radius: 10px; margin-bottom: 24px; border: 1px solid var(--border); display: none; }
+.summary-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px dashed var(--border); font-size: 15px; color: var(--text2); }
+.summary-row:last-child { border-bottom: none; }
+.summary-row span:last-child { font-weight: 600; color: var(--text); }
+.summary-row.total { font-size: 18px; font-weight: 700; color: var(--success); padding-top: 15px; border-top: 2px solid var(--border); margin-top: 5px; border-bottom: none; }
+.summary-row.total span:last-child { color: var(--success); }
+
+/* 明細區塊 */
+.detail-section { display: none; }
+h3 { color: var(--text); font-size: 16px; margin-bottom: 12px; border-left: 4px solid var(--orange); padding-left: 10px; }
+
+.data-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }
+.data-table th { background: var(--surface2); color: var(--text2); padding: 12px; text-align: left; border-bottom: 1px solid var(--border); font-weight: 500; }
+.data-table td { padding: 12px; border-bottom: 1px solid var(--border); color: var(--text); }
+.data-table tr:hover td { background: rgba(255,255,255,0.02); }
+.data-table tr:last-child td { border-bottom: none; }
+
+.amount-col { font-weight: 700; color: var(--orange); }
+.date-col { color: var(--text2); font-size: 12px; }
+
+.loading { text-align: center; padding: 40px; color: var(--text2); font-size: 14px; display: none; flex-direction: column; align-items: center; gap: 10px; }
+.spinner { width: 30px; height: 30px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="navbar-brand">🐟 龍潭央廚<span>進銷存系統</span></div>
+  <div class="nav-links">
+    <button class="nav-btn" onclick="location.href='SearchSales.html'">📋 銷貨查詢</button>
+    <button class="nav-btn" onclick="location.href='SalesOrder.html'">➕ 開銷貨單</button>
+    <button class="nav-btn" onclick="location.href='AddExpense.html'">📝 新增支出</button>
+    <button class="nav-btn active">📊 收支報表</button>
+  </div>
+</nav>
+
+<div class="main">
+  <div class="container">
+    <h2>📊 收支統計報表</h2>
+    
+    <div class="control-group">
+      <input type="month" id="month" class="form-control" />
+      <button class="btn-search" onclick="generate()">🔍 查詢結算</button>
+    </div>
+
+    <div id="loading" class="loading">
+      <div class="spinner"></div>
+      <div>正在計算數據中...</div>
+    </div>
+
+    <div id="report" class="summary"></div>
+
+    <div id="detailSection" class="detail-section">
+      <h3>📋 本月現金支出明細</h3>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th width="15%">日期</th>
+            <th width="15%">類別</th>
+            <th width="25%">項目</th>
+            <th width="15%" style="text-align:right">金額</th>
+            <th width="15%">對象</th>
+            <th width="15%">支付方式</th>
+          </tr>
+        </thead>
+        <tbody id="detailTableBody">
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://xuykenpvonfqwsgbuvvj.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh1eWtlbnB2b25mcXdzZ2J1dnZqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwMDY3MzgsImV4cCI6MjA4NzU4MjczOH0.HmIktEbkPc0e7eTdqJdMWVxMzYIh4YkZ4LewZfC4Qr4';
+const H = { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json' };
+
+async function api(table, params='') {
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${params}`, { headers: H });
+  if (!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+
+function fmt(num) {
+  return (num || 0).toLocaleString();
+}
+
+// 預設帶入當前月份
+window.onload = function() {
+  const today = new Date();
+  const yyyy = today.getFullYear();
+  const mm = String(today.getMonth() + 1).padStart(2, '0');
+  document.getElementById('month').value = `${yyyy}-${mm}`;
+  generate(); // 載入時自動查詢當月
+};
+
+async function generate() {
+  const monthVal = document.getElementById('month').value;
+  if (!monthVal) { alert('請選擇月份'); return; }
+
+  document.getElementById('loading').style.display = 'flex';
+  document.getElementById('report').style.display = 'none';
+  document.getElementById('detailSection').style.display = 'none';
+
+  try {
+    const [year, month] = monthVal.split('-').map(Number);
+    const firstDay = `${monthVal}-01`;
+    const lastDay = new Date(year, month, 0).toISOString().split('T')[0];
+
+    // 1. 撈取該月銷售收入 (抓取 sales_orders 資料表，依日期)
+    // 實務上可能只算 "已收款"，這裡為了簡化，先計算所有訂單總額
+    const sales = await api('sales_orders', `date=gte.${firstDay}&date=lte.${lastDay}&select=grand_total`);
+    const salesRevenue = sales.reduce((sum, order) => sum + Number(order.grand_total || 0), 0);
+
+    // 2. 撈取該月現金支出 (抓取 expenses 資料表)
+    const expenses = await api('expenses', `date=gte.${firstDay}&date=lte.${lastDay}&order=date.desc`);
+    const cashExpense = expenses.reduce((sum, exp) => sum + Number(exp.amount || 0), 0);
+
+    // 3. 撈取該月進貨支出 (抓取 purchase_orders 資料表，假設存在)
+    // 如果您沒有 purchase_orders 資料表，這裡會捕捉到錯誤並將進貨支出設為 0
+    let supplierPayment = 0;
+    try {
+      const purchases = await api('purchase_orders', `date=gte.${firstDay}&date=lte.${lastDay}&select=grand_total`);
+      supplierPayment = purchases.reduce((sum, po) => sum + Number(po.grand_total || 0), 0);
+    } catch(err) {
+      console.warn('查無進貨單資料表或權限不足，進貨支出預設為 0');
+    }
+
+    // 計算本月淨利
+    const balance = salesRevenue - cashExpense - supplierPayment;
+
+    displayData({ salesRevenue, cashExpense, supplierPayment, balance, expenses });
+
+  } catch(e) {
+    document.getElementById('loading').style.display = 'none';
+    alert("讀取失敗：" + e.message);
+  }
+}
+
+function displayData(data) {
+  document.getElementById('loading').style.display = 'none';
+  
+  // 1. 顯示統計摘要
+  const reportDiv = document.getElementById('report');
+  reportDiv.style.display = 'block';
+  
+  // 淨利顏色判斷 (負數顯示紅色)
+  const balanceColor = data.balance >= 0 ? 'var(--success)' : 'var(--danger)';
+  
+  reportDiv.innerHTML = `
+    <div class="summary-row"><span>💰 銷售收入</span><span>NT$ ${fmt(data.salesRevenue)}</span></div>
+    <div class="summary-row"><span>💵 日常支出</span><span style="color:var(--orange)">- NT$ ${fmt(data.cashExpense)}</span></div>
+    <div class="summary-row"><span>💸 進貨支出</span><span style="color:var(--orange)">- NT$ ${fmt(data.supplierPayment)}</span></div>
+    <div class="summary-row total"><span>💎 本月結餘 (淨利)</span><span style="color:${balanceColor}">NT$ ${fmt(data.balance)}</span></div>
+  `;
+
+  // 2. 顯示明細列表
+  const tbody = document.getElementById('detailTableBody');
+  tbody.innerHTML = ''; 
+
+  if (data.expenses.length > 0) {
+    document.getElementById('detailSection').style.display = 'block';
+    
+    data.expenses.forEach(item => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td class="date-col">${item.date.substring(5)}</td>
+        <td><span style="background:rgba(255,159,67,0.15);color:var(--orange);padding:2px 6px;border-radius:4px;font-size:11px;">${item.category}</span></td>
+        <td style="font-weight:500;">${item.item}</td>
+        <td class="amount-col" style="text-align:right">$${fmt(item.amount)}</td>
+        <td style="color:var(--text2);font-size:12px;">${item.recipient || '-'}</td>
+        <td style="color:var(--text2);font-size:12px;">${item.payment_method}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+  } else {
+    document.getElementById('detailSection').style.display = 'block';
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:30px; color:var(--text2);">本月無支出紀錄 🍃</td></tr>';
+  }
+}
+</script>
+
+</body>
+</html>

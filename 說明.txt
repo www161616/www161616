@@ -1,0 +1,21 @@
+【龍潭央廚進銷存系統 - 背景說明】
+
+資料庫：Supabase（東京）
+Project URL：https://xuykenpvonfqwsgbuvvj.supabase.co
+Anon Key：eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh1eWtlbnB2b25mcXdzZ2J1dnZqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwMDY3MzgsImV4cCI6MjA4NzU4MjczOH0.HmIktEbkPc0e7eTdqJdMWVxMzYIh4YkZ4LewZfC4Qr4
+
+系統架構：純 HTML + JavaScript，直接連 Supabase REST API
+不使用 Google Apps Script，不需要伺服器
+
+已完成的 HTML 檔案：
+- index.html（首頁儀表板）
+- 銷貨單查詢.html
+- 開立銷貨單.html
+- 開立進貨單.html
+- 月結報表.html
+
+設計風格：深色主題（--bg:#0f1117）、Noto Sans TC 字體
+
+尚未完成的頁面（參考 GS 原始碼建立）：
+進貨單查詢、應收帳款、應付帳款、庫存查詢、
+庫存盤點、庫存預警、供應商管理、商品管理等

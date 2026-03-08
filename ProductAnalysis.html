@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>龍潭央廚 - 商品銷售分析</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+:root {
+  --bg:#fffbf0;
+  --surface:#ffffff;
+  --surface2:#fdf5d8;
+  --surface-sidebar:#fef9ec;
+  --border:#f5e0a0;
+  --text:#3d2a00;
+  --text2:#92660a;
+  --accent:#b45309;
+  --accent2:#d97706;
+  --danger:#c53030;
+  --success:#276749;
+  --warning:#b7791f;
+  --orange:#c05621;
+  --purple:#553c9a;
+  --pink:#b83280;
+  --teal:#0e7490;
+  --surface-dark:#f5c842;
+  --text-on-dark:#5a3a00;
+  --accent-light:#fef3c7;
+  --shadow:rgba(180,83,9,0.07);
+}
+body { font-family:'Noto Sans TC',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; display:flex; flex-direction:column; }
+
+/* Navbar */
+.navbar { background:var(--surface); border-bottom:1px solid var(--border); padding:0 20px; height:52px; display:flex; align-items:center; justify-content:space-between; flex-shrink:0; position:sticky; top:0; z-index:100; }
+.navbar-brand { font-size:15px; font-weight:700; color:var(--accent); display:flex; align-items:center; gap:8px; }
+.navbar-brand span { color:var(--text2); font-weight:400; font-size:13px; margin-left:6px; }
+.nav-links { display:flex; gap:4px; }
+.nav-btn { padding:6px 14px; border-radius:6px; border:none; background:transparent; color:var(--text2); font-size:13px; cursor:pointer; font-family:inherit; transition:all 0.15s; text-decoration:none; display:inline-flex; align-items:center; }
+.nav-btn:hover { background:var(--surface2); color:var(--text); }
+
+/* Main */
+.main { flex:1; padding:24px; display:flex; justify-content:center; }
+.container { width:100%; max-width:1100px; display:flex; flex-direction:column; gap:20px; }
+
+/* Controls */
+.controls-card { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:16px 20px; display:flex; align-items:center; gap:14px; box-shadow:0 4px 15px rgba(0,0,0,0.2); flex-wrap:wrap; }
+.controls-card h2 { font-size:18px; color:var(--accent); flex-grow:1; display:flex; align-items:center; gap:8px; white-space:nowrap; }
+.ctrl-group { display:flex; align-items:center; gap:8px; }
+.ctrl-group label { font-size:13px; color:var(--text2); white-space:nowrap; }
+input[type="date"] {
+  padding:8px 12px; font-size:14px; background:var(--bg); border:1px solid var(--border);
+  border-radius:8px; color:var(--text); outline:none; color-scheme:dark; font-family:inherit;
+  transition:border-color 0.2s;
+}
+input[type="date"]:focus { border-color:var(--accent); }
+.ctrl-sep { color:var(--border); font-size:18px; }
+.btn { padding:8px 18px; color:white; border:none; border-radius:8px; cursor:pointer; font-size:14px; font-weight:600; display:inline-flex; align-items:center; gap:6px; transition:all 0.2s; font-family:inherit; white-space:nowrap; }
+.btn-primary { background:var(--accent); }
+.btn-primary:hover { background:#3d6be8; transform:translateY(-1px); }
+.btn-primary:active { transform:translateY(0); }
+.btn:disabled { opacity:0.5; cursor:not-allowed; pointer-events:none; }
+
+/* Quick Range Buttons */
+.quick-btns { display:flex; gap:6px; flex-wrap:wrap; }
+.quick-btn { padding:5px 12px; border-radius:6px; border:1px solid var(--border); background:transparent; color:var(--text2); font-size:12px; cursor:pointer; font-family:inherit; transition:all 0.15s; }
+.quick-btn:hover { border-color:var(--accent); color:var(--accent); background:rgba(180,83,9,0.08); }
+
+/* Summary Cards */
+.summary-grid { display:grid; grid-template-columns:repeat(4, 1fr); gap:14px; }
+.stat-card { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:18px 20px; border-top-width:4px; box-shadow:0 4px 12px rgba(0,0,0,0.15); }
+.stat-card.c-revenue  { border-top-color:var(--orange); }
+.stat-card.c-profit   { border-top-color:var(--success); }
+.stat-card.c-products { border-top-color:var(--accent); }
+.stat-card.c-lines    { border-top-color:var(--purple); }
+.stat-label { font-size:12px; color:var(--text2); margin-bottom:8px; font-weight:500; }
+.stat-value { font-size:24px; font-weight:700; }
+.stat-card.c-revenue  .stat-value { color:var(--orange); }
+.stat-card.c-profit   .stat-value { color:var(--success); }
+.stat-card.c-products .stat-value { color:var(--accent); }
+.stat-card.c-lines    .stat-value { color:var(--purple); }
+.stat-sub { font-size:11px; color:var(--text2); margin-top:8px; padding-top:8px; border-top:1px dashed var(--border); }
+
+/* Section */
+.section { background:var(--surface); border:1px solid var(--border); border-radius:12px; overflow:hidden; box-shadow:0 4px 12px rgba(0,0,0,0.15); }
+.section-header { padding:14px 20px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; background:var(--surface2); }
+.section-title { font-size:15px; font-weight:700; display:flex; align-items:center; gap:8px; }
+.section-meta { font-size:12px; color:var(--text2); }
+
+/* Table */
+table { width:100%; border-collapse:collapse; font-size:13px; }
+thead th { background:var(--surface2); color:var(--text2); font-weight:500; padding:10px 16px; text-align:right; border-bottom:1px solid var(--border); white-space:nowrap; }
+thead th:first-child { text-align:center; width:50px; }
+thead th:nth-child(2) { text-align:left; width:100px; }
+thead th:nth-child(3) { text-align:left; }
+tbody td { padding:12px 16px; border-bottom:1px solid var(--border); text-align:right; color:var(--text); vertical-align:middle; }
+tbody td:first-child { text-align:center; }
+tbody td:nth-child(2) { text-align:left; }
+tbody td:nth-child(3) { text-align:left; }
+tbody tr:last-child td { border-bottom:none; }
+tbody tr:hover td { background:rgba(255,255,255,0.02); }
+
+/* Rank Badge */
+.rank-badge { display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border-radius:50%; font-size:12px; font-weight:700; background:var(--surface2); color:var(--text2); }
+.rank-badge.gold   { background:linear-gradient(135deg,#f6d365,#fda085); color:#1a1003; font-size:13px; box-shadow:0 0 10px rgba(253,163,5,0.4); }
+.rank-badge.silver { background:linear-gradient(135deg,#a8b0c0,#d0d8e8); color:#3d2a00; }
+.rank-badge.bronze { background:linear-gradient(135deg,#cd7f32,#e8a87c); color:#3d2a00; }
+
+/* Product ID */
+.product-id { font-size:10px; color:var(--text2); background:var(--surface2); padding:2px 7px; border-radius:4px; font-family:monospace; display:inline-block; margin-bottom:3px; }
+.product-name { font-weight:600; font-size:13px; }
+.champion-row td { background:rgba(255,193,7,0.04) !important; }
+.champion-row .product-name { color:var(--warning); }
+
+/* Progress bar */
+.bar-wrap { display:flex; align-items:center; gap:8px; justify-content:flex-end; }
+.bar-bg { width:80px; height:6px; background:var(--border); border-radius:3px; overflow:hidden; flex-shrink:0; }
+.bar-fill { height:100%; border-radius:3px; transition:width 0.6s ease; }
+.bar-orange { background:var(--orange); }
+.bar-teal   { background:var(--success); }
+
+/* Qty chip */
+.qty-chip { display:inline-flex; align-items:center; gap:4px; background:rgba(162,155,254,0.12); color:var(--purple); padding:3px 10px; border-radius:20px; font-size:12px; font-weight:600; }
+
+/* NA tag */
+.na-tag { color:var(--text2); font-size:12px; background:var(--surface2); padding:2px 8px; border-radius:4px; }
+
+/* Loading */
+.loading-box { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:60px; text-align:center; display:none; flex-direction:column; align-items:center; gap:16px; }
+.spinner { width:42px; height:42px; border:4px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:spin 0.8s linear infinite; }
+@keyframes spin { to { transform:rotate(360deg); } }
+.loading-text { font-size:15px; font-weight:600; color:var(--text); }
+.loading-sub  { font-size:13px; color:var(--text2); }
+
+/* Empty State */
+.empty-state { padding:60px 20px; text-align:center; color:var(--text2); }
+.empty-icon { font-size:48px; margin-bottom:12px; opacity:0.5; }
+.empty-text { font-size:15px; }
+.empty-sub  { font-size:13px; margin-top:6px; opacity:0.7; }
+
+/* Toast */
+.toast-container { position:fixed; top:70px; right:20px; display:flex; flex-direction:column; gap:8px; z-index:999; pointer-events:none; }
+.toast { padding:12px 18px; border-radius:10px; font-size:13px; font-weight:500; display:flex; align-items:center; gap:10px; pointer-events:auto; box-shadow:0 4px 20px rgba(0,0,0,0.4); animation:slideIn 0.3s ease; max-width:340px; }
+.toast.success { background:var(--surface2); border:1px solid var(--success); color:var(--success); }
+.toast.error   { background:var(--surface2); border:1px solid var(--danger);  color:var(--danger);  }
+.toast.info    { background:var(--surface2); border:1px solid var(--accent);  color:var(--accent);  }
+@keyframes slideIn  { from { opacity:0; transform:translateX(20px); } to { opacity:1; transform:translateX(0); } }
+@keyframes slideOut { from { opacity:1; transform:translateX(0); } to { opacity:0; transform:translateX(20px); } }
+.toast.out { animation:slideOut 0.3s ease forwards; }
+
+::-webkit-scrollbar { width:5px; height:5px; }
+::-webkit-scrollbar-track { background:transparent; }
+::-webkit-scrollbar-thumb { background:var(--border); border-radius:3px; }
+</style>
+</head>
+<body>
+
+<!-- Navbar -->
+<nav class="navbar">
+  <div class="navbar-brand">🛍️ 商品銷售分析<span>龍潭央廚 ERP</span></div>
+  <div class="nav-links">
+    <a class="nav-btn" href="index.html">🏠 首頁</a>
+    <a class="nav-btn" href="SearchSales.html">📋 銷貨查詢</a>
+    <a class="nav-btn" href="CustomerAnalysis.html">🧩 客戶分析</a>
+    <a class="nav-btn" href="ProductList.html">🍎 商品管理</a>
+  </div>
+</nav>
+
+<!-- Toast Container -->
+<div class="toast-container" id="toastContainer"></div>
+
+<div class="main">
+  <div class="container">
+
+    <!-- Controls -->
+    <div class="controls-card">
+      <h2>🛍️ 商品銷售分析</h2>
+      <div class="ctrl-group">
+        <label>開始日期</label>
+        <input type="date" id="dateStart">
+      </div>
+      <span class="ctrl-sep">—</span>
+      <div class="ctrl-group">
+        <label>結束日期</label>
+        <input type="date" id="dateEnd">
+      </div>
+      <div class="quick-btns">
+        <button class="quick-btn" onclick="setRange('thisMonth')">本月</button>
+        <button class="quick-btn" onclick="setRange('lastMonth')">上月</button>
+        <button class="quick-btn" onclick="setRange('last7')">近7天</button>
+        <button class="quick-btn" onclick="setRange('last30')">近30天</button>
+      </div>
+      <button class="btn btn-primary" id="queryBtn" onclick="runAnalysis()">🔍 查詢分析</button>
+    </div>
+
+    <!-- Loading -->
+    <div class="loading-box" id="loading">
+      <div class="spinner"></div>
+      <div class="loading-text">正在分析商品銷售資料...</div>
+      <div class="loading-sub">查詢訂單明細，統計各商品銷售量與毛利，請稍候</div>
+    </div>
+
+    <!-- Results -->
+    <div id="results" style="display:none;">
+
+      <!-- Summary Cards -->
+      <div class="summary-grid">
+        <div class="stat-card c-revenue">
+          <div class="stat-label">區間總銷售額</div>
+          <div class="stat-value" id="sumRevenue">NT$0</div>
+          <div class="stat-sub" id="sumRevenueSub">-</div>
+        </div>
+        <div class="stat-card c-profit">
+          <div class="stat-label">區間總毛利</div>
+          <div class="stat-value" id="sumProfit">NT$0</div>
+          <div class="stat-sub" id="sumProfitSub">-</div>
+        </div>
+        <div class="stat-card c-products">
+          <div class="stat-label">商品種類數</div>
+          <div class="stat-value" id="sumProducts">0</div>
+          <div class="stat-sub" id="sumProductsSub">-</div>
+        </div>
+        <div class="stat-card c-lines">
+          <div class="stat-label">銷售明細筆數</div>
+          <div class="stat-value" id="sumLines">0</div>
+          <div class="stat-sub" id="sumLinesSub">-</div>
+        </div>
+      </div>
+
+      <!-- Ranking Table -->
+      <div class="section">
+        <div class="section-header">
+          <div class="section-title">🏆 商品銷售排名 <span style="font-size:12px; color:var(--text2); font-weight:400;">（前20名）</span></div>
+          <div class="section-meta" id="tableMetaInfo">-</div>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>排名</th>
+              <th>商品編號</th>
+              <th>商品名稱</th>
+              <th>銷售數量</th>
+              <th>銷售金額</th>
+              <th>毛利</th>
+            </tr>
+          </thead>
+          <tbody id="rankingTable"></tbody>
+        </table>
+      </div>
+
+    </div><!-- /results -->
+
+    <!-- Initial State -->
+    <div class="empty-state" id="initialState">
+      <div class="empty-icon">🛍️</div>
+      <div class="empty-text">設定日期區間後點擊「查詢分析」</div>
+      <div class="empty-sub">將統計區間內各商品的銷售數量、金額與毛利，並列出前20名</div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://xuykenpvonfqwsgbuvvj.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh1eWtlbnB2b25mcXdzZ2J1dnZqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwMDY3MzgsImV4cCI6MjA4NzU4MjczOH0.HmIktEbkPc0e7eTdqJdMWVxMzYIh4YkZ4LewZfC4Qr4';
+const H = { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json' };
+
+async function api(table, params = '') {
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${params}`, { headers: H });
+  if (!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+
+function fmt(n) {
+  return 'NT$' + Math.round(Number(n) || 0).toLocaleString('zh-TW');
+}
+
+function toDateStr(d) {
+  return d.toISOString().split('T')[0];
+}
+
+// Toast system
+function showToast(msg, type = 'info', duration = 3500) {
+  const container = document.getElementById('toastContainer');
+  const icons = { success: '✅', error: '❌', info: 'ℹ️' };
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.innerHTML = `<span>${icons[type] || 'ℹ️'}</span><span>${msg}</span>`;
+  container.appendChild(toast);
+  setTimeout(() => {
+    toast.classList.add('out');
+    setTimeout(() => toast.remove(), 300);
+  }, duration);
+}
+
+function showLoading() {
+  document.getElementById('loading').style.display = 'flex';
+  document.getElementById('results').style.display = 'none';
+  document.getElementById('initialState').style.display = 'none';
+  document.getElementById('queryBtn').disabled = true;
+}
+
+function hideLoading() {
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('queryBtn').disabled = false;
+}
+
+// Quick range presets
+function setRange(preset) {
+  const now = new Date();
+  let start, end;
+  if (preset === 'thisMonth') {
+    start = new Date(now.getFullYear(), now.getMonth(), 1);
+    end = now;
+  } else if (preset === 'lastMonth') {
+    start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    end = new Date(now.getFullYear(), now.getMonth(), 0);
+  } else if (preset === 'last7') {
+    start = new Date(now); start.setDate(now.getDate() - 6);
+    end = now;
+  } else if (preset === 'last30') {
+    start = new Date(now); start.setDate(now.getDate() - 29);
+    end = now;
+  }
+  document.getElementById('dateStart').value = toDateStr(start);
+  document.getElementById('dateEnd').value   = toDateStr(end);
+}
+
+// Default: this month first day to today
+window.onload = function () {
+  setRange('thisMonth');
+};
+
+async function runAnalysis() {
+  const dateStart = document.getElementById('dateStart').value;
+  const dateEnd   = document.getElementById('dateEnd').value;
+
+  if (!dateStart || !dateEnd) {
+    showToast('請選擇開始與結束日期', 'error');
+    return;
+  }
+  if (dateStart > dateEnd) {
+    showToast('開始日期不能晚於結束日期', 'error');
+    return;
+  }
+
+  showLoading();
+
+  try {
+    // Step 1: Get orders in range (only need IDs)
+    const orders = await api('sales_orders', `select=id&date=gte.${dateStart}&date=lte.${dateEnd}&order=date`);
+
+    if (orders.length === 0) {
+      hideLoading();
+      const state = document.getElementById('initialState');
+      state.style.display = 'block';
+      state.querySelector('.empty-icon').textContent = '📭';
+      state.querySelector('.empty-text').textContent = `${dateStart} ~ ${dateEnd} 區間無銷貨記錄`;
+      state.querySelector('.empty-sub').textContent = '請確認日期範圍或嘗試其他區間';
+      showToast('此區間無銷貨資料', 'info');
+      return;
+    }
+
+    // Step 2: Get all order IDs
+    const orderIds = orders.map(o => o.id);
+
+    // Step 3: Query sales_details in batches
+    const BATCH = 200;
+    let details = [];
+    for (let i = 0; i < orderIds.length; i += BATCH) {
+      const batchIds = orderIds.slice(i, i + BATCH);
+      const batchParam = `(${batchIds.join(',')})`;
+      const rows = await api('sales_details', `select=*&order_id=in.${batchParam}`);
+      details = details.concat(rows);
+    }
+
+    if (details.length === 0) {
+      hideLoading();
+      const state = document.getElementById('initialState');
+      state.style.display = 'block';
+      state.querySelector('.empty-icon').textContent = '📭';
+      state.querySelector('.empty-text').textContent = '找到訂單，但無銷售明細資料';
+      state.querySelector('.empty-sub').textContent = '請確認 sales_details 資料是否正確';
+      showToast('無銷售明細資料', 'info');
+      return;
+    }
+
+    // Step 4: Group by product_id + product_name
+    const productMap = {};
+    details.forEach(d => {
+      const key = (d.product_id || '') + '||' + (d.product_name || '未知商品');
+      if (!productMap[key]) {
+        productMap[key] = {
+          product_id:   d.product_id   || '',
+          product_name: d.product_name || '未知商品',
+          qty:      0,
+          subtotal: 0,
+          profit:   0,
+          hasProfit: false,
+          lineCount: 0
+        };
+      }
+      const p = productMap[key];
+      p.qty      += Number(d.qty      || 0);
+      p.subtotal += Number(d.subtotal || 0);
+      p.profit   += Number(d.profit   || 0);
+      p.lineCount++;
+      if (Number(d.profit || 0) !== 0) p.hasProfit = true;
+    });
+
+    // Sort by subtotal descending
+    const ranked = Object.values(productMap).sort((a, b) => b.subtotal - a.subtotal);
+
+    // Totals
+    const totalRevenue  = ranked.reduce((s, p) => s + p.subtotal, 0);
+    const totalProfit   = ranked.reduce((s, p) => s + p.profit, 0);
+    const totalProducts = ranked.length;
+    const totalLines    = details.length;
+    const overallMargin = totalRevenue > 0 ? (totalProfit / totalRevenue * 100) : 0;
+
+    // Max subtotal for bar reference
+    const maxSubtotal = ranked.length > 0 ? ranked[0].subtotal : 1;
+
+    // Render summary
+    document.getElementById('sumRevenue').textContent   = fmt(totalRevenue);
+    document.getElementById('sumRevenueSub').textContent = `區間 ${dateStart} ~ ${dateEnd}`;
+    document.getElementById('sumProfit').textContent    = fmt(totalProfit);
+    document.getElementById('sumProfitSub').textContent = `整體毛利率 ${overallMargin.toFixed(1)}%`;
+    document.getElementById('sumProducts').textContent  = totalProducts;
+    document.getElementById('sumProductsSub').textContent = '不同商品';
+    document.getElementById('sumLines').textContent     = totalLines;
+    document.getElementById('sumLinesSub').textContent  = `共 ${orderIds.length} 張訂單`;
+
+    document.getElementById('tableMetaInfo').textContent = `${dateStart} ~ ${dateEnd} · 共 ${totalProducts} 種商品`;
+
+    // Render table (top 20)
+    const top20 = ranked.slice(0, 20);
+    let html = '';
+    if (top20.length === 0) {
+      html = `<tr><td colspan="6"><div class="empty-state"><div class="empty-icon">📭</div><div class="empty-text">無商品資料</div></div></td></tr>`;
+    } else {
+      top20.forEach((p, idx) => {
+        const rank = idx + 1;
+        const barRevPct = Math.round((p.subtotal / maxSubtotal) * 100);
+
+        // Rank badge
+        let badgeClass = '';
+        if (rank === 1) badgeClass = 'gold';
+        else if (rank === 2) badgeClass = 'silver';
+        else if (rank === 3) badgeClass = 'bronze';
+
+        const rowClass = rank === 1 ? 'champion-row' : '';
+
+        // Profit display: if all profit records are 0, show N/A
+        let profitDisplay;
+        if (!p.hasProfit) {
+          profitDisplay = '<span class="na-tag">N/A</span>';
+        } else {
+          const barProfPct = totalProfit > 0 ? Math.round((p.profit / totalRevenue) * 100 * (p.subtotal / maxSubtotal)) : 0;
+          profitDisplay = `
+            <div class="bar-wrap">
+              <span style="color:var(--success); font-weight:700; min-width:110px; text-align:right;">${fmt(p.profit)}</span>
+            </div>`;
+        }
+
+        // Revenue bar
+        const revenueDisplay = `
+          <div class="bar-wrap">
+            <div class="bar-bg"><div class="bar-fill bar-orange" style="width:${barRevPct}%;"></div></div>
+            <span style="color:var(--orange); font-weight:700; min-width:110px; text-align:right;">${fmt(p.subtotal)}</span>
+          </div>`;
+
+        // Qty chip with unit
+        const qtyDisplay = `<span class="qty-chip">
+          ${p.qty % 1 === 0 ? p.qty.toLocaleString() : Number(p.qty).toFixed(2)}
+        </span>`;
+
+        // Product ID
+        const idDisplay = p.product_id
+          ? `<span class="product-id">${p.product_id}</span>`
+          : `<span class="product-id" style="opacity:0.4;">—</span>`;
+
+        html += `
+          <tr class="${rowClass}">
+            <td><span class="rank-badge ${badgeClass}">${rank}</span></td>
+            <td>${idDisplay}</td>
+            <td>
+              <div class="product-name">${rank === 1 ? '🔥 ' : ''}${p.product_name}</div>
+            </td>
+            <td>${qtyDisplay}</td>
+            <td>${revenueDisplay}</td>
+            <td>${profitDisplay}</td>
+          </tr>`;
+      });
+
+      // If more than 20 items, show footer note
+      if (ranked.length > 20) {
+        html += `<tr>
+          <td colspan="6" style="text-align:center; padding:14px; color:var(--text2); font-size:12px; background:var(--surface2);">
+            尚有 ${ranked.length - 20} 種商品未顯示（僅列前20名）
+          </td>
+        </tr>`;
+      }
+    }
+    document.getElementById('rankingTable').innerHTML = html;
+
+    // Show results
+    hideLoading();
+    document.getElementById('results').style.display = 'block';
+
+    showToast(`分析完成！共 ${totalProducts} 種商品、${totalLines} 筆明細`, 'success');
+
+  } catch (e) {
+    hideLoading();
+    document.getElementById('initialState').style.display = 'block';
+    showToast('查詢失敗：' + e.message, 'error', 5000);
+    console.error(e);
+  }
+}
+</script>
+</body>
+</html>

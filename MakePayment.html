@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>供應商付款 - 龍潭央廚</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+    :root {
+    --bg:#fffbf0;
+    --surface:#ffffff;
+    --surface2:#fdf5d8;
+    --surface-sidebar:#fef9ec;
+    --border:#f5e0a0;
+    --text:#3d2a00;
+    --text2:#92660a;
+    --accent:#b45309;
+    --accent2:#d97706;
+    --danger:#c53030;
+    --success:#276749;
+    --warning:#b7791f;
+    --orange:#c05621;
+    --purple:#553c9a;
+    --pink:#b83280;
+    --teal:#0e7490;
+    --surface-dark:#f5c842;
+    --text-on-dark:#5a3a00;
+    --accent-light:#fef3c7;
+    --shadow:rgba(180,83,9,0.07);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Noto Sans TC', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Loading Overlay */
+  #loading {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.65);
+    z-index: 9999;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .spinner {
+    width: 48px; height: 48px;
+    border: 4px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  #loadingMsg { color: var(--text); font-size: 15px; font-weight: 500; }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: 30px;
+    right: 24px;
+    padding: 12px 20px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 500;
+    z-index: 10000;
+    animation: slideIn 0.3s ease;
+    max-width: 320px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+  }
+  .toast.success { background: var(--success); color:#fff; }
+  .toast.error { background: var(--danger); color: #fff; }
+  .toast.warning { background: var(--warning); color:#fff; }
+  @keyframes slideIn { from { transform: translateX(100px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+  /* Navbar */
+  .navbar {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 24px;
+    display: flex;
+    align-items: center;
+    gap: 32px;
+    height: 60px;
+    flex-shrink: 0;
+  }
+  .navbar-brand {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text);
+    text-decoration: none;
+    white-space: nowrap;
+  }
+  .nav-links {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+  }
+  .nav-links a {
+    color: var(--text2);
+    text-decoration: none;
+    padding: 6px 14px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .nav-links a:hover { background: var(--surface2); color: var(--text); }
+  .nav-links a.active { background: rgba(79,124,255,0.15); color: var(--accent); }
+
+  /* Main */
+  .main { flex: 1; overflow-y: auto; padding: 20px; }
+
+  /* Card */
+  .card {
+    max-width: 600px;
+    margin: 0 auto;
+    background: var(--surface);
+    border-radius: 14px;
+    border: 1px solid var(--border);
+    padding: 28px;
+    margin-bottom: 20px;
+  }
+
+  /* Step Header */
+  .step-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 18px;
+  }
+  .step-num {
+    width: 32px; height: 32px;
+    background: var(--orange);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 700;
+    color: #fff;
+    flex-shrink: 0;
+  }
+  .step-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  /* Form Elements */
+  label {
+    display: block;
+    font-size: 13px;
+    color: var(--text2);
+    margin-bottom: 6px;
+    font-weight: 500;
+  }
+  select, input[type="date"], input[type="text"], input[type="number"] {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    padding: 10px 14px;
+    font-size: 14px;
+    font-family: 'Noto Sans TC', sans-serif;
+    outline: none;
+    transition: border-color 0.2s;
+    -webkit-appearance: none;
+  }
+  select:focus, input:focus { border-color: var(--accent); }
+  select option { background: var(--surface2); }
+  input[type="number"] { -moz-appearance: textfield; }
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+  /* Payable List */
+  #payableList { display: flex; flex-direction: column; gap: 8px; }
+
+  .payable-item {
+    padding: 16px;
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+  }
+  .payable-item:hover:not(.disabled) { border-color: var(--orange); background: rgba(255,159,67,0.05); }
+  .payable-item.selected { border-color: var(--orange); background: rgba(255,159,67,0.08); }
+  .payable-item.disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* Selected indicator */
+  .payable-item.selected::before {
+    content: '✓';
+    position: absolute;
+    top: 12px;
+    right: 14px;
+    width: 22px; height: 22px;
+    background: var(--orange);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    color: #fff;
+    line-height: 22px;
+    text-align: center;
+  }
+
+  .payable-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    padding-right: 28px;
+  }
+  .payable-order-id { font-size: 14px; font-weight: 700; color: var(--text); }
+  .payable-status {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-weight: 600;
+  }
+  .status-unpaid { background: rgba(255,107,107,0.15); color: var(--danger); }
+  .status-partial { background: rgba(255,209,102,0.15); color: var(--warning); }
+
+  .payable-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px 16px;
+    font-size: 13px;
+    color: var(--text2);
+  }
+  .payable-grid .row { display: flex; justify-content: space-between; gap: 8px; }
+  .payable-grid .row-label { white-space: nowrap; }
+  .payable-grid .row-val { color: var(--text); font-weight: 500; text-align: right; }
+  .payable-grid .unpaid-row {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: space-between;
+    border-top: 1px solid var(--border);
+    padding-top: 8px;
+    margin-top: 4px;
+    font-size: 14px;
+  }
+  .payable-grid .unpaid-row .label { font-weight: 600; color: var(--text2); }
+  .payable-grid .unpaid-row .val { color: var(--danger); font-weight: 700; font-size: 15px; }
+
+  .placeholder-hint {
+    color: var(--text2);
+    font-size: 13px;
+    padding: 20px;
+    text-align: center;
+    background: var(--surface2);
+    border-radius: 8px;
+  }
+  .empty-state {
+    text-align: center;
+    padding: 32px;
+    color: var(--text2);
+    font-size: 14px;
+  }
+  .empty-state .icon { font-size: 36px; margin-bottom: 8px; }
+
+  /* Form Grid */
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .form-group { display: flex; flex-direction: column; }
+  .form-group.full { grid-column: 1 / -1; }
+
+  /* Amount hint */
+  .amount-hint {
+    font-size: 11px;
+    color: var(--accent2);
+    margin-top: 4px;
+  }
+
+  /* Selected Order Badge */
+  .selected-order-badge {
+    background: rgba(255,159,67,0.1);
+    border: 1px solid rgba(255,159,67,0.3);
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin-bottom: 16px;
+    font-size: 13px;
+    color: var(--orange);
+    display: none;
+    align-items: center;
+    gap: 8px;
+  }
+  .selected-order-badge .badge-id { font-weight: 700; }
+
+  /* Button */
+  .btn-confirm {
+    width: 100%;
+    background: var(--orange);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    padding: 14px;
+    font-size: 16px;
+    font-weight: 700;
+    font-family: 'Noto Sans TC', sans-serif;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-top: 8px;
+  }
+  .btn-confirm:hover:not(:disabled) { background: #e8892e; transform: translateY(-1px); }
+  .btn-confirm:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+  /* Success Screen */
+  #successScreen {
+    display: none;
+    max-width: 600px;
+    margin: 0 auto;
+  }
+  .success-card {
+    background: var(--surface);
+    border-radius: 14px;
+    border: 1px solid var(--border);
+    padding: 48px 32px;
+    text-align: center;
+  }
+  .success-icon {
+    width: 72px; height: 72px;
+    background: rgba(255,159,67,0.15);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 36px;
+    margin: 0 auto 20px;
+  }
+  .success-title { font-size: 22px; font-weight: 700; color: var(--orange); margin-bottom: 8px; }
+  .success-sub { font-size: 14px; color: var(--text2); margin-bottom: 28px; }
+  .success-details {
+    background: var(--surface2);
+    border-radius: 10px;
+    padding: 16px;
+    text-align: left;
+    margin-bottom: 24px;
+  }
+  .success-detail-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 14px;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--border);
+    color: var(--text2);
+  }
+  .success-detail-row:last-child { border-bottom: none; }
+  .success-detail-row .val { color: var(--text); font-weight: 600; }
+  .success-detail-row .amount { color: var(--orange); font-weight: 700; }
+  .btn-new {
+    background: transparent;
+    border: 2px solid var(--orange);
+    color: var(--orange);
+    border-radius: 10px;
+    padding: 12px 32px;
+    font-size: 15px;
+    font-weight: 600;
+    font-family: 'Noto Sans TC', sans-serif;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin: 0 8px;
+  }
+  .btn-new:hover { background: rgba(255,159,67,0.1); }
+  .btn-report {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text2);
+    border-radius: 10px;
+    padding: 12px 32px;
+    font-size: 15px;
+    font-weight: 600;
+    font-family: 'Noto Sans TC', sans-serif;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-decoration: none;
+    display: inline-block;
+    margin: 0 8px;
+  }
+  .btn-report:hover { color: var(--text); background: var(--border); }
+
+  @media (max-width: 600px) {
+    .form-grid { grid-template-columns: 1fr; }
+    .navbar { padding: 0 14px; gap: 16px; }
+    .card { padding: 18px; }
+    .main { padding: 12px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Loading Overlay -->
+<div id="loading">
+  <div class="spinner"></div>
+  <div id="loadingMsg">處理中...</div>
+</div>
+
+<!-- Navbar -->
+<nav class="navbar">
+  <a href="#" class="navbar-brand">🐟 龍潭央廚</a>
+  <div class="nav-links">
+    <a href="MakePayment.html" class="active">💸 供應商付款</a>
+    <a href="PayableReport.html">📋 應付帳款</a>
+    <a href="SearchPurchase.html">📋 進貨查詢</a>
+  </div>
+</nav>
+
+<div class="main">
+
+  <!-- 主要表單 -->
+  <div id="mainForm">
+
+    <!-- 步驟一：選擇供應商 -->
+    <div class="card">
+      <div class="step-header">
+        <div class="step-num">1</div>
+        <div class="step-title">選擇供應商</div>
+      </div>
+      <div class="form-group">
+        <label>供應商名稱</label>
+        <select id="supplierSelect">
+          <option value="">-- 請選擇供應商 --</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- 步驟二：選擇進貨單 -->
+    <div class="card">
+      <div class="step-header">
+        <div class="step-num">2</div>
+        <div class="step-title">選擇待付進貨單</div>
+      </div>
+      <div id="payableList">
+        <div class="placeholder-hint">請先選擇供應商，系統將自動載入未付款進貨單</div>
+      </div>
+    </div>
+
+    <!-- 步驟三：付款資訊 -->
+    <div class="card">
+      <div class="step-header">
+        <div class="step-num">3</div>
+        <div class="step-title">付款資訊</div>
+      </div>
+
+      <!-- 已選進貨單提示 -->
+      <div class="selected-order-badge" id="selectedBadge">
+        <span>已選進貨單：</span>
+        <span class="badge-id" id="selectedOrderId">-</span>
+        <span style="margin-left:auto; color:var(--text2); font-size:12px;">點選其他進貨單可切換</span>
+      </div>
+
+      <div class="form-grid">
+        <div class="form-group">
+          <label>付款日期</label>
+          <input type="date" id="payDate">
+        </div>
+        <div class="form-group">
+          <label>付款方式</label>
+          <select id="payMethod">
+            <option value="老闆付款">老闆付款</option>
+            <option value="零用金">零用金</option>
+            <option value="匯款">匯款</option>
+            <option value="支票">支票</option>
+          </select>
+        </div>
+        <div class="form-group full">
+          <label>付款金額</label>
+          <input type="number" id="payAmount" placeholder="請先選擇進貨單" min="1" step="1">
+          <div class="amount-hint" id="amountHint"></div>
+        </div>
+        <div class="form-group full">
+          <label>備註</label>
+          <input type="text" id="payNote" placeholder="選填，如支票號碼等">
+        </div>
+      </div>
+      <button class="btn-confirm" id="confirmBtn" onclick="submitPayment()">確認付款</button>
+    </div>
+
+  </div>
+
+  <!-- 成功畫面 -->
+  <div id="successScreen">
+    <div class="success-card">
+      <div class="success-icon">✓</div>
+      <div class="success-title">付款完成！</div>
+      <div class="success-sub" id="successSub">付款記錄已成功儲存</div>
+      <div class="success-details" id="successDetails"></div>
+      <div>
+        <button class="btn-new" onclick="resetForm()">繼續付款</button>
+        <a href="PayableReport.html" class="btn-report">查看應付帳款</a>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const SUPABASE_URL = 'https://xuykenpvonfqwsgbuvvj.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh1eWtlbnB2b25mcXdzZ2J1dnZqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwMDY3MzgsImV4cCI6MjA4NzU4MjczOH0.HmIktEbkPc0e7eTdqJdMWVxMzYIh4YkZ4LewZfC4Qr4';
+const H = {
+  'apikey': SUPABASE_KEY,
+  'Authorization': 'Bearer ' + SUPABASE_KEY,
+  'Content-Type': 'application/json',
+  'Prefer': 'return=minimal'
+};
+
+async function api(table, params = '', method = 'GET', body = null) {
+  const opts = { headers: H, method };
+  if (body) opts.body = JSON.stringify(body);
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${params}`, opts);
+  if (!r.ok) throw new Error(await r.text());
+  if (method === 'GET') return r.json();
+  return null;
+}
+
+function showToast(msg, type = 'success') {
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3500);
+}
+function showLoading(msg = '處理中...') {
+  document.getElementById('loading').style.display = 'flex';
+  document.getElementById('loadingMsg').textContent = msg;
+}
+function hideLoading() {
+  document.getElementById('loading').style.display = 'none';
+}
+function fmt(n) {
+  return 'NT$ ' + Number(n || 0).toLocaleString();
+}
+function today() {
+  return new Date().toISOString().split('T')[0];
+}
+
+// 設定預設日期
+document.getElementById('payDate').value = today();
+
+// 全域資料
+let currentSupplierId = null;
+let currentSupplierName = '';
+let payables = [];
+let selectedPayable = null;
+
+// 載入供應商清單
+async function loadSuppliers() {
+  try {
+    showLoading('載入供應商資料...');
+    const supps = await api('suppliers', 'status=eq.啟用&select=id,name&order=name');
+    const sel = document.getElementById('supplierSelect');
+    sel.innerHTML = '<option value="">-- 請選擇供應商 --</option>';
+    supps.forEach(s => {
+      const opt = document.createElement('option');
+      opt.value = s.id;
+      opt.textContent = s.name;
+      sel.appendChild(opt);
+    });
+  } catch (e) {
+    showToast('載入供應商失敗：' + e.message, 'error');
+  } finally {
+    hideLoading();
+  }
+}
+
+// 選擇供應商
+document.getElementById('supplierSelect').addEventListener('change', async function() {
+  const suppId = this.value;
+  const suppName = this.options[this.selectedIndex].text;
+  currentSupplierId = suppId;
+  currentSupplierName = suppName;
+  selectedPayable = null;
+
+  // 重置表單
+  document.getElementById('payAmount').value = '';
+  document.getElementById('payAmount').placeholder = '請先選擇進貨單';
+  document.getElementById('amountHint').textContent = '';
+  document.getElementById('selectedBadge').style.display = 'none';
+  document.getElementById('confirmBtn').disabled = true;
+
+  if (!suppId) {
+    document.getElementById('payableList').innerHTML = '<div class="placeholder-hint">請先選擇供應商，系統將自動載入未付款進貨單</div>';
+    payables = [];
+    return;
+  }
+  await loadPayables(suppId);
+});
+
+// 載入應付帳款
+async function loadPayables(suppId) {
+  try {
+    showLoading('載入進貨單資料...');
+    const pays = await api('payables', `supplier_id=eq.${suppId}&status=neq.已付款&select=*&order=order_date`);
+    payables = pays;
+    renderPayables(pays);
+  } catch (e) {
+    showToast('載入進貨單失敗：' + e.message, 'error');
+    document.getElementById('payableList').innerHTML = '<div class="empty-state"><div class="icon">⚠️</div>載入失敗，請重試</div>';
+  } finally {
+    hideLoading();
+  }
+}
+
+// 渲染應付清單
+function renderPayables(pays) {
+  const container = document.getElementById('payableList');
+  if (!pays || pays.length === 0) {
+    container.innerHTML = '<div class="empty-state"><div class="icon">🎉</div>此供應商目前無未付款進貨單</div>';
+    return;
+  }
+
+  container.innerHTML = '';
+  pays.forEach(pay => {
+    const isDisabled = pay.status === '已付款';
+    const statusClass = pay.status === '未付款' ? 'status-unpaid' : 'status-partial';
+    const statusLabel = pay.status || '未付款';
+
+    const item = document.createElement('div');
+    item.className = 'payable-item' + (isDisabled ? ' disabled' : '');
+    item.dataset.id = pay.id;
+    item.innerHTML = `
+      <div class="payable-top">
+        <span class="payable-order-id">單號：${pay.order_id || pay.id}</span>
+        <span class="payable-status ${statusClass}">${statusLabel}</span>
+      </div>
+      <div class="payable-grid">
+        <div class="row">
+          <span class="row-label">日期：</span>
+          <span class="row-val">${pay.order_date || '-'}</span>
+        </div>
+        <div class="row">
+          <span class="row-label">到期：</span>
+          <span class="row-val">${pay.due_date || '-'}</span>
+        </div>
+        <div class="row">
+          <span class="row-label">總額：</span>
+          <span class="row-val">${fmt(pay.total_amount)}</span>
+        </div>
+        <div class="row">
+          <span class="row-label">已付：</span>
+          <span class="row-val">${fmt(pay.paid_amount)}</span>
+        </div>
+        <div class="unpaid-row">
+          <span class="label">待付：</span>
+          <span class="val">${fmt(pay.unpaid_amount)}</span>
+        </div>
+        ${pay.note ? `<div style="grid-column:1/-1; font-size:12px; color:var(--text2); padding-top:6px;">備註：<span style="color:var(--text)">${pay.note}</span></div>` : ''}
+      </div>
+    `;
+    if (!isDisabled) {
+      item.addEventListener('click', () => selectPayable(pay, item));
+    }
+    container.appendChild(item);
+  });
+}
+
+// 選取進貨單（單選）
+function selectPayable(pay, clickedItem) {
+  // 取消所有選中
+  document.querySelectorAll('.payable-item').forEach(el => el.classList.remove('selected'));
+
+  // 如果點選同一張，取消選取
+  if (selectedPayable && selectedPayable.id === pay.id) {
+    selectedPayable = null;
+    document.getElementById('payAmount').value = '';
+    document.getElementById('payAmount').placeholder = '請先選擇進貨單';
+    document.getElementById('amountHint').textContent = '';
+    document.getElementById('selectedBadge').style.display = 'none';
+    document.getElementById('confirmBtn').disabled = true;
+    return;
+  }
+
+  // 選取新的
+  selectedPayable = pay;
+  clickedItem.classList.add('selected');
+
+  // 填入金額
+  const unpaid = Number(pay.unpaid_amount || 0);
+  document.getElementById('payAmount').value = unpaid;
+  document.getElementById('payAmount').placeholder = '輸入付款金額';
+  document.getElementById('amountHint').textContent = `待付金額：${fmt(unpaid)}（可輸入部分金額）`;
+
+  // 顯示選中標示
+  document.getElementById('selectedBadge').style.display = 'flex';
+  document.getElementById('selectedOrderId').textContent = pay.order_id || pay.id;
+
+  document.getElementById('confirmBtn').disabled = false;
+
+  // 滾動到步驟三
+  document.getElementById('payDate').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+// 付款金額驗證
+document.getElementById('payAmount').addEventListener('input', function() {
+  if (!selectedPayable) return;
+  const val = Number(this.value);
+  const unpaid = Number(selectedPayable.unpaid_amount || 0);
+  if (val <= 0) {
+    document.getElementById('amountHint').textContent = '金額必須大於 0';
+    document.getElementById('amountHint').style.color = 'var(--danger)';
+    document.getElementById('confirmBtn').disabled = true;
+  } else if (val > unpaid) {
+    document.getElementById('amountHint').textContent = `超過待付金額 ${fmt(unpaid)}，請確認`;
+    document.getElementById('amountHint').style.color = 'var(--warning)';
+    document.getElementById('confirmBtn').disabled = false;
+  } else {
+    document.getElementById('amountHint').textContent = `待付金額：${fmt(unpaid)}`;
+    document.getElementById('amountHint').style.color = 'var(--accent2)';
+    document.getElementById('confirmBtn').disabled = false;
+  }
+});
+
+// 生成付款 ID
+async function getNextPmId() {
+  const last = await api('payment_made', 'select=id&order=id.desc&limit=1');
+  const num = last.length > 0 ? parseInt(last[0].id.replace(/\D/g, ''), 10) || 0 : 0;
+  return 'PM' + String(num + 1).padStart(5, '0');
+}
+
+// 提交付款
+async function submitPayment() {
+  if (!selectedPayable) {
+    showToast('請先選擇進貨單', 'warning');
+    return;
+  }
+
+  const payDate = document.getElementById('payDate').value;
+  const payAmount = Number(document.getElementById('payAmount').value);
+  const payMethod = document.getElementById('payMethod').value;
+  const payNote = document.getElementById('payNote').value;
+
+  if (!payDate) {
+    showToast('請填寫付款日期', 'warning');
+    return;
+  }
+  if (!payAmount || payAmount <= 0) {
+    showToast('請填寫正確的付款金額', 'warning');
+    return;
+  }
+
+  const unpaid = Number(selectedPayable.unpaid_amount || 0);
+  if (payAmount > unpaid * 1.1) {
+    showToast('付款金額超出待付金額，請確認', 'warning');
+    return;
+  }
+
+  const ok = confirm(`確認付款？\n供應商：${currentSupplierName}\n進貨單：${selectedPayable.order_id || selectedPayable.id}\n金額：${fmt(payAmount)}\n方式：${payMethod}`);
+  if (!ok) return;
+
+  showLoading('儲存付款記錄...');
+
+  try {
+    const pmId = await getNextPmId();
+    const now = new Date().toISOString();
+
+    // 1. POST payment_made
+    const pmBody = {
+      id: pmId,
+      date: payDate,
+      supplier_id: selectedPayable.supplier_id,
+      supplier_name: selectedPayable.supplier_name || currentSupplierName,
+      amount: payAmount,
+      payment_method: payMethod,
+      order_id: selectedPayable.order_id,
+      created_at: now,
+      note: payNote || null
+    };
+    const pmResp = await fetch(`${SUPABASE_URL}/rest/v1/payment_made`, {
+      method: 'POST',
+      headers: H,
+      body: JSON.stringify(pmBody)
+    });
+    if (!pmResp.ok) throw new Error(await pmResp.text());
+
+    // 2. PATCH payables
+    const newPaid = Number(selectedPayable.paid_amount || 0) + payAmount;
+    const newUnpaid = Number(selectedPayable.total_amount || 0) - newPaid;
+    const newStatus = newUnpaid <= 0 ? '已付款' : '部分付款';
+
+    const payResp = await fetch(`${SUPABASE_URL}/rest/v1/payables?id=eq.${selectedPayable.id}`, {
+      method: 'PATCH',
+      headers: H,
+      body: JSON.stringify({
+        paid_amount: newPaid,
+        unpaid_amount: Math.max(0, newUnpaid),
+        status: newStatus
+      })
+    });
+    if (!payResp.ok) throw new Error(await payResp.text());
+
+    // 3. PATCH purchase_orders
+    if (selectedPayable.order_id) {
+      const poStatus = newUnpaid <= 0 ? '已付款' : '部分付款';
+      await fetch(`${SUPABASE_URL}/rest/v1/purchase_orders?id=eq.${selectedPayable.order_id}`, {
+        method: 'PATCH',
+        headers: H,
+        body: JSON.stringify({ payment_status: poStatus })
+      });
+    }
+
+    hideLoading();
+    showSuccessScreen({
+      supplierName: currentSupplierName,
+      orderId: selectedPayable.order_id || selectedPayable.id,
+      pmId,
+      payDate,
+      payAmount,
+      payMethod,
+      payNote,
+      remaining: Math.max(0, newUnpaid)
+    });
+
+  } catch (e) {
+    hideLoading();
+    showToast('付款失敗：' + e.message, 'error');
+    console.error(e);
+  }
+}
+
+// 顯示成功畫面
+function showSuccessScreen(data) {
+  document.getElementById('mainForm').style.display = 'none';
+  document.getElementById('successScreen').style.display = 'block';
+
+  document.getElementById('successSub').textContent = `付款 ${fmt(data.payAmount)} 已成功記錄`;
+
+  const details = document.getElementById('successDetails');
+  details.innerHTML = `
+    <div class="success-detail-row"><span>付款單號</span><span class="val">${data.pmId}</span></div>
+    <div class="success-detail-row"><span>供應商</span><span class="val">${data.supplierName}</span></div>
+    <div class="success-detail-row"><span>進貨單號</span><span class="val">${data.orderId}</span></div>
+    <div class="success-detail-row"><span>付款日期</span><span class="val">${data.payDate}</span></div>
+    <div class="success-detail-row"><span>付款方式</span><span class="val">${data.payMethod}</span></div>
+    <div class="success-detail-row"><span>本次付款金額</span><span class="amount">${fmt(data.payAmount)}</span></div>
+    <div class="success-detail-row"><span>剩餘待付金額</span><span class="val" style="color:${data.remaining > 0 ? 'var(--warning)' : 'var(--success)'}">${fmt(data.remaining)}</span></div>
+    ${data.payNote ? `<div class="success-detail-row"><span>備註</span><span class="val">${data.payNote}</span></div>` : ''}
+  `;
+}
+
+// 重置表單
+function resetForm() {
+  document.getElementById('mainForm').style.display = 'block';
+  document.getElementById('successScreen').style.display = 'none';
+  document.getElementById('supplierSelect').value = '';
+  document.getElementById('payableList').innerHTML = '<div class="placeholder-hint">請先選擇供應商，系統將自動載入未付款進貨單</div>';
+  document.getElementById('payDate').value = today();
+  document.getElementById('payAmount').value = '';
+  document.getElementById('payAmount').placeholder = '請先選擇進貨單';
+  document.getElementById('amountHint').textContent = '';
+  document.getElementById('payMethod').value = '老闆付款';
+  document.getElementById('payNote').value = '';
+  document.getElementById('selectedBadge').style.display = 'none';
+  document.getElementById('confirmBtn').disabled = true;
+  currentSupplierId = null;
+  currentSupplierName = '';
+  payables = [];
+  selectedPayable = null;
+}
+
+// 初始化
+document.getElementById('confirmBtn').disabled = true;
+loadSuppliers();
+</script>
+</body>
+</html>

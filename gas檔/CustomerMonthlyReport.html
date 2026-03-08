@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: 'Microsoft JhengHei', sans-serif; margin: 0; padding: 15px; background: #f5f5f5; }
+    .container { background: white; padding: 20px; border-radius: 12px; max-width: 900px; margin: 0 auto; }
+    h2 { color: #1976D2; margin-top: 0; }
+    label { font-weight: bold; display: block; margin-bottom: 5px; color: #666; }
+    input, select { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 15px; margin-bottom: 15px; }
+    .date-row { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+    .quick-btns { display: flex; gap: 10px; margin-bottom: 15px; }
+    .quick-btn { flex: 1; padding: 10px; background: #e3f2fd; border: 1px solid #2196F3; border-radius: 6px; cursor: pointer; text-align: center; font-weight: bold; }
+    .quick-btn:hover { background: #2196F3; color: white; }
+    .btn-generate { width: 100%; padding: 15px; background: #1976D2; color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; }
+    .btn-generate:hover { background: #1565C0; }
+    
+    .report-box { margin-top: 20px; display: none; }
+    .summary-cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-bottom: 20px; }
+    .card { background: #f9f9f9; padding: 15px; border-radius: 10px; border-left: 4px solid #1976D2; }
+    .card-title { font-size: 14px; color: #666; margin-bottom: 5px; }
+    .card-value { font-size: 24px; font-weight: bold; color: #1976D2; }
+    
+    .orders-table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 14px; }
+    .orders-table th { background: #1976D2; color: white; padding: 10px; text-align: left; }
+    .orders-table td { padding: 10px; border-bottom: 1px solid #ddd; }
+    
+    .btn-print { width: 100%; padding: 15px; background: #4CAF50; color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 15px; }
+    .btn-print:hover { background: #45a049; }
+    
+    .loading { text-align: center; padding: 40px; color: #1976D2; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>📊 客戶月結報表</h2>
+    
+    <label>👤 選擇客戶</label>
+    <select id="customer">
+      <option value="">🔄 載入中...</option>
+    </select>
+    
+    <div class="quick-btns">
+      <div class="quick-btn" onclick="setThisMonth()">本月</div>
+      <div class="quick-btn" onclick="setLastMonth()">上個月</div>
+      <div class="quick-btn" onclick="setThisYear()">今年</div>
+    </div>
+    
+    <div class="date-row">
+      <div>
+        <label>📅 起始日期</label>
+        <input type="date" id="dateFrom">
+      </div>
+      <div>
+        <label>📅 結束日期</label>
+        <input type="date" id="dateTo">
+      </div>
+    </div>
+    
+    <button class="btn-generate" onclick="generateReport()">📊 產生報表</button>
+    
+    <div id="reportBox" class="report-box">
+      <div id="reportContent"></div>
+      <button class="btn-print" onclick="printReport()">🖨️ 列印報表</button>
+    </div>
+  </div>
+
+<script>
+  let allCustomers = [];
+  let reportData = null;
+  
+  window.onload = function() {
+    // 設定預設日期為本月
+    setThisMonth();
+    
+    // 載入客戶清單
+    loadCustomers();
+  };
+  
+  function loadCustomers() {
+    google.script.run
+      .withSuccessHandler(function(customers) {
+        allCustomers = customers;
+        const select = document.getElementById('customer');
+        
+        if (customers.length === 0) {
+          select.innerHTML = '<option value="">-- 沒有客戶資料 --</option>';
+          return;
+        }
+        
+        select.innerHTML = '<option value="">-- 請選擇客戶 --</option>';
+        customers.forEach(function(c) {
+          const option = document.createElement('option');
+          option.value = c.id;
+          option.textContent = c.name;
+          select.appendChild(option);
+        });
+      })
+      .withFailureHandler(function(error) {
+        const select = document.getElementById('customer');
+        select.innerHTML = '<option value="">❌ 載入失敗</option>';
+        console.error('載入客戶失敗:', error);
+      })
+      .getCustomers();
+  }
+  
+  function setThisMonth() {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = today.getMonth();
+  const firstDay = new Date(year, month, 1);
+  const lastDay = new Date(year, month + 1, 0);
+  document.getElementById('dateFrom').value = formatDate(firstDay);
+  document.getElementById('dateTo').value = formatDate(lastDay);
+}
+function formatDate(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return y + '-' + m + '-' + day;
+}
+  
+  function setLastMonth() {
+  const today = new Date();
+  const firstDay = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+  const lastDay = new Date(today.getFullYear(), today.getMonth(), 0);
+  document.getElementById('dateFrom').value = formatDate(firstDay);
+  document.getElementById('dateTo').value = formatDate(lastDay);
+}
+
+function setThisYear() {
+  const today = new Date();
+  const firstDay = new Date(today.getFullYear(), 0, 1);
+  const lastDay = new Date(today.getFullYear(), 11, 31);
+  document.getElementById('dateFrom').value = formatDate(firstDay);
+  document.getElementById('dateTo').value = formatDate(lastDay);
+}
+  
+  function generateReport() {
+    const customerId = document.getElementById('customer').value;
+    const dateFrom = document.getElementById('dateFrom').value;
+    const dateTo = document.getElementById('dateTo').value;
+    
+    if (!customerId) {
+      alert('請選擇客戶！');
+      return;
+    }
+    
+    if (!dateFrom || !dateTo) {
+      alert('請選擇日期區間！');
+      return;
+    }
+    
+    const reportBox = document.getElementById('reportBox');
+    const reportContent = document.getElementById('reportContent');
+    
+    reportContent.innerHTML = '<div class="loading">🔄 產生報表中...</div>';
+    reportBox.style.display = 'block';
+    
+    google.script.run
+      .withSuccessHandler(function(result) {
+        if (result.success) {
+          reportData = result;
+          displayReport(result);
+        } else {
+          reportContent.innerHTML = '<div style="text-align:center;padding:40px;color:#d32f2f;">❌ 產生報表失敗：' + result.error + '</div>';
+        }
+      })
+      .withFailureHandler(function(error) {
+        reportContent.innerHTML = '<div style="text-align:center;padding:40px;color:#d32f2f;">❌ 系統錯誤：' + error + '</div>';
+      })
+      .getCustomerMonthlyReport(customerId, dateFrom, dateTo);
+  }
+  
+  function displayReport(data) {
+    const content = document.getElementById('reportContent');
+    
+    let html = '<h3 style="color:#1976D2;border-bottom:2px solid #1976D2;padding-bottom:10px;">' + data.customer.name + ' - 月結報表</h3>';
+    html += '<p style="color:#666;margin-bottom:20px;">📅 期間：' + data.dateRange.from + ' ~ ' + data.dateRange.to + '</p>';
+    
+    html += '<div class="summary-cards">';
+    html += '<div class="card"><div class="card-title">📋 訂單數量</div><div class="card-value">' + data.summary.totalOrders + ' 筆</div></div>';
+    html += '<div class="card"><div class="card-title">💰 銷售總額</div><div class="card-value">$' + data.summary.totalSales.toLocaleString() + '</div></div>';
+    html += '<div class="card" style="border-left-color:#4CAF50;"><div class="card-title">✅ 已收款</div><div class="card-value" style="color:#4CAF50;">$' + data.summary.totalPaid.toLocaleString() + '</div></div>';
+    html += '<div class="card" style="border-left-color:#f44336;"><div class="card-title">⏳ 未收款</div><div class="card-value" style="color:#f44336;">$' + data.summary.totalUnpaid.toLocaleString() + '</div></div>';
+    html += '</div>';
+    
+    html += '<h4 style="color:#1976D2;margin-top:20px;">📋 訂單明細</h4>';
+    
+    // ⭐ 修正表格欄位：增加運費、扣款、小計
+    html += '<table class="orders-table"><thead><tr>' + 
+            '<th>訂單編號</th>' + 
+            '<th>日期</th>' + 
+            '<th style="text-align:right;">未稅小計</th>' + 
+            '<th style="text-align:right;">運費</th>' + 
+            '<th style="text-align:right;">扣款</th>' + 
+            '<th style="text-align:right;">稅額</th>' + 
+            '<th style="text-align:right;">含稅總額</th>' + 
+            '<th>付款狀態</th>' + 
+            '</tr></thead><tbody>';
+    
+    data.orders.forEach(function(order) {
+      const statusColor = order.paymentStatus === '已收款' ? '#4CAF50' : '#ff9800';
+      const shipTxt = order.shipping > 0 ? '$' + order.shipping.toLocaleString() : '-';
+      const dedTxt = order.deduction > 0 ? '<span style="color:red;">-$' + order.deduction.toLocaleString() + '</span>' : '-';
+
+      html += '<tr>';
+      html += '<td>' + order.orderId + '</td>';
+      html += '<td>' + order.date + '</td>';
+      html += '<td style="text-align:right;">$' + order.subtotal.toLocaleString() + '</td>';
+      html += '<td style="text-align:right;">' + shipTxt + '</td>';
+      html += '<td style="text-align:right;">' + dedTxt + '</td>';
+      html += '<td style="text-align:right;">$' + order.taxAmount.toLocaleString() + '</td>';
+      html += '<td style="text-align:right;font-weight:bold;">$' + order.grandTotal.toLocaleString() + '</td>';
+      html += '<td><span style="background:' + statusColor + ';color:white;padding:4px 8px;border-radius:4px;font-size:12px;">' + order.paymentStatus + '</span></td>';
+      html += '</tr>';
+    });
+    
+    html += '</tbody></table>';
+    
+    if (data.summary.overdueAmount > 0) {
+      html += '<div style="background:#fff3e0;border-left:4px solid #ff9800;padding:15px;margin-top:20px;border-radius:6px;"><strong style="color:#e65100;">⚠️ 提醒：有 $' + data.summary.overdueAmount.toLocaleString() + ' 的帳款已逾期</strong></div>';
+    }
+    
+    content.innerHTML = html;
+  }
+  
+  function printReport() {
+    if (!reportData) {
+      alert('請先產生報表！');
+      return;
+    }
+
+    // 前端自行計算總計細項，確保列印時資料正確
+    let totalSubtotal = 0;
+    let totalTax = 0;
+    let totalShipping = 0;
+    let totalDeduction = 0;
+    let totalGrand = 0;
+
+    if (reportData.orders) {
+      reportData.orders.forEach(function(o) {
+        totalSubtotal += (Number(o.subtotal) || 0);
+        totalTax += (Number(o.taxAmount) || 0);
+        totalShipping += (Number(o.shipping) || 0);
+        totalDeduction += (Number(o.deduction) || 0);
+        totalGrand += (Number(o.grandTotal) || 0);
+      });
+    }
+
+    const w = window.open('', '_blank');
+    w.document.write(`
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>客戶月結報表-${reportData.customer.name}</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: "Microsoft JhengHei", sans-serif; padding: 5mm; font-size: 11px; }
+    .header { text-align: center; margin-bottom: 5mm; border-bottom: 2px solid #000; padding-bottom: 3mm; }
+    .header h1 { font-size: 18px; margin-bottom: 2mm; }
+    table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+    th { background: #d0d0d0; padding: 3mm 1mm; border: 1px solid #000; text-align: center; font-size: 10px; font-weight: bold; }
+    td { padding: 2mm 1.5mm; border: 1px solid #999; font-size: 10px; vertical-align: top; }
+    .text-right { text-align: right; }
+    .text-center { text-align: center; }
+    .item-list { font-size: 9px; line-height: 1.4; color: #333; }
+    
+    .footer { margin-top: 5mm; padding-top: 3mm; border-top: 2px solid #000; display: flex; justify-content: space-between; font-size: 11px; }
+    .footer-right { text-align: right; line-height: 1.6; }
+    .total-row { font-size: 13px; font-weight: bold; border-top: 1px solid #999; margin-top: 3px; padding-top: 2px; }
+    
+    @page { margin: 5mm; size: A4; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>丸十水產股份有限公司 - 應收帳款表</h1>
+    <p>期間：${reportData.dateRange.from} ~ ${reportData.dateRange.to} &nbsp;|&nbsp; 顧客：${reportData.customer.name}</p>
+  </div>
+  
+  <table>
+    <thead>
+      <tr>
+        <th width="10%">單號</th>
+        <th width="12%">日期</th>
+        <th width="10%" class="text-right">應收總額</th>
+        <th width="68%">商品明細 & 金額結構</th>
+      </tr>
+    </thead>
+    <tbody>
+    `);
+    
+    reportData.orders.forEach(function(order) {
+      const itemLines = order.items.map(function(item) {
+  return item.productName + ' x' + item.qty + item.unit + ' ($' + item.subtotal.toLocaleString() + ')';
+});
+      
+      // ⭐ 這裡也加入了運費和扣款的文字描述
+      let structArr = ['未稅:$' + order.subtotal.toLocaleString()];
+      if(order.shipping > 0) structArr.push('運費:$' + order.shipping);
+      if(order.deduction > 0) structArr.push('扣款:-$' + order.deduction);
+      structArr.push('稅額:$' + order.taxAmount);
+      
+      const structLine = '<div style="margin-top:4px; padding-top:4px; border-top:1px dashed #ccc; font-weight:bold;">總計結構: ' + structArr.join(' + ') + ' = $' + order.grandTotal.toLocaleString() + '</div>';
+      
+      const itemListHtml = itemLines.join('，') + structLine;
+      
+      w.document.write(`
+      <tr>
+        <td class="text-center">${order.orderId}</td>
+        <td class="text-center">${order.date}</td>
+        <td class="text-right" style="font-weight:bold;">$${order.grandTotal.toLocaleString()}</td>
+        <td>${itemListHtml}</td>
+      </tr>
+      `);
+    });
+    
+    w.document.write(`
+    </tbody>
+  </table>
+  
+  <div class="footer">
+    <div class="footer-left">
+      訂單總數：${reportData.summary.totalOrders} 筆
+    </div>
+    <div class="footer-right">
+      <div>銷售小計 (未稅)：$${totalSubtotal.toLocaleString()}</div>
+      <div>+ 運費總計：$${totalShipping.toLocaleString()}</div>
+      <div>- 扣款總計：$${totalDeduction.toLocaleString()}</div>
+      <div>+ 稅金總計：$${totalTax.toLocaleString()}</div>
+      <div class="total-row">應收總計：$${totalGrand.toLocaleString()}</div>
+    </div>
+  </div>
+  
+  <script>
+    window.onload = function() { setTimeout(function(){ window.print(); window.close(); }, 800); }
+  <\/script>
+</body>
+</html>
+    `);
+    w.document.close();
+  }
+</script>
+</body>
+</html>

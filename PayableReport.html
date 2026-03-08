@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>應付帳款報表 - 龍潭央廚</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column;}
+:root {
+  --bg:#fffbf0;
+  --surface:#ffffff;
+  --surface2:#fdf5d8;
+  --surface-sidebar:#fef9ec;
+  --border:#f5e0a0;
+  --text:#3d2a00;
+  --text2:#92660a;
+  --accent:#b45309;
+  --accent2:#d97706;
+  --danger:#c53030;
+  --success:#276749;
+  --warning:#b7791f;
+  --orange:#c05621;
+  --purple:#553c9a;
+  --pink:#b83280;
+  --teal:#0e7490;
+  --surface-dark:#f5c842;
+  --text-on-dark:#5a3a00;
+  --accent-light:#fef3c7;
+  --shadow:rgba(180,83,9,0.07);
+}
+
+/* Loading Overlay */
+#loading{display:none;position:fixed;inset:0;background:rgba(180,83,9,0.15);z-index:9999;align-items:center;justify-content:center;flex-direction:column;gap:16px;}
+.spinner{width:44px;height:44px;border:4px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+#loadingMsg{color:var(--text2);font-size:14px;}
+
+/* Toast */
+.toast{position:fixed;bottom:24px;right:24px;padding:12px 20px;border-radius:9px;font-size:13px;font-weight:500;z-index:10000;animation:slideIn 0.3s ease;max-width:320px;}
+.toast.success{background:#d1fae5;border:1px solid var(--success);color:var(--success);}
+.toast.error{background:#fee2e2;border:1px solid var(--danger);color:var(--danger);}
+.toast.warning{background:#fef3c7;border:1px solid var(--warning);color:var(--warning);}
+@keyframes slideIn{from{transform:translateX(120%);opacity:0;}to{transform:translateX(0);opacity:1;}}
+
+/* Navbar */
+.navbar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 24px;display:flex;align-items:center;gap:24px;height:56px;flex-shrink:0;}
+.brand{font-size:16px;font-weight:700;color:var(--text);text-decoration:none;white-space:nowrap;}
+.nav-links{display:flex;gap:6px;flex:1;}
+.nav-link{padding:7px 14px;border-radius:7px;text-decoration:none;font-size:13px;color:var(--text2);transition:all 0.15s;}
+.nav-link:hover{background:var(--surface2);color:var(--text);}
+.nav-link.active{background:rgba(79,124,255,0.15);color:var(--accent);font-weight:600;}
+
+/* Main */
+.main{flex:1;overflow-y:auto;padding:20px;}
+
+/* Stats Grid */
+.stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px;}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 18px;}
+.stat-value{font-size:22px;font-weight:700;margin-bottom:4px;}
+.stat-label{font-size:11px;color:var(--text2);}
+
+/* Filter Bar */
+.filter-bar{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 18px;display:flex;gap:12px;align-items:flex-end;margin-bottom:18px;flex-wrap:wrap;}
+.filter-group{display:flex;flex-direction:column;}
+.form-label{font-size:11px;color:var(--text2);margin-bottom:4px;display:block;}
+.form-control{background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:8px 11px;color:var(--text);font-size:13px;font-family:inherit;outline:none;width:100%;}
+.form-control:focus{border-color:var(--accent);}
+select.form-control{cursor:pointer;}
+
+/* Buttons */
+.btn{padding:8px 16px;border-radius:7px;border:none;font-size:13px;font-family:inherit;cursor:pointer;font-weight:500;transition:all 0.15s;display:inline-flex;align-items:center;gap:6px;}
+.btn-primary{background:var(--accent);color:#fff;}
+.btn-primary:hover{background:#3d6ae8;}
+.btn-success{background:#d1fae5;color:var(--success);border:1px solid rgba(56,232,197,0.3);}
+.btn-success:hover{background:rgba(56,232,197,0.25);}
+.btn-warning{background:#fef3c7;color:var(--warning);border:1px solid rgba(255,209,102,0.3);}
+.btn-warning:hover{background:rgba(255,209,102,0.25);}
+.btn-secondary{background:var(--surface2);color:var(--text2);border:1px solid var(--border);}
+.btn-secondary:hover{color:var(--text);}
+
+/* Table */
+.table-wrap{overflow-x:auto;border-radius:10px;}
+.data-table{width:100%;border-collapse:collapse;background:var(--surface);border-radius:10px;overflow:hidden;border:1px solid var(--border);}
+.data-table th{padding:10px 14px;text-align:left;font-size:11px;color:var(--text2);background:var(--surface2);border-bottom:1px solid var(--border);}
+.data-table td{padding:10px 14px;font-size:13px;border-bottom:1px solid var(--border);}
+.data-table tr:last-child td{border-bottom:none;}
+.data-table tbody tr:hover{background:var(--surface2);}
+.order-link{color:var(--accent);cursor:pointer;text-decoration:underline;}
+.order-link:hover{color:#7ea8ff;}
+.text-right{text-align:right;}
+.no-data{text-align:center;color:var(--text2);padding:40px!important;}
+
+/* Badges */
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;}
+.badge-success{background:#d1fae5;color:var(--success);}
+.badge-danger{background:#fee2e2;color:var(--danger);}
+.badge-warning{background:#fef3c7;color:var(--warning);}
+.badge-partial{background:#fef3c7;color:var(--warning);}
+
+/* Overlay / Modal */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:1000;align-items:center;justify-content:center;padding:16px;}
+.overlay.active{display:flex;}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:14px;width:100%;max-width:700px;max-height:88vh;display:flex;flex-direction:column;overflow:hidden;}
+.modal-lg{max-width:820px;}
+.modal-header{padding:18px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.modal-header h3{font-size:15px;font-weight:700;}
+.modal-close{background:none;border:none;color:var(--text2);font-size:20px;cursor:pointer;padding:2px 6px;line-height:1;border-radius:5px;}
+.modal-close:hover{color:var(--text);background:var(--surface2);}
+.modal-body{padding:20px;overflow-y:auto;flex:1;}
+.modal-footer{padding:14px 20px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:flex-end;flex-shrink:0;}
+
+/* Detail sections */
+.detail-section{margin-bottom:18px;}
+.detail-section-title{font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;}
+.detail-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+.detail-item label{font-size:11px;color:var(--text2);display:block;margin-bottom:3px;}
+.detail-item span{font-size:13px;font-weight:500;}
+
+/* Monthly print modal */
+.month-modal{max-width:420px;}
+
+/* Section header */
+.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.section-title{font-size:14px;font-weight:700;}
+
+@media(max-width:768px){
+  .stats-grid{grid-template-columns:1fr;}
+  .detail-grid{grid-template-columns:1fr 1fr;}
+  .filter-bar{gap:8px;}
+}
+</style>
+</head>
+<body>
+
+<!-- Loading Overlay -->
+<div id="loading">
+  <div class="spinner"></div>
+  <div id="loadingMsg">處理中...</div>
+</div>
+
+<!-- Navbar -->
+<nav class="navbar">
+  <a href="#" class="brand">🐟 龍潭央廚</a>
+  <div class="nav-links">
+    <a href="PayableReport.html" class="nav-link active">📋 應付帳款</a>
+    <a href="SearchPurchase.html" class="nav-link">📋 進貨查詢</a>
+    <a href="MakePayment.html" class="nav-link">💸 供應商付款</a>
+  </div>
+</nav>
+
+<!-- Main Content -->
+<div class="main">
+
+  <!-- Stats Grid -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-value" id="statTotal" style="color:var(--accent)">NT$ 0</div>
+      <div class="stat-label">總應付金額</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" id="statUnpaid" style="color:var(--danger)">NT$ 0</div>
+      <div class="stat-label">未付金額</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" id="statPaid" style="color:var(--success)">NT$ 0</div>
+      <div class="stat-label">已付金額</div>
+    </div>
+  </div>
+
+  <!-- Filter Bar -->
+  <div class="filter-bar">
+    <div class="filter-group">
+      <label class="form-label">開始日期</label>
+      <input type="date" id="dateFrom" class="form-control" style="width:160px;">
+    </div>
+    <div class="filter-group">
+      <label class="form-label">結束日期</label>
+      <input type="date" id="dateTo" class="form-control" style="width:160px;">
+    </div>
+    <div class="filter-group">
+      <label class="form-label">付款狀態</label>
+      <select id="statusFilter" class="form-control" style="width:150px;">
+        <option value="">全部</option>
+        <option value="未付款">未付款</option>
+        <option value="部分付款">部分付款</option>
+        <option value="已付款">已付款</option>
+      </select>
+    </div>
+    <button class="btn btn-primary" onclick="loadData()">🔍 查詢</button>
+    <button class="btn btn-success" onclick="exportCSV()">⬇ 匯出 CSV</button>
+    <button class="btn btn-warning" onclick="openMonthlyPrint()">🖨 月結列印</button>
+  </div>
+
+  <!-- Table -->
+  <div class="section-header">
+    <div class="section-title">應付帳款明細</div>
+    <div style="font-size:12px;color:var(--text2)" id="recordCount">共 0 筆</div>
+  </div>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>進貨單號</th>
+          <th>日期</th>
+          <th>供應商</th>
+          <th class="text-right">應付金額</th>
+          <th class="text-right">已付金額</th>
+          <th class="text-right">未付金額</th>
+          <th>付款狀態</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody">
+        <tr><td colspan="7" class="no-data">載入中...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Detail Modal -->
+<div class="overlay" id="detailOverlay">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <h3 id="detailTitle">進貨單明細</h3>
+      <button class="modal-close" onclick="closeDetail()">&times;</button>
+    </div>
+    <div class="modal-body" id="detailBody">載入中...</div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeDetail()">關閉</button>
+    </div>
+  </div>
+</div>
+
+<!-- Pay Modal -->
+<div class="overlay" id="payOverlay">
+  <div class="modal" style="max-width:420px;">
+    <div class="modal-header">
+      <h3>快速付款</h3>
+      <button class="modal-close" onclick="closePayModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div style="margin-bottom:14px;font-size:13px;">
+        <div>進貨單號：<strong id="payOrderId"></strong></div>
+        <div>供應商：<strong id="paySupplier"></strong></div>
+        <div>應付金額：<strong style="color:var(--accent)" id="payTotal"></strong></div>
+        <div>未付金額：<strong style="color:var(--danger)" id="payUnpaid"></strong></div>
+      </div>
+      <div class="filter-group" style="margin-bottom:12px;">
+        <label class="form-label">付款金額</label>
+        <input type="number" id="payAmount" class="form-control" placeholder="輸入金額">
+      </div>
+      <div class="filter-group" style="margin-bottom:12px;">
+        <label class="form-label">付款方式</label>
+        <select id="payMethod" class="form-control">
+          <option value="匯款">匯款</option>
+          <option value="現金">現金</option>
+          <option value="支票">支票</option>
+          <option value="其他">其他</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label class="form-label">備註</label>
+        <input type="text" id="payNote" class="form-control" placeholder="選填">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closePayModal()">取消</button>
+      <button class="btn btn-primary" onclick="submitQuickPay()">確認付款</button>
+    </div>
+  </div>
+</div>
+
+<!-- Monthly Print Modal -->
+<div class="overlay" id="monthlyOverlay">
+  <div class="modal month-modal">
+    <div class="modal-header">
+      <h3>月結列印</h3>
+      <button class="modal-close" onclick="closeMonthly()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="filter-group" style="margin-bottom:16px;">
+        <label class="form-label">選擇月份</label>
+        <input type="month" id="printMonth" class="form-control">
+      </div>
+      <p style="font-size:12px;color:var(--text2);">將開啟列印視窗，顯示該月份各供應商應付帳款彙總。</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeMonthly()">取消</button>
+      <button class="btn btn-primary" onclick="doMonthlyPrint()">🖨 列印</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL='https://xuykenpvonfqwsgbuvvj.supabase.co';
+const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh1eWtlbnB2b25mcXdzZ2J1dnZqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwMDY3MzgsImV4cCI6MjA4NzU4MjczOH0.HmIktEbkPc0e7eTdqJdMWVxMzYIh4YkZ4LewZfC4Qr4';
+const H={'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Content-Type':'application/json','Prefer':'return=minimal'};
+
+async function api(table,params=''){
+  const r=await fetch(`${SUPABASE_URL}/rest/v1/${table}?${params}`,{headers:H});
+  if(!r.ok)throw new Error(await r.text());
+  return r.json();
+}
+
+function showToast(msg,type='success'){
+  const t=document.createElement('div');
+  t.className=`toast ${type}`;
+  t.textContent=msg;
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(),3500);
+}
+
+function showLoading(msg='處理中...'){
+  document.getElementById('loading').style.display='flex';
+  document.getElementById('loadingMsg').textContent=msg;
+}
+
+function hideLoading(){
+  document.getElementById('loading').style.display='none';
+}
+
+function fmt(n){return'NT$ '+Number(n||0).toLocaleString();}
+
+function statusBadge(s){
+  if(s==='已付款')return`<span class="badge badge-success">${s}</span>`;
+  if(s==='未付款')return`<span class="badge badge-danger">${s}</span>`;
+  return`<span class="badge badge-warning">${s||'未設定'}</span>`;
+}
+
+let allData=[];
+let filteredData=[];
+
+// Set default date range (current month)
+function initDates(){
+  const now=new Date();
+  const y=now.getFullYear();
+  const m=String(now.getMonth()+1).padStart(2,'0');
+  document.getElementById('dateFrom').value=`${y}-${m}-01`;
+  const lastDay=new Date(y,now.getMonth()+1,0).getDate();
+  document.getElementById('dateTo').value=`${y}-${m}-${lastDay}`;
+  document.getElementById('printMonth').value=`${y}-${m}`;
+}
+
+async function loadData(){
+  showLoading('載入應付帳款...');
+  try{
+    const raw=await api('payables','select=*&order=order_date.desc');
+    allData=raw||[];
+    applyFilter();
+    showToast('資料載入成功');
+  }catch(e){
+    console.error(e);
+    showToast('載入失敗：'+e.message,'error');
+    document.getElementById('tableBody').innerHTML='<tr><td colspan="7" class="no-data">載入失敗</td></tr>';
+  }finally{
+    hideLoading();
+  }
+}
+
+function applyFilter(){
+  const from=document.getElementById('dateFrom').value;
+  const to=document.getElementById('dateTo').value;
+  const status=document.getElementById('statusFilter').value;
+
+  filteredData=allData.filter(r=>{
+    const d=r.order_date?r.order_date.substring(0,10):'';
+    if(from&&d<from)return false;
+    if(to&&d>to)return false;
+    if(status&&r.status!==status)return false;
+    return true;
+  });
+
+  renderTable(filteredData);
+  updateStats(filteredData);
+}
+
+function updateStats(data){
+  let total=0,paid=0,unpaid=0;
+  data.forEach(r=>{
+    total+=Number(r.total_amount||0);
+    paid+=Number(r.paid_amount||0);
+    unpaid+=Number(r.unpaid_amount||0);
+  });
+  document.getElementById('statTotal').textContent=fmt(total);
+  document.getElementById('statUnpaid').textContent=fmt(unpaid);
+  document.getElementById('statPaid').textContent=fmt(paid);
+}
+
+function renderTable(data){
+  document.getElementById('recordCount').textContent=`共 ${data.length} 筆`;
+  if(!data.length){
+    document.getElementById('tableBody').innerHTML='<tr><td colspan="7" class="no-data">查無資料</td></tr>';
+    return;
+  }
+  const rows=data.map(r=>`
+    <tr>
+      <td><span class="order-link" onclick="openDetail('${r.order_id||r.id}')">${r.order_id||'-'}</span></td>
+      <td>${r.order_date?r.order_date.substring(0,10):'-'}</td>
+      <td>${r.supplier_name||'-'}</td>
+      <td class="text-right">${fmt(r.total_amount)}</td>
+      <td class="text-right">${fmt(r.paid_amount)}</td>
+      <td class="text-right" style="color:${Number(r.unpaid_amount||0)>0?'var(--danger)':'var(--success)'}">${fmt(r.unpaid_amount)}</td>
+      <td>${r.status!=='已付款'?`<span class="badge badge-danger" style="cursor:pointer" onclick="openPayModal('${r.id}')">${r.status||'未付款'}</span>`:statusBadge(r.status)}</td>
+    </tr>
+  `).join('');
+  document.getElementById('tableBody').innerHTML=rows;
+}
+
+async function openDetail(orderId){
+  document.getElementById('detailTitle').textContent=`進貨單明細 - ${orderId}`;
+  document.getElementById('detailBody').innerHTML='<div style="text-align:center;padding:30px;color:var(--text2);">載入中...</div>';
+  document.getElementById('detailOverlay').classList.add('active');
+  try{
+    const [orders,details]=await Promise.all([
+      api('purchase_orders',`select=*&id=eq.${orderId}`),
+      api('purchase_details',`select=*&order_id=eq.${orderId}`)
+    ]);
+    const o=orders&&orders[0]?orders[0]:null;
+    const d=details||[];
+
+    let html='';
+    if(o){
+      html+=`<div class="detail-section">
+        <div class="detail-section-title">進貨單資訊</div>
+        <div class="detail-grid">
+          <div class="detail-item"><label>進貨單號</label><span>${o.id||'-'}</span></div>
+          <div class="detail-item"><label>日期</label><span>${o.order_date?o.order_date.substring(0,10):'-'}</span></div>
+          <div class="detail-item"><label>供應商</label><span>${o.supplier_name||'-'}</span></div>
+          <div class="detail-item"><label>應付金額</label><span style="color:var(--accent)">${fmt(o.total_amount)}</span></div>
+          <div class="detail-item"><label>備註</label><span>${o.note||'-'}</span></div>
+        </div>
+      </div>`;
+    }else{
+      // Fallback: show from payables
+      const pv=allData.find(r=>r.order_id===orderId||String(r.id)===String(orderId));
+      if(pv){
+        html+=`<div class="detail-section">
+          <div class="detail-section-title">應付帳款資訊</div>
+          <div class="detail-grid">
+            <div class="detail-item"><label>進貨單號</label><span>${pv.order_id||pv.id||'-'}</span></div>
+            <div class="detail-item"><label>日期</label><span>${pv.order_date?pv.order_date.substring(0,10):'-'}</span></div>
+            <div class="detail-item"><label>供應商</label><span>${pv.supplier_name||'-'}</span></div>
+            <div class="detail-item"><label>應付金額</label><span style="color:var(--accent)">${fmt(pv.total_amount)}</span></div>
+            <div class="detail-item"><label>已付金額</label><span style="color:var(--success)">${fmt(pv.paid_amount)}</span></div>
+            <div class="detail-item"><label>未付金額</label><span style="color:var(--danger)">${fmt(pv.unpaid_amount)}</span></div>
+            <div class="detail-item"><label>狀態</label><span>${statusBadge(pv.status)}</span></div>
+            <div class="detail-item"><label>備註</label><span>${pv.note||'-'}</span></div>
+          </div>
+        </div>`;
+      }
+    }
+
+    if(d.length){
+      html+=`<div class="detail-section">
+        <div class="detail-section-title">進貨明細</div>
+        <table class="data-table">
+          <thead><tr><th>品名</th><th class="text-right">數量</th><th class="text-right">單價</th><th class="text-right">小計</th></tr></thead>
+          <tbody>
+            ${d.map(item=>`<tr>
+              <td>${item.product_name||item.item_name||'-'}</td>
+              <td class="text-right">${item.quantity||0} ${item.unit||''}</td>
+              <td class="text-right">${fmt(item.unit_price||item.price)}</td>
+              <td class="text-right">${fmt(item.subtotal||item.amount)}</td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>`;
+    }else{
+      html+=`<div style="text-align:center;padding:20px;color:var(--text2);font-size:13px;">無進貨明細記錄</div>`;
+    }
+
+    document.getElementById('detailBody').innerHTML=html;
+  }catch(e){
+    document.getElementById('detailBody').innerHTML=`<div style="color:var(--danger);padding:20px;">載入失敗：${e.message}</div>`;
+  }
+}
+
+function closeDetail(){
+  document.getElementById('detailOverlay').classList.remove('active');
+}
+
+function openMonthlyPrint(){
+  document.getElementById('monthlyOverlay').classList.add('active');
+}
+
+function closeMonthly(){
+  document.getElementById('monthlyOverlay').classList.remove('active');
+}
+
+function doMonthlyPrint(){
+  const month=document.getElementById('printMonth').value;
+  if(!month){showToast('請選擇月份','error');return;}
+  const [y,m]=month.split('-');
+  const prefix=`${y}-${m}`;
+
+  // Filter data for selected month
+  const monthData=allData.filter(r=>{
+    const d=r.order_date?r.order_date.substring(0,7):'';
+    return d===prefix;
+  });
+
+  // Group by supplier
+  const groups={};
+  monthData.forEach(r=>{
+    const name=r.supplier_name||'未知供應商';
+    if(!groups[name])groups[name]={total:0,paid:0,unpaid:0,rows:[]};
+    groups[name].total+=Number(r.total_amount||0);
+    groups[name].paid+=Number(r.paid_amount||0);
+    groups[name].unpaid+=Number(r.unpaid_amount||0);
+    groups[name].rows.push(r);
+  });
+
+  let grandTotal=0,grandPaid=0,grandUnpaid=0;
+  let tableRows='';
+  Object.keys(groups).forEach(name=>{
+    const g=groups[name];
+    grandTotal+=g.total;grandPaid+=g.paid;grandUnpaid+=g.unpaid;
+    tableRows+=`<tr>
+      <td>${name}</td>
+      <td style="text-align:right">NT$ ${g.total.toLocaleString()}</td>
+      <td style="text-align:right">NT$ ${g.paid.toLocaleString()}</td>
+      <td style="text-align:right;color:${g.unpaid>0?'#e53e3e':'#276749'}">NT$ ${g.unpaid.toLocaleString()}</td>
+    </tr>`;
+  });
+
+  const html=`<!DOCTYPE html><html lang="zh-TW"><head>
+<meta charset="UTF-8"><title>應付帳款月結 ${y}年${m}月</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:"Microsoft JhengHei","微軟正黑體",sans-serif;padding:18px 24px;font-size:11px;color:#000;}
+table{width:100%;border-collapse:collapse;}
+.print-title{text-align:center;font-size:18px;font-weight:bold;margin-bottom:2px;letter-spacing:2px;}
+.print-subtitle{text-align:center;font-size:13px;margin-bottom:8px;letter-spacing:6px;}
+.info-box{border:1px solid #000;padding:6px 10px;margin-bottom:8px;font-size:11px;line-height:20px;}
+.info-box table{width:100%;} .info-box td{padding:1px 0;border:none;vertical-align:top;}
+.info-box .lbl{font-weight:bold;white-space:nowrap;}
+.info-box .val-r{text-align:left;padding-left:40px;}
+.data th,.data td{border:1px solid #000;padding:3px 6px;font-size:11px;line-height:16px;}
+.data th{text-align:center;font-weight:bold;background:#f0f0f0;white-space:nowrap;}
+.r{text-align:right;}
+.total-row td{border-top:2px double #000;font-weight:bold;}
+.no-print{margin-top:15px;padding:8px 24px;font-size:13px;cursor:pointer;}
+@media print{.no-print{display:none;}}
+</style></head><body>
+<div class="print-title">丸十水產股份有限公司</div>
+<div class="print-subtitle">應付帳款彙總表</div>
+<div class="info-box"><table>
+  <tr><td><span class="lbl">期間：</span>${y} 年 ${m} 月</td><td class="val-r"><span class="lbl">列印日期：</span>${new Date().toLocaleDateString('zh-TW')}</td></tr>
+</table></div>
+<table class="data">
+<thead><tr><th>供應商名稱</th><th>應付金額</th><th>已付金額</th><th>未付金額</th></tr></thead>
+<tbody>
+${tableRows||'<tr><td colspan="4" style="text-align:center;padding:10px;">本月無應付帳款資料</td></tr>'}
+<tr class="total-row">
+  <td>合　計</td>
+  <td class="r">NT$ ${grandTotal.toLocaleString()}</td>
+  <td class="r">NT$ ${grandPaid.toLocaleString()}</td>
+  <td class="r">NT$ ${grandUnpaid.toLocaleString()}</td>
+</tr>
+</tbody>
+</table>
+<button class="no-print" onclick="window.print()">列印</button>
+</body></html>`;
+
+  const w=window.open('','_blank','width=900,height=650');
+  w.document.write(html);
+  w.document.close();
+  closeMonthly();
+}
+
+function exportCSV(){
+  if(!filteredData.length){showToast('無資料可匯出','error');return;}
+  const headers=['進貨單號','日期','供應商','應付金額','已付金額','未付金額','付款狀態'];
+  const rows=filteredData.map(r=>[
+    r.order_id||'',
+    r.order_date?r.order_date.substring(0,10):'',
+    r.supplier_name||'',
+    r.total_amount||0,
+    r.paid_amount||0,
+    r.unpaid_amount||0,
+    r.status||''
+  ]);
+  let csv='\uFEFF'+headers.join(',')+'\n';
+  csv+=rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const tTotal=filteredData.reduce((s,r)=>s+Number(r.total_amount||0),0);
+  const tPaid=filteredData.reduce((s,r)=>s+Number(r.paid_amount||0),0);
+  const tUnpaid=filteredData.reduce((s,r)=>s+Number(r.unpaid_amount||0),0);
+  csv+=`\n"","","總計",${tTotal},${tPaid},${tUnpaid},""`;
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  const now=new Date();
+  a.download=`應付帳款報表_${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('CSV 已匯出');
+}
+
+// === 快速付款 ===
+let payingRecord=null;
+
+function openPayModal(id){
+  const r=allData.find(x=>String(x.id)===String(id));
+  if(!r){showToast('找不到該筆資料','error');return;}
+  payingRecord=r;
+  document.getElementById('payOrderId').textContent=r.order_id||r.id;
+  document.getElementById('paySupplier').textContent=r.supplier_name||'-';
+  document.getElementById('payTotal').textContent=fmt(r.total_amount);
+  document.getElementById('payUnpaid').textContent=fmt(r.unpaid_amount);
+  document.getElementById('payAmount').value=Number(r.unpaid_amount||0);
+  document.getElementById('payNote').value='';
+  document.getElementById('payOverlay').classList.add('active');
+}
+
+function closePayModal(){
+  document.getElementById('payOverlay').classList.remove('active');
+  payingRecord=null;
+}
+
+async function submitQuickPay(){
+  if(!payingRecord)return;
+  const amount=Number(document.getElementById('payAmount').value);
+  const method=document.getElementById('payMethod').value;
+  const note=document.getElementById('payNote').value;
+  if(!amount||amount<=0){showToast('請輸入付款金額','error');return;}
+
+  showLoading('記錄付款中...');
+  try{
+    const now=new Date().toISOString().split('T')[0];
+    // 產生付款紀錄ID
+    const lastPay=await api('payment_made','select=id&order=id.desc&limit=1');
+    const lastNum=lastPay.length>0?parseInt(lastPay[0].id.replace(/[^0-9]/g,''),10):0;
+    const pmId='PM'+String(lastNum+1).padStart(5,'0');
+
+    // 寫入付款紀錄
+    await fetch(`${SUPABASE_URL}/rest/v1/payment_made`,{method:'POST',headers:{...H,'Prefer':'return=minimal'},
+      body:JSON.stringify({id:pmId,supplier_id:payingRecord.supplier_id,order_id:payingRecord.order_id||payingRecord.id,date:now,amount,payment_method:method,note})
+    });
+
+    // 更新 payables
+    const newPaid=Number(payingRecord.paid_amount||0)+amount;
+    const newUnpaid=Math.max(0,Number(payingRecord.total_amount||0)-newPaid);
+    const newSt=newUnpaid<=0?'已付款':'部分付款';
+    await fetch(`${SUPABASE_URL}/rest/v1/payables?id=eq.${payingRecord.id}`,{method:'PATCH',headers:{...H,'Prefer':'return=minimal'},
+      body:JSON.stringify({paid_amount:newPaid,unpaid_amount:newUnpaid,status:newSt})
+    });
+
+    // 更新 purchase_orders 付款狀態
+    if(payingRecord.order_id){
+      await fetch(`${SUPABASE_URL}/rest/v1/purchase_orders?id=eq.${payingRecord.order_id}`,{method:'PATCH',headers:{...H,'Prefer':'return=minimal'},
+        body:JSON.stringify({payment_status:newSt})
+      });
+    }
+
+    closePayModal();
+    showToast(`已記錄付款 ${fmt(amount)}`,'success');
+    loadData();
+  }catch(e){
+    showToast('付款失敗：'+e.message,'error');
+  }finally{
+    hideLoading();
+  }
+}
+
+// Close overlays on background click
+document.getElementById('detailOverlay').addEventListener('click',function(e){if(e.target===this)closeDetail();});
+document.getElementById('monthlyOverlay').addEventListener('click',function(e){if(e.target===this)closeMonthly();});
+document.getElementById('payOverlay').addEventListener('click',function(e){if(e.target===this)closePayModal();});
+
+// Init
+initDates();
+loadData();
+</script>
+</body>
+</html>

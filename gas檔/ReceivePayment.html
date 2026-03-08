@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: "Microsoft JhengHei", Arial, sans-serif;
+      font-size: 16px;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .container {
+      background: white;
+      padding: 25px;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      max-width: 650px;
+      margin: 0 auto;
+    }
+    h2 {
+      color: #2E7D32;
+      font-size: 24px;
+      margin-bottom: 20px;
+      border-bottom: 3px solid #4CAF50;
+      padding-bottom: 10px;
+    }
+    .form-group { margin-bottom: 20px; }
+    label {
+      display: block;
+      font-weight: bold;
+      font-size: 15px;
+      margin-bottom: 8px;
+      color: #555;
+    }
+    input, select {
+      width: 100%;
+      padding: 12px 15px;
+      font-size: 16px;
+      border: 2px solid #ddd;
+      border-radius: 8px;
+      min-height: 48px;
+      transition: border-color 0.3s;
+    }
+    input:focus, select:focus { outline: none; border-color: #4CAF50; }
+    .btn {
+      padding: 14px 28px;
+      font-size: 18px;
+      font-weight: bold;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      width: 100%;
+      margin-bottom: 10px;
+    }
+    .btn-success { background: #4CAF50; color: white; }
+    .btn-success:hover { background: #45a049; }
+    .btn-secondary { background: #9e9e9e; color: white; }
+
+    /* ⭐ 訂單清單樣式 */
+    .receivables-box {
+      background: #f1f8ff;
+      border: 1px solid #bbdefb;
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 20px;
+    }
+    .receivables-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .receivables-list {
+      max-height: 350px;
+      overflow-y: auto;
+      margin-top: 10px;
+    }
+    
+    /* ⭐ 快速操作按鈕 */
+    .quick-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .btn-small {
+      padding: 6px 12px;
+      font-size: 13px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    .btn-select-all { background: #2196F3; color: white; }
+    .btn-select-unpaid { background: #FF9800; color: white; }
+    .btn-clear { background: #9e9e9e; color: white; }
+    
+    /* ⭐ 可勾選的訂單項目 */
+    .receivable-item {
+      background: white;
+      padding: 12px;
+      margin-bottom: 8px;
+      border-radius: 6px;
+      border: 2px solid #e0e0e0;
+      cursor: pointer;
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      position: relative;
+    }
+    .receivable-item:hover { border-color: #2196F3; }
+    .receivable-item.selected {
+      border-color: #4CAF50;
+      background: #e8f5e9;
+      box-shadow: 0 0 8px rgba(76,175,80,0.3);
+    }
+    .receivable-item.paid {
+      background: #f5f5f5;
+      border-color: #bdbdbd;
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    .receivable-item.partial { background: #fff3e0; border-color: #FF9800; }
+    
+    .item-checkbox {
+      width: 22px;
+      height: 22px;
+      min-width: 22px;
+      margin-top: 2px;
+      cursor: pointer;
+    }
+    .item-checkbox:disabled { cursor: not-allowed; }
+    
+    .item-content { flex: 1; display: flex; flex-direction: column; gap: 5px; }
+    .order-header { display: flex; justify-content: space-between; font-weight: bold; align-items: center; }
+    .order-info { display: flex; justify-content: space-between; font-size: 14px; }
+    .unpaid-amount { color: #d32f2f; font-weight: bold; }
+    
+    .status-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 11px;
+      font-weight: bold;
+      color: white;
+    }
+    .status-badge.paid { background: #4CAF50; }
+    .status-badge.partial { background: #FF9800; }
+    .status-badge.unpaid { background: #E53935; }
+
+    /* ⭐ 金額統計區 */
+    .amount-summary {
+      background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+      padding: 15px;
+      border-radius: 8px;
+      margin: 15px 0;
+      border: 2px solid #81C784;
+    }
+    .summary-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 5px 0;
+      font-size: 15px;
+    }
+    .summary-row.total {
+      border-top: 2px solid #4CAF50;
+      margin-top: 10px;
+      padding-top: 10px;
+      font-size: 20px;
+      font-weight: bold;
+    }
+    .summary-row .value { font-weight: bold; }
+    .summary-row .value.green { color: #2E7D32; }
+    .summary-row .value.orange { color: #E65100; }
+    
+    /* ⭐ 美化提示訊息 */
+    .alert { 
+      padding: 15px 20px; 
+      border-radius: 8px; 
+      margin-bottom: 15px; 
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 16px;
+      animation: slideIn 0.3s ease-out;
+    }
+    .alert-success { background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%); color: #155724; border: 2px solid #28a745; }
+    .alert-error { background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%); color: #721c24; border: 2px solid #dc3545; }
+    .alert-warning { background: linear-gradient(135deg, #fff3cd 0%, #ffeeba 100%); color: #856404; border: 2px solid #ffc107; }
+    .alert .icon { font-size: 24px; }
+    .alert .message { flex: 1; }
+    
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .hidden { display: none; }
+    .radio-group { display: flex; gap: 15px; flex-wrap: wrap; margin-top: 5px; }
+    .radio-group label { font-weight: normal; cursor: pointer; display: flex; align-items: center; gap: 5px; }
+    .radio-group input { width: auto; min-height: auto; }
+    
+    /* ⭐ 成功畫面 */
+    .success-screen { text-align: center; padding: 40px 20px; }
+    .success-screen .icon { font-size: 80px; margin-bottom: 20px; animation: bounce 0.5s ease; }
+    .success-screen h3 { color: #2E7D32; font-size: 24px; margin-bottom: 10px; }
+    .success-screen p { color: #666; font-size: 16px; margin-bottom: 10px; }
+    .success-screen .detail { background: #f5f5f5; padding: 15px; border-radius: 8px; margin: 20px 0; text-align: left; font-size: 14px; }
+    @keyframes bounce { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.2); } }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>💰 客戶收款核銷</h2>
+    
+    <div id="alertBox" class="alert hidden">
+      <span class="icon"></span>
+      <span class="message"></span>
+    </div>
+    
+    <div id="formArea">
+      <form id="paymentForm">
+        <div class="form-group">
+          <label>👤 第一步：選擇客戶 *</label>
+          <select id="customer" required onchange="loadReceivables()">
+            <option value="">-- 請選擇客戶 --</option>
+          </select>
+        </div>
+        
+        <div id="receivablesBox" class="receivables-box hidden">
+          <div class="receivables-header">
+            <label style="margin-bottom:0;">📋 第二步：勾選要收款的訂單</label>
+            <div class="quick-actions">
+              <button type="button" class="btn-small btn-select-unpaid" onclick="selectAllUnpaid()">⚡ 全選待收</button>
+              <button type="button" class="btn-small btn-clear" onclick="clearSelection()">✖ 清除勾選</button>
+            </div>
+          </div>
+          <div class="receivables-list" id="receivablesList"></div>
+        </div>
+        
+        <!-- ⭐ 金額統計區 -->
+        <div id="amountSummary" class="amount-summary hidden">
+          <div class="summary-row">
+            <span>已勾選訂單數：</span>
+            <span class="value" id="selectedCount">0 筆</span>
+          </div>
+          <div class="summary-row">
+            <span>勾選訂單總額：</span>
+            <span class="value" id="selectedTotal">$0</span>
+          </div>
+          <div class="summary-row">
+            <span>已收金額：</span>
+            <span class="value green" id="selectedPaid">$0</span>
+          </div>
+          <div class="summary-row total">
+            <span>本次應收：</span>
+            <span class="value orange" id="selectedUnpaid">$0</span>
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label>📅 收款日期 *</label>
+          <input type="date" id="paymentDate" required>
+        </div>
+        
+        <div class="form-group">
+          <label>💵 本次收款金額 * <small style="color:#888;">(可手動調整)</small></label>
+          <input type="number" id="amount" min="0" step="1" required 
+                 placeholder="請輸入金額"
+                 style="text-align: right; font-size: 22px; font-weight: bold; color: #2E7D32;">
+        </div>
+        
+        <div class="form-group">
+          <label>💳 收款方式 *</label>
+          <div class="radio-group">
+            <label><input type="radio" name="paymentMethod" value="現金" checked> 現金</label>
+            <label><input type="radio" name="paymentMethod" value="轉帳"> 轉帳</label>
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label>📝 收款備註</label>
+          <input type="text" id="note" placeholder="例如：1月份月結款...">
+        </div>
+        
+        <button type="submit" class="btn btn-success" id="submitBtn">✅ 確認完成收款</button>
+        <button type="button" class="btn btn-secondary" onclick="resetForm()">🔄 重新填寫</button>
+      </form>
+    </div>
+    
+    <!-- ⭐ 成功畫面 -->
+    <div id="successScreen" class="success-screen hidden">
+      <div class="icon">🎉</div>
+      <h3>收款成功！</h3>
+      <p id="successMessage">款項已完成核銷</p>
+      <div class="detail" id="successDetail"></div>
+      <button type="button" class="btn btn-success" onclick="continuePayment()">繼續收款其他單據</button>
+      <button type="button" class="btn btn-secondary" onclick="google.script.host.close()">關閉視窗</button>
+    </div>
+  </div>
+
+<script>
+  let allOrders = [];       // 儲存所有訂單資料
+  let lastCustomerId = '';
+  
+  window.onload = function() {
+    setTodayDate();
+    loadCustomers();
+  };
+  
+  function setTodayDate() {
+    document.getElementById('paymentDate').value = new Date().toISOString().split('T')[0];
+  }
+  
+  function loadCustomers() {
+    google.script.run
+      .withSuccessHandler(function(data) {
+        const select = document.getElementById('customer');
+        select.innerHTML = '<option value="">-- 請選擇客戶 --</option>';
+        data.forEach(c => {
+          select.innerHTML += `<option value="${c.id}">${c.name}</option>`;
+        });
+      })
+      .getCustomers();
+  }
+  
+  function loadReceivables() {
+    const customerId = document.getElementById('customer').value;
+    const box = document.getElementById('receivablesBox');
+    const list = document.getElementById('receivablesList');
+    
+    lastCustomerId = customerId;
+    
+    if (!customerId) {
+      box.classList.add('hidden');
+      document.getElementById('amountSummary').classList.add('hidden');
+      return;
+    }
+    
+    list.innerHTML = '<div style="text-align:center; padding:20px;">🔍 正在載入訂單...</div>';
+    box.classList.remove('hidden');
+    
+    google.script.run
+  .withSuccessHandler(function(response) {
+    // ⭐ 檢查後端回傳格式
+    if (!response.success) {
+      list.innerHTML = '<div style="text-align:center; padding:20px; color:red;">❌ 載入失敗：' + response.error + '</div>';
+      document.getElementById('amountSummary').classList.add('hidden');
+      return;
+    }
+    
+    // ⭐ 取出真正的訂單陣列
+    const data = response.data;
+    allOrders = data;
+    
+    if (data.length === 0) {
+          list.innerHTML = '<div style="text-align:center; padding:20px; color:#666;">🎉 此客戶目前無訂單記錄！</div>';
+          document.getElementById('amountSummary').classList.add('hidden');
+          return;
+        }
+        
+        const html = data.map((r, index) => {
+          let statusClass = 'unpaid';
+          let statusText = '未收款';
+          let cardClass = '';
+          let disabled = '';
+          
+          if (r.status === '已收款' || r.unpaid <= 0) {
+            statusClass = 'paid';
+            statusText = '已收款';
+            cardClass = 'paid';
+            disabled = 'disabled';
+          } else if (r.paidAmount > 0) {
+            statusClass = 'partial';
+            statusText = '部分收款';
+            cardClass = 'partial';
+          }
+          
+          return `
+            <div class="receivable-item ${cardClass}" id="item_${r.orderId}" onclick="toggleCheckbox(${index}, '${disabled}')">
+              <input type="checkbox" class="item-checkbox" data-index="${index}" 
+                     data-order-id="${r.orderId}" 
+                     data-unpaid="${r.unpaid}"
+                     data-total="${r.totalAmount}"
+                     data-paid="${r.paidAmount}"
+                     onchange="updateSummary()" ${disabled}>
+              <div class="item-content">
+                <div class="order-header">
+                  <span>單號：${r.orderId}</span>
+                  <span class="status-badge ${statusClass}">${statusText}</span>
+                </div>
+                <div class="order-info">
+                  <span style="font-size:13px; color:#666;">${r.orderDate}</span>
+                </div>
+                <div class="order-info">
+                  <span>總額：$${r.totalAmount.toLocaleString()}</span>
+                  <span>已收：<span style="color:#4CAF50; font-weight:bold;">$${r.paidAmount.toLocaleString()}</span></span>
+                </div>
+                <div class="order-info">
+                  <span></span>
+                  <span>待收：<span class="unpaid-amount">$${r.unpaid.toLocaleString()}</span></span>
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('');
+        
+        list.innerHTML = html;
+    document.getElementById('amountSummary').classList.remove('hidden');
+    updateSummary();
+  })
+  .withFailureHandler(function(error) {
+    // ⭐ 新增：處理系統錯誤
+    list.innerHTML = '<div style="text-align:center; padding:20px; color:red;">❌ 系統錯誤：' + error + '</div>';
+  })
+  .getAllCustomerOrders(customerId);
+  }
+  
+  // ⭐ 點擊卡片時切換勾選
+  function toggleCheckbox(index, disabled) {
+    if (disabled) return;
+    const checkbox = document.querySelector(`.item-checkbox[data-index="${index}"]`);
+    if (checkbox && !checkbox.disabled) {
+      checkbox.checked = !checkbox.checked;
+      updateSummary();
+    }
+  }
+  
+  // ⭐ 全選待收款項
+  function selectAllUnpaid() {
+    document.querySelectorAll('.item-checkbox').forEach(cb => {
+      if (!cb.disabled) {
+        cb.checked = true;
+      }
+    });
+    updateSummary();
+    showAlert('已勾選所有待收款訂單', 'success');
+  }
+  
+  // ⭐ 清除所有勾選
+  function clearSelection() {
+    document.querySelectorAll('.item-checkbox').forEach(cb => {
+      cb.checked = false;
+    });
+    updateSummary();
+  }
+  
+  // ⭐ 更新金額統計
+  function updateSummary() {
+    const checkboxes = document.querySelectorAll('.item-checkbox:checked');
+    let count = 0;
+    let totalAmount = 0;
+    let paidAmount = 0;
+    let unpaidAmount = 0;
+    
+    checkboxes.forEach(cb => {
+      count++;
+      totalAmount += parseFloat(cb.dataset.total) || 0;
+      paidAmount += parseFloat(cb.dataset.paid) || 0;
+      unpaidAmount += parseFloat(cb.dataset.unpaid) || 0;
+    });
+    
+    document.getElementById('selectedCount').textContent = count + ' 筆';
+    document.getElementById('selectedTotal').textContent = '$' + totalAmount.toLocaleString();
+    document.getElementById('selectedPaid').textContent = '$' + paidAmount.toLocaleString();
+    document.getElementById('selectedUnpaid').textContent = '$' + unpaidAmount.toLocaleString();
+    
+    // 自動帶入金額
+    document.getElementById('amount').value = unpaidAmount > 0 ? unpaidAmount : '';
+    
+    // 更新卡片選中樣式
+    document.querySelectorAll('.receivable-item').forEach(item => {
+      const cb = item.querySelector('.item-checkbox');
+      if (cb && cb.checked) {
+        item.classList.add('selected');
+      } else {
+        item.classList.remove('selected');
+      }
+    });
+  }
+  
+  // ⭐ 美化提示訊息
+  function showAlert(message, type) {
+    const alertBox = document.getElementById('alertBox');
+    const iconSpan = alertBox.querySelector('.icon');
+    const msgSpan = alertBox.querySelector('.message');
+    
+    const icons = { success: '✅', error: '❌', warning: '⚠️' };
+    iconSpan.textContent = icons[type] || '💬';
+    msgSpan.textContent = message;
+    alertBox.className = 'alert alert-' + type;
+    
+    window.scrollTo(0, 0);
+    setTimeout(() => alertBox.classList.add('hidden'), type === 'error' ? 5000 : 3000);
+  }
+  
+  // ⭐ 顯示成功畫面
+  function showSuccessScreen(amount, orderIds) {
+    document.getElementById('formArea').classList.add('hidden');
+    document.getElementById('successScreen').classList.remove('hidden');
+    document.getElementById('successMessage').textContent = `已成功收款 $${amount.toLocaleString()}`;
+    
+    // 顯示明細
+    const detailHtml = orderIds.length > 0 
+      ? `<b>核銷單號：</b><br>${orderIds.join('<br>')}`
+      : '此筆為預收款（未指定單號）';
+    document.getElementById('successDetail').innerHTML = detailHtml;
+  }
+  
+  // ⭐ 繼續收款
+  function continuePayment() {
+    document.getElementById('successScreen').classList.add('hidden');
+    document.getElementById('formArea').classList.remove('hidden');
+    
+    document.getElementById('amount').value = '';
+    document.getElementById('note').value = '';
+    setTodayDate();
+    
+    if (lastCustomerId) {
+      document.getElementById('customer').value = lastCustomerId;
+      loadReceivables();
+    }
+  }
+  
+  // ⭐ 表單提交
+  document.getElementById('paymentForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const submitBtn = document.getElementById('submitBtn');
+    const customerId = document.getElementById('customer').value;
+    const amount = parseFloat(document.getElementById('amount').value);
+    
+    if (!customerId) { showAlert('請選擇客戶！', 'error'); return; }
+    if (!amount || amount <= 0) { showAlert('請輸入正確金額！', 'error'); return; }
+    
+    // 取得勾選的訂單
+    const selectedOrders = [];
+    document.querySelectorAll('.item-checkbox:checked').forEach(cb => {
+      selectedOrders.push({
+        orderId: cb.dataset.orderId,
+        unpaid: parseFloat(cb.dataset.unpaid) || 0
+      });
+    });
+    
+    if (selectedOrders.length === 0) {
+      if (!confirm('尚未勾選任何單據，是否仍要儲存此筆收款作為預收款？')) return;
+    }
+    
+    submitBtn.disabled = true;
+    submitBtn.innerText = '⏳ 正在儲存收款...';
+    
+    // ⭐ 批次處理：依序為每筆訂單建立收款記錄
+    const paymentDate = document.getElementById('paymentDate').value;
+    const paymentMethod = document.querySelector('input[name="paymentMethod"]:checked').value;
+    const note = document.getElementById('note').value;
+    
+    if (selectedOrders.length === 0) {
+      // 預收款：沒有指定單號
+      const paymentData = {
+        customerId: customerId,
+        orderId: '',
+        date: paymentDate,
+        amount: amount,
+        paymentMethod: paymentMethod,
+        note: note || '預收款'
+      };
+      
+      google.script.run
+        .withSuccessHandler(handleSuccess)
+        .withFailureHandler(handleError)
+        .savePaymentReceived(paymentData);
+    } else {
+      // ⭐ 批次收款：為每筆訂單分別建立收款記錄
+      let remaining = amount;
+      const payments = [];
+      
+      selectedOrders.forEach(order => {
+        if (remaining <= 0) return;
+        const payAmount = Math.min(remaining, order.unpaid);
+        payments.push({
+          customerId: customerId,
+          orderId: order.orderId,
+          date: paymentDate,
+          amount: payAmount,
+          paymentMethod: paymentMethod,
+          note: note
+        });
+        remaining -= payAmount;
+      });
+      
+      // 依序執行
+      processBatchPayments(payments, 0, selectedOrders.map(o => o.orderId));
+    }
+    
+    function handleSuccess(result) {
+      submitBtn.disabled = false;
+      submitBtn.innerText = '✅ 確認完成收款';
+      if (result.success) {
+        showSuccessScreen(amount, []);
+      } else {
+        showAlert('錯誤：' + result.error, 'error');
+      }
+    }
+    
+    function handleError(err) {
+      submitBtn.disabled = false;
+      submitBtn.innerText = '✅ 確認完成收款';
+      showAlert('系統錯誤：' + err, 'error');
+    }
+  });
+  
+  // ⭐ 批次處理收款
+  function processBatchPayments(payments, index, orderIds) {
+    if (index >= payments.length) {
+      // 全部完成
+      document.getElementById('submitBtn').disabled = false;
+      document.getElementById('submitBtn').innerText = '✅ 確認完成收款';
+      const totalAmount = payments.reduce((sum, p) => sum + p.amount, 0);
+      showSuccessScreen(totalAmount, orderIds);
+      return;
+    }
+    
+    google.script.run
+      .withSuccessHandler(function(result) {
+        if (result.success) {
+          processBatchPayments(payments, index + 1, orderIds);
+        } else {
+          document.getElementById('submitBtn').disabled = false;
+          document.getElementById('submitBtn').innerText = '✅ 確認完成收款';
+          showAlert('第 ' + (index + 1) + ' 筆收款失敗：' + result.error, 'error');
+        }
+      })
+      .withFailureHandler(function(err) {
+        document.getElementById('submitBtn').disabled = false;
+        document.getElementById('submitBtn').innerText = '✅ 確認完成收款';
+        showAlert('系統錯誤：' + err, 'error');
+      })
+      .savePaymentReceived(payments[index]);
+  }
+  
+  function resetForm() {
+    document.getElementById('paymentForm').reset();
+    allOrders = [];
+    lastCustomerId = '';
+    setTodayDate();
+    document.getElementById('receivablesBox').classList.add('hidden');
+    document.getElementById('amountSummary').classList.add('hidden');
+  }
+</script>
+</body>
+</html>

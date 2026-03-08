@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>龍潭央廚 - 發票紀錄</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg:#fffbf0;
+  --surface:#ffffff;
+  --surface2:#fdf5d8;
+  --surface-sidebar:#fef9ec;
+  --border:#f5e0a0;
+  --text:#3d2a00;
+  --text2:#92660a;
+  --accent:#b45309;
+  --accent2:#d97706;
+  --danger:#c53030;
+  --success:#276749;
+  --warning:#b7791f;
+  --orange:#c05621;
+  --purple:#553c9a;
+  --pink:#b83280;
+  --teal:#0e7490;
+  --surface-dark:#f5c842;
+  --text-on-dark:#5a3a00;
+  --accent-light:#fef3c7;
+  --shadow:rgba(180,83,9,0.07);
+}
+body {
+  font-family: 'Noto Sans TC', Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ========== 導覽列 ========== */
+.navbar { background:var(--surface); border-bottom:1px solid var(--border); padding:0 20px; height:52px; display:flex; align-items:center; justify-content:space-between; flex-shrink:0; }
+.navbar-brand { font-size:15px; font-weight:700; color:var(--accent); }
+.navbar-brand span { color:var(--text2); font-weight:400; font-size:13px; margin-left:10px; }
+.nav-links { display:flex; gap:4px; }
+.nav-btn { padding:6px 14px; border-radius:6px; border:none; background:transparent; color:var(--text2); font-size:13px; cursor:pointer; font-family:inherit; transition:all 0.15s; }
+.nav-btn:hover { background:var(--surface2); color:var(--text); }
+.nav-btn.active { background:var(--accent); color:white; }
+
+/* ========== 主要內容區 ========== */
+.main { flex: 1; overflow-y: auto; padding: 20px; }
+.container { max-width: 860px; margin: 0 auto; background: var(--surface); border-radius: 12px; border: 1px solid var(--border); overflow: hidden; display: flex; flex-direction: column; }
+
+/* ========== 頂部標題 ========== */
+.header { background: var(--surface2); padding: 20px 30px; border-bottom: 1px solid var(--border); }
+.header h1 { font-size: 20px; font-weight: 700; color: var(--accent); margin-bottom: 5px; }
+.header p { color: var(--text2); font-size: 13px; }
+
+/* ========== 標籤頁導航 ========== */
+.tabs { display: flex; background: var(--bg); border-bottom: 1px solid var(--border); }
+.tab-btn { flex: 1; padding: 14px 20px; border: none; background: transparent; font-size: 14px; font-weight: 600; color: var(--text2); cursor: pointer; transition: all 0.2s; position: relative; font-family: inherit; }
+.tab-btn:hover { background: var(--surface2); color: var(--text); }
+.tab-btn.active { color: var(--accent); background: var(--surface); border-bottom: 2px solid var(--accent); }
+.tab-btn .icon { margin-right: 8px; font-size: 16px; }
+
+/* ========== 內容區塊 ========== */
+.tab-content { display: none; padding: 25px 30px; animation: fadeIn 0.3s ease; }
+.tab-content.active { display: block; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ========== 表單樣式 ========== */
+.section-title { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 18px; padding-bottom: 10px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; }
+.section-title::before { content: ''; display: inline-block; width: 4px; height: 16px; background: var(--accent); border-radius: 2px; }
+
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.form-group { display: flex; flex-direction: column; }
+.form-group.full-width { grid-column: 1 / -1; }
+.form-group.col3 { grid-column: span 1; }
+.form-group label { font-size: 12px; font-weight: 500; color: var(--text2); margin-bottom: 6px; display: flex; align-items: center; gap: 4px; }
+.form-group label .required { color: var(--danger); }
+.form-group label .badge { font-size: 11px; background: rgba(79,124,255,0.15); color: var(--accent); padding: 1px 7px; border-radius: 10px; font-weight: 600; }
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+  padding: 10px 14px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 14px;
+  font-family: inherit;
+  transition: all 0.2s;
+  outline: none;
+}
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(79,124,255,0.1); }
+.form-group input[readonly] { background: var(--surface2); color: var(--text2); cursor: default; }
+.form-group input.auto-calc { background: var(--surface2); color: var(--success); font-weight: 700; cursor: default; }
+.form-group textarea { resize: vertical; min-height: 72px; }
+.form-group select { cursor: pointer; }
+
+/* 客戶搜尋下拉 */
+.customer-search-wrap { position: relative; }
+.customer-search-wrap input { width: 100%; }
+.customer-dropdown {
+  display: none;
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0; right: 0;
+  background: var(--surface);
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  z-index: 100;
+  max-height: 200px;
+  overflow-y: auto;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+}
+.customer-dropdown.open { display: block; }
+.customer-option {
+  padding: 10px 14px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--border);
+  transition: background 0.15s;
+}
+.customer-option:last-child { border-bottom: none; }
+.customer-option:hover { background: var(--surface2); }
+.customer-option .opt-name { font-size: 14px; font-weight: 600; color: var(--text); }
+.customer-option .opt-detail { font-size: 12px; color: var(--text2); margin-top: 2px; }
+
+/* 金額計算卡 */
+.calc-card {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px 20px;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+.calc-item { display: flex; flex-direction: column; gap: 5px; }
+.calc-item label { font-size: 11px; color: var(--text2); font-weight: 500; }
+.calc-item .value { font-size: 18px; font-weight: 700; color: var(--text); }
+.calc-item.total .value { color: var(--warning); font-size: 22px; }
+.calc-item.tax .value { color: var(--orange); }
+
+/* 按鈕樣式 */
+.button-row { display: flex; gap: 10px; margin-top: 20px; justify-content: flex-end; }
+.btn { padding: 10px 22px; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-family: inherit; }
+.btn-primary { background: var(--accent); color: white; }
+.btn-primary:hover { background: #3d6be8; transform: translateY(-1px); }
+.btn-secondary { background: var(--surface2); color: var(--text2); border: 1px solid var(--border); }
+.btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+.btn-danger { background: rgba(255,107,107,0.12); color: var(--danger); border: 1px solid rgba(255,107,107,0.3); font-size: 12px; padding: 5px 12px; }
+.btn-danger:hover { background: var(--danger); color: white; }
+.btn-sm { padding: 5px 12px; font-size: 12px; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; }
+
+/* ========== 查詢區 ========== */
+.query-bar { display: flex; gap: 10px; align-items: flex-end; margin-bottom: 20px; flex-wrap: wrap; }
+.query-bar .form-group { margin-bottom: 0; }
+.query-bar label { font-size: 12px; color: var(--text2); margin-bottom: 5px; }
+.query-bar input[type="month"] { padding: 9px 14px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 14px; font-family: inherit; outline: none; }
+.query-bar input[type="month"]:focus { border-color: var(--accent); }
+
+/* ========== 表格 ========== */
+.table-wrap { overflow-x: auto; border-radius: 10px; border: 1px solid var(--border); }
+table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 820px; }
+thead tr { background: var(--surface2); }
+thead th { padding: 12px 14px; text-align: left; color: var(--text2); font-weight: 600; font-size: 12px; white-space: nowrap; border-bottom: 1px solid var(--border); }
+tbody tr { border-bottom: 1px solid var(--border); transition: background 0.15s; }
+tbody tr:last-child { border-bottom: none; }
+tbody tr:hover { background: rgba(79,124,255,0.04); }
+tbody td { padding: 11px 14px; color: var(--text); vertical-align: middle; white-space: nowrap; }
+tbody td.muted { color: var(--text2); font-size: 12px; }
+tbody td .amount { font-weight: 700; color: var(--warning); }
+tbody td .invoice-no { font-family: monospace; font-weight: 700; color: var(--success); font-size: 13px; letter-spacing: 0.5px; }
+
+/* 狀態標籤 */
+.status-badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+.status-未開立 { background: rgba(139,144,176,0.15); color: var(--text2); }
+.status-已開立 { background: rgba(56,232,197,0.12); color: var(--success); }
+.status-已作廢 { background: rgba(255,107,107,0.12); color: var(--danger); }
+
+/* 摘要列 */
+.summary-row { background: var(--surface2) !important; font-weight: 700; }
+.summary-row td { color: var(--text); border-top: 2px solid var(--border); }
+
+/* 空狀態 */
+.empty-state { padding: 50px 20px; text-align: center; color: var(--text2); }
+.empty-state .icon { font-size: 36px; margin-bottom: 12px; opacity: 0.5; }
+.empty-state p { font-size: 14px; }
+
+/* ========== Loading ========== */
+#loadingOverlay {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(15,17,23,0.75);
+  z-index: 9000;
+  align-items: center;
+  justify-content: center;
+}
+#loadingOverlay.show { display: flex; }
+.spinner { width: 40px; height: 40px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ========== Toast ========== */
+#toastContainer { position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
+.toast {
+  padding: 12px 18px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: white;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+  animation: toastIn 0.3s ease;
+  pointer-events: auto;
+  max-width: 320px;
+  line-height: 1.5;
+}
+.toast.success { background: var(--success); color:#fff; }
+.toast.error { background: var(--danger); }
+.toast.warning { background: var(--warning); color:#fff; }
+@keyframes toastIn { from { opacity:0; transform: translateX(30px); } to { opacity:1; transform: translateX(0); } }
+@keyframes toastOut { from { opacity:1; } to { opacity:0; transform: translateX(30px); } }
+
+/* ========== 響應式 ========== */
+@media (max-width: 600px) {
+  .main { padding: 12px; }
+  .tab-content { padding: 18px 16px; }
+  .form-grid { grid-template-columns: 1fr; }
+  .form-group.full-width { grid-column: 1; }
+  .calc-card { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- Loading Overlay -->
+<div id="loadingOverlay">
+  <div class="spinner"></div>
+</div>
+
+<!-- Toast Container -->
+<div id="toastContainer"></div>
+
+<!-- 導覽列 -->
+<nav class="navbar">
+  <div class="navbar-brand">
+    🧾 發票紀錄
+    <span>龍潭央廚 ERP</span>
+  </div>
+  <div class="nav-links">
+    <button class="nav-btn" onclick="location.href='index.html'">首頁</button>
+    <button class="nav-btn" onclick="location.href='SalesOrder.html'">銷貨單</button>
+    <button class="nav-btn" onclick="location.href='SearchSales.html'">查詢銷貨</button>
+  </div>
+</nav>
+
+<!-- 主體 -->
+<div class="main">
+  <div class="container">
+    <!-- 標題 -->
+    <div class="header">
+      <h1>🧾 發票紀錄管理</h1>
+      <p>新增銷售發票、查詢歷史紀錄與管理發票狀態</p>
+    </div>
+
+    <!-- 標籤頁 -->
+    <div class="tabs">
+      <button class="tab-btn active" id="tabAdd" onclick="switchTab('add')">
+        <span class="icon">➕</span>新增發票
+      </button>
+      <button class="tab-btn" id="tabSearch" onclick="switchTab('search')">
+        <span class="icon">🔍</span>查詢發票
+      </button>
+    </div>
+
+    <!-- ====== Tab 1: 新增發票 ====== -->
+    <div class="tab-content active" id="contentAdd">
+      <div class="section-title">發票資料</div>
+
+      <div class="form-grid">
+        <!-- 發票日期 -->
+        <div class="form-group">
+          <label>發票日期 <span class="required">*</span></label>
+          <input type="date" id="invDate">
+        </div>
+
+        <!-- 關聯銷貨單號 -->
+        <div class="form-group">
+          <label>關聯銷貨單號 <span class="badge">選填</span></label>
+          <input type="text" id="orderId" placeholder="例：SO00123">
+        </div>
+
+        <!-- 客戶選擇 -->
+        <div class="form-group full-width">
+          <label>客戶 <span class="required">*</span></label>
+          <div class="customer-search-wrap">
+            <input type="text" id="customerSearch" placeholder="輸入客戶名稱搜尋..." autocomplete="off" oninput="filterCustomers()" onfocus="filterCustomers()">
+            <div class="customer-dropdown" id="customerDropdown"></div>
+          </div>
+          <input type="hidden" id="customerId">
+          <input type="hidden" id="customerNameHidden">
+        </div>
+
+        <!-- 發票號碼 -->
+        <div class="form-group">
+          <label>發票號碼 <span class="required">*</span> <span class="badge">自動轉大寫</span></label>
+          <input type="text" id="invoiceNo" placeholder="AB12345678" maxlength="10" oninput="this.value=this.value.toUpperCase()">
+        </div>
+
+        <!-- 課稅別 -->
+        <div class="form-group">
+          <label>課稅別 <span class="required">*</span></label>
+          <select id="taxType" onchange="calcAmounts()">
+            <option value="taxable">應稅 5%</option>
+            <option value="zero">零稅率</option>
+            <option value="exempt">免稅</option>
+          </select>
+        </div>
+
+        <!-- 未稅金額 -->
+        <div class="form-group">
+          <label>未稅金額 <span class="required">*</span></label>
+          <input type="number" id="amount" placeholder="0" min="0" step="1" oninput="calcAmounts()">
+        </div>
+
+        <!-- 稅額 -->
+        <div class="form-group">
+          <label>稅額（自動計算，可手動修改）</label>
+          <input type="number" id="taxAmount" placeholder="0" min="0" step="1" oninput="calcTotal()">
+        </div>
+
+        <!-- 備註 -->
+        <div class="form-group full-width">
+          <label>備註</label>
+          <textarea id="note" placeholder="備註說明..."></textarea>
+        </div>
+      </div>
+
+      <!-- 金額計算卡 -->
+      <div class="calc-card" style="margin-top:16px;">
+        <div class="calc-item">
+          <label>未稅金額</label>
+          <div class="value" id="displayAmount">$0</div>
+        </div>
+        <div class="calc-item tax">
+          <label>稅額</label>
+          <div class="value" id="displayTax">$0</div>
+        </div>
+        <div class="calc-item total">
+          <label>含稅總計</label>
+          <div class="value" id="displayTotal">$0</div>
+        </div>
+      </div>
+
+      <div class="button-row">
+        <button class="btn btn-secondary" onclick="resetForm()">清除</button>
+        <button class="btn btn-primary" id="btnSave" onclick="saveInvoice()">💾 儲存發票</button>
+      </div>
+    </div>
+
+    <!-- ====== Tab 2: 查詢發票 ====== -->
+    <div class="tab-content" id="contentSearch">
+      <div class="query-bar">
+        <div class="form-group">
+          <label>月份</label>
+          <input type="month" id="queryMonth">
+        </div>
+        <button class="btn btn-primary" onclick="loadInvoices()">🔍 查詢</button>
+      </div>
+
+      <!-- 表格 -->
+      <div class="table-wrap">
+        <table id="invoiceTable">
+          <thead>
+            <tr>
+              <th>發票號碼</th>
+              <th>日期</th>
+              <th>客戶名稱</th>
+              <th>銷貨單號</th>
+              <th>未稅金額</th>
+              <th>稅額</th>
+              <th>含稅總計</th>
+              <th>狀態</th>
+              <th>備註</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody id="invoiceTableBody">
+            <tr>
+              <td colspan="10">
+                <div class="empty-state">
+                  <div class="icon">🧾</div>
+                  <p>請選擇月份後點擊查詢</p>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- 合計列 -->
+      <div id="summarySection" style="display:none; margin-top:12px;">
+        <div style="display:flex; gap:20px; padding:14px 18px; background:var(--surface2); border-radius:8px; border:1px solid var(--border); font-size:13px;">
+          <span style="color:var(--text2);">共 <b id="sumCount" style="color:var(--text);">0</b> 筆有效發票</span>
+          <span style="color:var(--text2);">未稅合計：<b id="sumAmount" style="color:var(--warning);">$0</b></span>
+          <span style="color:var(--text2);">稅額合計：<b id="sumTax" style="color:var(--orange);">$0</b></span>
+          <span style="color:var(--text2);">含稅合計：<b id="sumTotal" style="color:var(--success);">$0</b></span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+/* ==============================
+   Supabase API 設定
+============================== */
+const SUPABASE_URL = 'https://xuykenpvonfqwsgbuvvj.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh1eWtlbnB2b25mcXdzZ2J1dnZqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwMDY3MzgsImV4cCI6MjA4NzU4MjczOH0.HmIktEbkPc0e7eTdqJdMWVxMzYIh4YkZ4LewZfC4Qr4';
+const H = {
+  'apikey': SUPABASE_KEY,
+  'Authorization': 'Bearer ' + SUPABASE_KEY,
+  'Content-Type': 'application/json',
+  'Prefer': 'return=representation'
+};
+
+async function api(table, params = '') {
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${params}`, { headers: H });
+  if (!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+async function apiPost(table, body) {
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
+    method: 'POST', headers: H, body: JSON.stringify(body)
+  });
+  if (!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+async function apiPatch(table, params, body) {
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${params}`, {
+    method: 'PATCH', headers: H, body: JSON.stringify(body)
+  });
+  if (!r.ok) throw new Error(await r.text());
+}
+
+/* ==============================
+   Loading / Toast
+============================== */
+function showLoading() { document.getElementById('loadingOverlay').classList.add('show'); }
+function hideLoading() { document.getElementById('loadingOverlay').classList.remove('show'); }
+
+function showToast(msg, type = 'success') {
+  const c = document.getElementById('toastContainer');
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.textContent = msg;
+  c.appendChild(t);
+  setTimeout(() => {
+    t.style.animation = 'toastOut 0.3s ease forwards';
+    setTimeout(() => t.remove(), 300);
+  }, 3200);
+}
+
+/* ==============================
+   標籤頁切換
+============================== */
+function switchTab(tab) {
+  document.getElementById('tabAdd').classList.toggle('active', tab === 'add');
+  document.getElementById('tabSearch').classList.toggle('active', tab === 'search');
+  document.getElementById('contentAdd').classList.toggle('active', tab === 'add');
+  document.getElementById('contentSearch').classList.toggle('active', tab === 'search');
+  if (tab === 'search') loadInvoices();
+}
+
+/* ==============================
+   初始化
+============================== */
+let allCustomers = [];
+
+async function init() {
+  // 預設今天
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('invDate').value = today;
+
+  // 預設當月
+  const ym = today.substring(0, 7);
+  document.getElementById('queryMonth').value = ym;
+
+  // 載入客戶清單
+  try {
+    showLoading();
+    allCustomers = await api('customers', 'select=id,name,tax_id,invoice_title&order=name.asc');
+  } catch (e) {
+    showToast('載入客戶清單失敗：' + e.message, 'error');
+  } finally {
+    hideLoading();
+  }
+}
+
+/* ==============================
+   客戶搜尋下拉
+============================== */
+function filterCustomers() {
+  const keyword = document.getElementById('customerSearch').value.toLowerCase().trim();
+  const dd = document.getElementById('customerDropdown');
+
+  const filtered = keyword
+    ? allCustomers.filter(c =>
+        c.name.toLowerCase().includes(keyword) ||
+        (c.tax_id && c.tax_id.includes(keyword)) ||
+        (c.invoice_title && c.invoice_title.toLowerCase().includes(keyword))
+      )
+    : allCustomers;
+
+  if (filtered.length === 0) {
+    dd.innerHTML = '<div class="customer-option"><div class="opt-name" style="color:var(--text2);">無符合客戶</div></div>';
+  } else {
+    dd.innerHTML = filtered.slice(0, 30).map(c => `
+      <div class="customer-option" onclick="selectCustomer('${c.id}','${escHtml(c.name)}','${escHtml(c.invoice_title || c.name)}')">
+        <div class="opt-name">${escHtml(c.name)}</div>
+        <div class="opt-detail">統編：${c.tax_id || '-'} | 發票抬頭：${escHtml(c.invoice_title || '-')}</div>
+      </div>
+    `).join('');
+  }
+  dd.classList.add('open');
+}
+
+function selectCustomer(id, name, title) {
+  document.getElementById('customerId').value = id;
+  document.getElementById('customerNameHidden').value = name;
+  document.getElementById('customerSearch').value = name + (title && title !== name ? ` (${title})` : '');
+  document.getElementById('customerDropdown').classList.remove('open');
+}
+
+function escHtml(str) {
+  if (!str) return '';
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+// 點擊外部關閉下拉
+document.addEventListener('click', e => {
+  if (!e.target.closest('.customer-search-wrap')) {
+    document.getElementById('customerDropdown').classList.remove('open');
+  }
+});
+
+/* ==============================
+   金額計算
+============================== */
+function calcAmounts() {
+  const amount = parseFloat(document.getElementById('amount').value) || 0;
+  const taxType = document.getElementById('taxType').value;
+  let tax = 0;
+  if (taxType === 'taxable') {
+    tax = Math.round(amount * 0.05);
+  }
+  document.getElementById('taxAmount').value = tax;
+  calcTotal();
+}
+
+function calcTotal() {
+  const amount = parseFloat(document.getElementById('amount').value) || 0;
+  const tax = parseFloat(document.getElementById('taxAmount').value) || 0;
+  const total = amount + tax;
+  document.getElementById('displayAmount').textContent = '$' + amount.toLocaleString();
+  document.getElementById('displayTax').textContent = '$' + tax.toLocaleString();
+  document.getElementById('displayTotal').textContent = '$' + total.toLocaleString();
+}
+
+/* ==============================
+   產生 ID
+============================== */
+async function generateId() {
+  try {
+    const rows = await api('invoices', 'select=id&order=id.desc&limit=1');
+    if (!rows || rows.length === 0) return 'IV00001';
+    const lastNum = parseInt(rows[0].id.replace('IV', ''), 10);
+    const newNum = lastNum + 1;
+    return 'IV' + String(newNum).padStart(5, '0');
+  } catch {
+    return 'IV00001';
+  }
+}
+
+/* ==============================
+   儲存發票
+============================== */
+async function saveInvoice() {
+  // 驗證
+  const date = document.getElementById('invDate').value;
+  const customerId = document.getElementById('customerId').value;
+  const customerName = document.getElementById('customerNameHidden').value;
+  const orderId = document.getElementById('orderId').value.trim();
+  const invoiceNo = document.getElementById('invoiceNo').value.trim().toUpperCase();
+  const taxType = document.getElementById('taxType').value;
+  const amount = parseFloat(document.getElementById('amount').value);
+  const taxAmount = parseFloat(document.getElementById('taxAmount').value) || 0;
+  const note = document.getElementById('note').value.trim();
+
+  if (!date) { showToast('請選擇發票日期', 'warning'); return; }
+  if (!customerId) { showToast('請選擇客戶', 'warning'); return; }
+  if (!invoiceNo) { showToast('請輸入發票號碼', 'warning'); return; }
+  // 格式驗證：2英+8數
+  if (!/^[A-Z]{2}\d{8}$/.test(invoiceNo)) {
+    showToast('發票號碼格式錯誤，應為 2 英文字母 + 8 數字（例：AB12345678）', 'warning');
+    return;
+  }
+  if (isNaN(amount) || amount <= 0) { showToast('請輸入有效的未稅金額', 'warning'); return; }
+
+  try {
+    showLoading();
+    document.getElementById('btnSave').disabled = true;
+
+    const id = await generateId();
+
+    const payload = {
+      id,
+      date,
+      customer_id: customerId,
+      customer_name: customerName,
+      order_id: orderId || null,
+      amount,
+      tax_amount: taxAmount,
+      invoice_no: invoiceNo,
+      tax_type: taxType,
+      status: '未開立',
+      note: note || null,
+      created_at: new Date().toISOString().split('T')[0]
+    };
+
+    await apiPost('invoices', payload);
+    showToast(`發票 ${invoiceNo} 已成功儲存（${id}）`, 'success');
+    resetForm();
+  } catch (e) {
+    showToast('儲存失敗：' + e.message, 'error');
+  } finally {
+    hideLoading();
+    document.getElementById('btnSave').disabled = false;
+  }
+}
+
+/* ==============================
+   清除表單
+============================== */
+function resetForm() {
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('invDate').value = today;
+  document.getElementById('customerSearch').value = '';
+  document.getElementById('customerId').value = '';
+  document.getElementById('customerNameHidden').value = '';
+  document.getElementById('orderId').value = '';
+  document.getElementById('invoiceNo').value = '';
+  document.getElementById('taxType').value = 'taxable';
+  document.getElementById('amount').value = '';
+  document.getElementById('taxAmount').value = '';
+  document.getElementById('note').value = '';
+  document.getElementById('displayAmount').textContent = '$0';
+  document.getElementById('displayTax').textContent = '$0';
+  document.getElementById('displayTotal').textContent = '$0';
+}
+
+/* ==============================
+   查詢發票
+============================== */
+async function loadInvoices() {
+  const month = document.getElementById('queryMonth').value;
+  if (!month) { showToast('請選擇月份', 'warning'); return; }
+
+  const [year, mon] = month.split('-');
+  const startDate = `${year}-${mon}-01`;
+  const lastDay = new Date(parseInt(year), parseInt(mon), 0).getDate();
+  const endDate = `${year}-${mon}-${String(lastDay).padStart(2, '0')}`;
+
+  try {
+    showLoading();
+    const rows = await api('invoices',
+      `date=gte.${startDate}&date=lte.${endDate}&order=date.asc,id.asc&select=*`
+    );
+    renderTable(rows);
+  } catch (e) {
+    showToast('查詢失敗：' + e.message, 'error');
+  } finally {
+    hideLoading();
+  }
+}
+
+function renderTable(rows) {
+  const tbody = document.getElementById('invoiceTableBody');
+  const sumSection = document.getElementById('summarySection');
+
+  if (!rows || rows.length === 0) {
+    tbody.innerHTML = `
+      <tr><td colspan="10">
+        <div class="empty-state">
+          <div class="icon">🧾</div>
+          <p>本月無發票紀錄</p>
+        </div>
+      </td></tr>`;
+    sumSection.style.display = 'none';
+    return;
+  }
+
+  // 計算合計（排除作廢）
+  let validCount = 0, totalAmount = 0, totalTax = 0, totalAll = 0;
+
+  tbody.innerHTML = rows.map(r => {
+    const amt = parseFloat(r.amount) || 0;
+    const tax = parseFloat(r.tax_amount) || 0;
+    const total = amt + tax;
+    const voided = r.status === '已作廢';
+
+    if (!voided) {
+      validCount++;
+      totalAmount += amt;
+      totalTax += tax;
+      totalAll += total;
+    }
+
+    const statusClass = `status-${r.status || '未開立'}`;
+
+    return `<tr style="${voided ? 'opacity:0.45;' : ''}">
+      <td><span class="invoice-no">${escHtml(r.invoice_no || '-')}</span></td>
+      <td>${r.date || '-'}</td>
+      <td>${escHtml(r.customer_name || '-')}</td>
+      <td class="muted">${escHtml(r.order_id || '-')}</td>
+      <td><span class="amount">$${amt.toLocaleString()}</span></td>
+      <td style="color:var(--orange);">$${tax.toLocaleString()}</td>
+      <td style="font-weight:700; color:var(--warning);">$${total.toLocaleString()}</td>
+      <td><span class="status-badge ${statusClass}">${r.status || '未開立'}</span></td>
+      <td class="muted">${escHtml(r.note || '')}</td>
+      <td>
+        ${!voided
+          ? `<button class="btn btn-danger btn-sm" onclick="voidInvoice('${r.id}','${escHtml(r.invoice_no || '')}')">作廢</button>`
+          : '<span style="color:var(--danger);font-size:12px;">已作廢</span>'
+        }
+      </td>
+    </tr>`;
+  }).join('');
+
+  // 更新摘要
+  document.getElementById('sumCount').textContent = validCount;
+  document.getElementById('sumAmount').textContent = '$' + totalAmount.toLocaleString();
+  document.getElementById('sumTax').textContent = '$' + totalTax.toLocaleString();
+  document.getElementById('sumTotal').textContent = '$' + totalAll.toLocaleString();
+  sumSection.style.display = 'block';
+}
+
+/* ==============================
+   作廢發票
+============================== */
+async function voidInvoice(id, invoiceNo) {
+  if (!confirm(`確定要將發票 ${invoiceNo} 設為「已作廢」？\n此操作無法復原。`)) return;
+  try {
+    showLoading();
+    await apiPatch('invoices', `id=eq.${encodeURIComponent(id)}`, { status: '已作廢' });
+    showToast(`發票 ${invoiceNo} 已作廢`, 'warning');
+    loadInvoices();
+  } catch (e) {
+    showToast('作廢失敗：' + e.message, 'error');
+  } finally {
+    hideLoading();
+  }
+}
+
+/* ==============================
+   啟動
+============================== */
+init();
+</script>
+</body>
+</html>

@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    /* 統一視覺風格：使用紅色/藍色系區分供應商付款 */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: "Microsoft JhengHei", Arial, sans-serif; font-size: 16px; padding: 20px; background: #f5f5f5; }
+    .container { background: white; padding: 25px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); max-width: 600px; margin: 0 auto; }
+    h2 { color: #D32F2F; font-size: 24px; margin-bottom: 20px; border-bottom: 3px solid #F44336; padding-bottom: 10px; }
+    
+    .form-group { margin-bottom: 20px; }
+    label { display: block; font-weight: bold; font-size: 15px; margin-bottom: 8px; color: #555; }
+    input, select { width: 100%; padding: 12px 15px; font-size: 16px; border: 2px solid #ddd; border-radius: 8px; min-height: 48px; }
+    input:focus, select:focus { outline: none; border-color: #F44336; }
+    
+    .btn { padding: 14px 28px; font-size: 18px; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; width: 100%; margin-bottom: 10px; }
+    .btn-danger { background: #E53935; color: white; }
+    .btn-danger:hover { background: #C62828; }
+    .btn-secondary { background: #9e9e9e; color: white; }
+
+    /* 📦 進貨單清單樣式 */
+    .payables-box { background: #fff5f5; border: 1px solid #ffcdd2; border-radius: 8px; padding: 15px; margin-bottom: 20px; }
+    .payables-list { max-height: 300px; overflow-y: auto; margin-top: 10px; }
+    .payable-item { background: white; padding: 12px; margin-bottom: 8px; border-radius: 6px; border: 2px solid #e0e0e0; cursor: pointer; display: flex; flex-direction: column; gap: 5px; position: relative; }
+    .payable-item:hover { border-color: #EF5350; }
+    .payable-item.selected { border-color: #D32F2F; background: #ffebee; box-shadow: 0 0 8px rgba(211,47,47,0.2); }
+    
+    .order-header { display: flex; justify-content: space-between; font-weight: bold; align-items: center; }
+    .status-badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; color: white; }
+    .status-badge.unpaid { background: #E53935; } /* 未付款 */
+    .status-badge.partial { background: #FF9800; } /* 部分付款 */
+
+    .amount-display { background: #ffebee; padding: 15px; border-radius: 8px; text-align: center; margin: 15px 0; border: 1px solid #EF5350; }
+    .amount-display .value { font-size: 28px; font-weight: bold; color: #C62828; }
+    
+    /* ⭐ 美化後的提示訊息樣式 */
+    .alert { 
+      padding: 15px 20px; 
+      border-radius: 8px; 
+      margin-bottom: 15px; 
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 16px;
+      animation: slideIn 0.3s ease-out;
+    }
+    .alert-success { 
+      background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%); 
+      color: #155724; 
+      border: 2px solid #28a745;
+    }
+    .alert-error { 
+      background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%); 
+      color: #721c24; 
+      border: 2px solid #dc3545;
+    }
+    .alert-warning { 
+      background: linear-gradient(135deg, #fff3cd 0%, #ffeeba 100%); 
+      color: #856404; 
+      border: 2px solid #ffc107;
+    }
+    .alert .icon { font-size: 24px; }
+    .alert .message { flex: 1; }
+    
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .hidden { display: none; }
+    .radio-group { display: flex; gap: 15px; margin-top: 5px; }
+    .radio-group label { font-weight: normal; cursor: pointer; display: flex; align-items: center; gap: 5px; }
+    
+    /* ⭐ 成功畫面樣式 */
+    .success-screen {
+      text-align: center;
+      padding: 40px 20px;
+    }
+    .success-screen .icon {
+      font-size: 80px;
+      margin-bottom: 20px;
+      animation: bounce 0.5s ease;
+    }
+    .success-screen h3 {
+      color: #2E7D32;
+      font-size: 24px;
+      margin-bottom: 10px;
+    }
+    .success-screen p {
+      color: #666;
+      font-size: 16px;
+      margin-bottom: 30px;
+    }
+    @keyframes bounce {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.2); }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>💸 供應商付款核銷</h2>
+    
+    <div id="alertBox" class="alert hidden">
+      <span class="icon"></span>
+      <span class="message"></span>
+    </div>
+    
+    <div id="formArea">
+      <form id="paymentForm">
+        <div class="form-group">
+          <label>🏢 第一步：選擇供應商 *</label>
+          <select id="supplier" required onchange="loadPayables()">
+            <option value="">-- 請選擇供應商 --</option>
+          </select>
+        </div>
+        
+        <div id="payablesBox" class="payables-box hidden">
+          <label>📋 第二步：待付進貨單（點選單據自動帶入金額）</label>
+          <div class="payables-list" id="payablesList"></div>
+        </div>
+        
+        <div class="form-group">
+          <label>📅 付款日期 *</label>
+          <input type="date" id="paymentDate" required>
+        </div>
+        
+        <div class="form-group">
+          <label>💵 本次付款金額 *</label>
+          <input type="number" id="amount" min="0" step="1" required 
+                 placeholder="請輸入金額"
+                 style="text-align: right; font-size: 22px; font-weight: bold; color: #C62828;">
+        </div>
+        
+        <div class="amount-display">
+          <div style="font-size: 14px; color: #666;">付款核銷總計</div>
+          <div class="value">$<span id="amountDisplay">0</span></div>
+        </div>
+        
+        <div class="form-group">
+          <label>💳 付款方式 *</label>
+          <select id="paymentMethod" style="width: 100%; padding: 12px 15px; border: 2px solid #ddd; border-radius: 8px; font-size: 16px;">
+             <option value="零用金(我代墊)">零用金(我代墊)</option>
+             <option value="老闆付款">老闆付款</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label>📝 備註</label>
+          <input type="text" id="note" placeholder="選填...">
+        </div>
+        
+        <button type="submit" class="btn btn-danger" id="submitBtn">✅ 確認完成付款</button>
+        <button type="button" class="btn btn-secondary" onclick="resetForm()">🔄 重新填寫</button>
+      </form>
+    </div>
+    
+    <!-- ⭐ 成功畫面 -->
+    <div id="successScreen" class="success-screen hidden">
+      <div class="icon">✅</div>
+      <h3>付款成功！</h3>
+      <p id="successMessage">款項已完成核銷</p>
+      <button type="button" class="btn btn-danger" onclick="continuePayment()">繼續付款其他單據</button>
+      <button type="button" class="btn btn-secondary" onclick="google.script.host.close()">關閉視窗</button>
+    </div>
+  </div>
+
+<script>
+  let selectedOrderId = '';
+  
+  window.onload = function() {
+    setTodayDate();
+    loadSuppliers();
+    document.getElementById('amount').addEventListener('input', updateAmountDisplay);
+  };
+  
+  function setTodayDate() {
+    document.getElementById('paymentDate').value = new Date().toISOString().split('T')[0];
+  }
+  
+  function loadSuppliers() {
+    google.script.run
+      .withSuccessHandler(function(data) {
+        const select = document.getElementById('supplier');
+        data.forEach(s => {
+          select.innerHTML += `<option value="${s.id}">${s.name}</option>`;
+        });
+      })
+      .getSuppliers();
+  }
+  
+  function loadPayables() {
+    const supplierId = document.getElementById('supplier').value;
+    const box = document.getElementById('payablesBox');
+    const list = document.getElementById('payablesList');
+    
+    if (!supplierId) {
+      box.classList.add('hidden');
+      return;
+    }
+    
+    list.innerHTML = '<div style="text-align:center; padding:20px;">🔍 查詢帳單中...</div>';
+    box.classList.remove('hidden');
+    
+    google.script.run
+      .withSuccessHandler(function(data) {
+        if (!data || data.length === 0) {
+          list.innerHTML = '<div style="text-align:center; padding:20px; color:#666;">🎉 此供應商目前無待付款項！</div>';
+          return;
+        }
+        
+        list.innerHTML = data.map(r => {
+          let statusClass = (r.paidAmount > 0) ? 'partial' : 'unpaid';
+          
+          return `
+            <div class="payable-item" id="item_${r.orderId}" onclick="selectPayable('${r.orderId}', ${r.remaining})">
+              <div class="order-header">
+                <span>單號：${r.orderId}</span>
+                <span class="status-badge ${statusClass}">${r.status}</span>
+              </div>
+              <div style="font-size:13px; color:#666; margin-top:5px;">${r.date}</div>
+              <div style="display:flex; justify-content:space-between; font-size:14px; margin-top:5px;">
+                <span>總額：$${r.totalAmount.toLocaleString()}</span>
+                <span>已付：<span style="color:#2E7D32; font-weight:bold;">$${r.paidAmount.toLocaleString()}</span></span>
+              </div>
+              <div style="text-align:right; font-size:14px; margin-top:5px;">
+                待付：<span style="color:#D32F2F; font-weight:bold;">$${r.remaining.toLocaleString()}</span>
+              </div>
+            </div>
+          `;
+        }).join('');
+      })
+      .getSupplierPayables(supplierId);
+  }
+  
+  function selectPayable(orderId, amount) {
+    selectedOrderId = orderId;
+    document.getElementById('amount').value = amount;
+    updateAmountDisplay();
+    
+    document.querySelectorAll('.payable-item').forEach(el => el.classList.remove('selected'));
+    const item = document.getElementById('item_' + orderId);
+    if (item) item.classList.add('selected');
+  }
+  
+  function updateAmountDisplay() {
+    const amount = parseFloat(document.getElementById('amount').value) || 0;
+    document.getElementById('amountDisplay').textContent = amount.toLocaleString();
+  }
+  
+  // ⭐ 美化後的提示訊息函數
+  function showAlert(message, type) {
+    const alertBox = document.getElementById('alertBox');
+    const iconSpan = alertBox.querySelector('.icon');
+    const msgSpan = alertBox.querySelector('.message');
+    
+    // 設定圖示
+    const icons = {
+      success: '✅',
+      error: '❌',
+      warning: '⚠️'
+    };
+    
+    iconSpan.textContent = icons[type] || '💬';
+    msgSpan.textContent = message;
+    
+    // 設定樣式
+    alertBox.className = 'alert alert-' + type;
+    
+    // 自動隱藏 (錯誤訊息顯示久一點)
+    setTimeout(() => {
+      alertBox.classList.add('hidden');
+    }, type === 'error' ? 5000 : 3000);
+  }
+  
+  // ⭐ 顯示成功畫面
+  function showSuccessScreen(amount, orderId) {
+    document.getElementById('formArea').classList.add('hidden');
+    document.getElementById('successScreen').classList.remove('hidden');
+    document.getElementById('successMessage').textContent = 
+      `已成功付款 $${amount.toLocaleString()}` + (orderId ? ` (單號: ${orderId})` : '');
+  }
+  
+  // ⭐ 繼續付款
+  function continuePayment() {
+    document.getElementById('successScreen').classList.add('hidden');
+    document.getElementById('formArea').classList.remove('hidden');
+    resetForm();
+  }
+  
+  document.getElementById('paymentForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const submitBtn = document.getElementById('submitBtn');
+    const supplierId = document.getElementById('supplier').value;
+    const amount = parseFloat(document.getElementById('amount').value);
+    
+    if (!supplierId || !amount) {
+      showAlert('請填寫完整資訊！', 'warning');
+      return;
+    }
+
+    submitBtn.disabled = true;
+    submitBtn.innerText = '⏳ 儲存中...';
+    
+    const data = {
+      supplierId: supplierId,
+      orderId: selectedOrderId,
+      date: document.getElementById('paymentDate').value,
+      amount: amount,
+      paymentMethod: document.getElementById('paymentMethod').value,
+      note: document.getElementById('note').value
+    };
+    
+    google.script.run
+      .withSuccessHandler(function(result) {
+        submitBtn.disabled = false;
+        submitBtn.innerText = '✅ 確認完成付款';
+        if (result.success) {
+          // ⭐ 顯示美化後的成功畫面
+          showSuccessScreen(data.amount, data.orderId);
+        } else {
+          showAlert('錯誤：' + result.error, 'error');
+        }
+      })
+      .withFailureHandler(function(err) {
+        submitBtn.disabled = false;
+        submitBtn.innerText = '✅ 確認完成付款';
+        showAlert('系統錯誤：' + err, 'error');
+      })
+      .savePaymentMade(data);
+  });
+  
+  function resetForm() {
+    document.getElementById('paymentForm').reset();
+    selectedOrderId = '';
+    setTodayDate();
+    updateAmountDisplay();
+    document.getElementById('payablesBox').classList.add('hidden');
+    document.querySelectorAll('.payable-item').forEach(el => el.classList.remove('selected'));
+  }
+</script>
+</body>
+</html>

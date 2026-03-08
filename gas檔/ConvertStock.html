@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <style>
+    body { font-family: 'Microsoft JhengHei', sans-serif; padding: 20px; color: #333; }
+    .box { background: #fffde7; padding: 15px; border-radius: 12px; border: 1px solid #ffd54f; margin-bottom: 15px; }
+    label { font-weight: bold; display: block; margin-bottom: 8px; color: #E64A19; }
+    select, input { width: 100%; padding: 12px; margin-bottom: 10px; border-radius: 8px; border: 1px solid #ddd; font-size: 15px; }
+    .btn { width: 100%; padding: 15px; background: #4CAF50; color: white; border: none; border-radius: 10px; font-size: 18px; font-weight: bold; cursor: pointer; }
+    .btn:hover { background: #45a049; }
+    .note { font-size: 13px; color: #666; margin-top: -5px; margin-bottom: 10px; }
+  </style>
+</head>
+<body>
+  <h3>📦 商品分裝轉換</h3>
+  <p style="font-size:14px; color:#666;">將大包裝原料轉換為小包裝成品</p>
+
+  <div class="box">
+    <label>🔙 消耗原料 (大規格)</label>
+    <select id="rawProduct"></select>
+    <input type="number" id="rawQty" placeholder="消耗數量" value="1">
+    <div class="note">通常消耗 1 個大規格單位</div>
+  </div>
+
+  <div style="text-align:center; font-size:24px; margin:10px 0;">⬇️</div>
+
+  <div class="box" style="background:#e8f5e9; border-color:#81C784;">
+    <label>🆕 產出成品 (小規格)</label>
+    <select id="targetProduct"></select>
+    <input type="number" id="targetQty" placeholder="產出數量">
+    <div class="note" style="color:#2E7D32;">💡 請依照實際分裝出的數量填寫 (例如 9 或 10)</div>
+  </div>
+
+  <button class="btn" id="saveBtn" onclick="submit()">確認執行轉換</button>
+
+<script>
+  window.onload = function() {
+    google.script.run.withSuccessHandler(data => {
+      const p = data.products;
+      const rSel = document.getElementById('rawProduct');
+      const tSel = document.getElementById('targetProduct');
+      p.forEach(i => {
+        const opt = `<option value="${i.id}">${i.name} (${i.unit})</option>`;
+        rSel.innerHTML += opt;
+        tSel.innerHTML += opt;
+      });
+    }).getDataForSalesOrder();
+  };
+
+  function submit() {
+    const btn = document.getElementById('saveBtn');
+    const data = {
+      rawId: document.getElementById('rawProduct').value,
+      rawQty: Number(document.getElementById('rawQty').value),
+      targetId: document.getElementById('targetProduct').value,
+      targetQty: Number(document.getElementById('targetQty').value)
+    };
+    
+    if (data.rawId === data.targetId) { alert('原料與成品不能相同！'); return; }
+    if (data.targetQty <= 0) { alert('請填寫實際產出的數量！'); return; }
+
+    btn.disabled = true;
+    btn.innerText = "正在更新庫存...";
+    
+    google.script.run.withSuccessHandler(res => {
+      if(res.success) {
+        alert('✅ 轉換成功！\n已扣除原料並增加成品庫存。');
+        google.script.host.close();
+      } else {
+        alert('❌ 失敗：' + res.error);
+        btn.disabled = false;
+        btn.innerText = "確認執行轉換";
+      }
+    }).convertProductStock(data);
+  }
+</script>
+</body>
+</html>

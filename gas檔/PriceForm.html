@@ -1,0 +1,1103 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+  <base target="_top">
+
+  <meta charset="UTF-8">
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <style>
+
+    * { box-sizing: border-box; }
+
+    body { font-family: 'Microsoft JhengHei', sans-serif; margin: 0; padding: 15px; background: #fdfdfd; }
+
+    .card { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 15px; }
+
+    h2 { color: #E64A19; margin-top: 0; display: flex; align-items: center; gap: 8px; }
+
+    label { font-weight: bold; display: block; margin-bottom: 5px; color: #666; }
+
+    select, input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 15px; margin-bottom: 10px; }
+
+   
+
+    .search-input { background-color: #fffde7; border: 1px solid #ffd54f; }
+
+    .search-box { background: #fff3e0; padding: 15px; border-radius: 10px; border: 1px solid #ffe0b2; }
+
+   
+
+    /* 類別選擇器 */
+
+    .filter-row { display: grid; grid-template-columns: 1fr 1fr 0.5fr; gap: 10px; margin-bottom: 10px; } /* ⭐ 修正 grid */
+
+    .category-badge { display: inline-block; background: #2196F3; color: white; padding: 2px 8px; border-radius: 4px; font-size: 11px; margin-left: 5px; }
+
+   
+
+    .prod-grid { display: grid; grid-template-columns: 1fr; gap: 10px; max-height: 350px; overflow-y: auto; margin-top: 10px; }
+
+    .p-card {
+
+      background: white; border: 1px solid #eee; padding: 12px; border-radius: 10px;
+
+      display: flex; justify-content: space-between; align-items: center; cursor: pointer;
+
+      transition: all 0.2s;
+
+    }
+
+    .p-card:hover { background: #fff3e0; }
+
+    .p-card.selected { background: #e8f5e9; border: 2px solid #4CAF50; }
+
+   
+
+    .p-name { font-weight: bold; color: #d84315; }
+
+    .p-price { font-size: 12px; color: #999; }
+
+    .set-badge { background: #e8f5e9; color: #2e7d32; font-size: 11px; padding: 2px 6px; border-radius: 4px; margin-left: 8px; }
+
+   
+
+    .selected-area { background: #e3f2fd; padding: 15px; border-radius: 10px; margin-top: 15px; }
+
+    .selected-item { background: white; padding: 8px 12px; border-radius: 6px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+
+    .price-input { width: 120px; padding: 8px; border: 1px solid #ccc; border-radius: 5px; text-align: right; }
+
+    .sort-badge { background: #1976D2; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; margin-right: 8px; }
+
+    .btn-remove { background: #ffebee; color: #d32f2f; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; }
+
+   
+
+    .btn-save-all { width: 100%; padding: 15px; background: #4CAF50; color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 15px; }
+
+    .btn-save-all:disabled { background: #ccc; cursor: not-allowed; }
+
+   
+
+    .sort-info { background: #fff3e0; padding: 10px; border-radius: 6px; margin-bottom: 10px; font-size: 13px; color: #e65100; border-left: 4px solid #ff9800; }
+
+
+
+    /* ⭐ 功能3：批量折扣工具列 */
+
+    .batch-tools {
+
+        background: #bbdefb;
+
+        padding: 10px;
+
+        border-radius: 6px;
+
+        margin-bottom: 15px;
+
+        display: flex;
+
+        gap: 10px;
+
+        align-items: center;
+
+        border: 1px solid #90caf9;
+
+    }
+
+    .batch-tools input { margin: 0; width: 80px; text-align: center; }
+
+    .btn-batch { padding: 8px 15px; font-size: 14px; background: #1976D2; color: white; border: none; border-radius: 6px; cursor: pointer; }
+
+    .btn-batch:hover { background: #1565C0; }
+
+    .btn-reset { background: #607D8B; }
+
+
+
+    /* ========== 新增商品彈窗樣式 ========== */
+
+    .modal-overlay {
+
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+
+      background: rgba(0, 0, 0, 0.5); z-index: 20000;
+
+      display: flex; justify-content: center; align-items: center;
+
+    }
+
+    .modal-content {
+
+      background: white; width: 95%; max-width: 900px; max-height: 90vh;
+
+      border-radius: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+
+      overflow-y: auto; padding: 20px; position: relative;
+
+    }
+
+    .modal-header {
+
+      display: flex; justify-content: space-between; align-items: center;
+
+      border-bottom: 2px solid #4CAF50; padding-bottom: 10px; margin-bottom: 20px;
+
+    }
+
+    .modal-header h3 { margin: 0; color: #4CAF50; font-size: 20px; border: none; }
+
+    .btn-close-modal {
+
+      background: transparent; border: none; font-size: 24px; cursor: pointer; color: #666;
+
+    }
+
+    .btn-close-modal:hover { color: #d32f2f; }
+
+
+
+    /* 讓新增商品的表單在彈窗內稍微緊湊一點 */
+
+    .modal-content .form-group { margin-bottom: 12px; }
+
+    .modal-content .spec-row { padding: 10px; margin-bottom: 8px; }
+
+   
+
+    /* ⭐ 確保 .hidden 樣式存在且權重夠高 */
+
+    .hidden { display: none !important; }
+
+  </style>
+
+</head>
+
+<body>
+
+
+
+  <div class="card">
+
+    <h2>🏷️ 批量設定客戶特價</h2>
+
+    <label>👤 第一步：選擇客戶</label>
+
+    <input type="text" id="custSearch" class="search-input" placeholder="🔍 輸入關鍵字搜尋客戶..." onkeyup="filterCustomer()">
+
+    <select id="custSelect" onchange="updateDisplay()"></select>
+
+  </div>
+
+
+
+  <div class="search-box">
+
+    <label>🔍 第二步：勾選要設定特價的商品（可多選）</label>
+
+    <div class="sort-info">
+
+      💡 <strong>排序提示：</strong>商品會按照你勾選的順序自動編號（第1個勾選=排序1，第2個=排序2...），開銷貨單時會按此順序顯示
+
+    </div>
+
+   
+
+    <div class="filter-row">
+
+      <select id="categoryFilter" onchange="filterProducts()">
+
+        <option value="">📦 全部類別</option>
+
+      </select>
+
+      <input type="text" id="pSearch" placeholder="🔍 搜尋名稱或編號..." onkeyup="filterProducts()">
+
+     
+
+      <button type="button" class="btn-batch" style="background:#4CAF50; width:auto;" onclick="openAddProductModal()">
+
+        ➕ 新增商品
+
+      </button>
+
+    </div>
+
+   
+
+    <div id="pList" class="prod-grid">載入中...</div>
+
+  </div>
+
+
+
+  <div class="selected-area" id="selectedZone" style="display:none;">
+
+    <h3 style="margin-top:0; color:#1976D2;">✅ 已選擇 <span id="selectedCount">0</span> 項商品</h3>
+
+   
+
+    <div class="batch-tools">
+
+        <span>⚡ 批量設定：</span>
+
+        <input type="number" id="batchRate" placeholder="折數" title="8=8折, 85=85折">
+
+        <button class="btn-batch" onclick="applyBatchDiscount()">套用折扣</button>
+
+        <button class="btn-batch btn-reset" onclick="resetBatchDiscount()">還原原價</button>
+
+    </div>
+
+
+
+    <div id="selectedList"></div>
+
+    <button class="btn-save-all" id="saveBtn" onclick="batchSave()">💾 統一儲存所有特價（含排序）</button>
+
+  </div>
+
+
+
+  <div id="addProductModal" class="modal-overlay hidden">
+
+    <div class="modal-content">
+
+      <div class="modal-header">
+
+        <h3>➕ 快速新增商品</h3>
+
+        <button type="button" class="btn-close-modal" onclick="closeAddProductModal()">×</button>
+
+      </div>
+
+
+
+      <form id="quickProductForm">
+
+        <datalist id="categoryList">
+
+          <option value="包子饅頭">
+
+          <option value="團購商品">
+
+          <option value="港式點心">
+
+          <option value="自有商品">
+
+        </datalist>
+
+
+
+        <div class="grid-row" style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+
+          <div class="form-group">
+
+            <label>📦 商品名稱 *</label>
+
+            <input type="text" id="newBaseName" required placeholder="例: 魚子鮮蝦餃">
+
+          </div>
+
+          <div class="form-group">
+
+            <label>🏷️ 類別</label>
+
+            <input type="text" id="newCategory" list="categoryList" placeholder="選擇或自訂">
+
+          </div>
+
+        </div>
+
+
+
+        <div style="background: #e3f2fd; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+
+          <h4 style="margin-top:0; color:#1976D2;">規格設定</h4>
+
+          <div id="newSpecList"></div>
+
+          <button type="button" class="btn-batch" style="margin-top:10px;" onclick="addNewSpecRow()">➕ 增加規格</button>
+
+        </div>
+
+
+
+        <div style="text-align: right;">
+
+          <button type="button" class="btn-batch btn-reset" onclick="closeAddProductModal()">取消</button>
+
+          <button type="submit" class="btn-batch" style="background:#4CAF50;">💾 儲存並使用</button>
+
+        </div>
+
+      </form>
+
+    </div>
+
+  </div>
+
+
+
+<script>
+
+  let allCustomers = [], products = [], specialPrices = [];
+
+  let selectedItems = [];
+
+  let categories = [];
+
+
+
+  // 1. 網頁載入時執行
+
+  window.onload = function() {
+
+    google.script.run.withSuccessHandler(function(data) {
+
+      allCustomers = data.customers;
+
+      specialPrices = data.specialPrices || [];
+
+      products = data.products;
+
+     
+
+      products.forEach(p => {
+
+      p.priceBranch = p.priceBranch || 0;      // G欄總倉價
+
+      p.priceWholesale = p.priceWholesale || 0; // H欄批發價
+
+      p.priceGroupBuy = p.priceGroupBuy || 0;   // I欄團購價
+
+    });
+
+     
+
+      extractCategories();
+
+      updateCustomerSelect(allCustomers);
+
+      renderCategoryFilter();
+
+      render(products);
+
+    }).getDataForSalesOrder();
+
+
+
+    // ⭐ 修正：在網頁載入完成後，才設定「新增商品」的按鈕監聽
+
+    setupQuickAddFormListener();
+
+  };
+
+
+
+  function extractCategories() {
+
+    let categorySet = new Set();
+
+    products.forEach(p => { if (p.category) categorySet.add(p.category); });
+
+    categories = Array.from(categorySet).sort();
+
+  }
+
+
+
+  function renderCategoryFilter() {
+
+    const select = document.getElementById('categoryFilter');
+
+    select.innerHTML = '<option value="">📦 全部類別</option>';
+
+    categories.forEach(cat => { select.innerHTML += `<option value="${cat}">${cat}</option>`; });
+
+  }
+
+
+
+  function updateCustomerSelect(list) {
+
+  const sel = document.getElementById('custSelect');
+
+  sel.innerHTML = '<option value="">-- 請選擇客戶 --</option>';
+
+  list.forEach(c => {
+
+    sel.innerHTML += `<option value="${c.id}">[${c.priceGroup}] ${c.name}</option>`; // ⭐ 顯示 [一般]、[總倉] 等
+
+  });
+
+}
+
+
+
+
+
+  function filterCustomer() {
+
+    const key = document.getElementById('custSearch').value.toLowerCase();
+
+    const filtered = allCustomers.filter(c => c.name.toLowerCase().includes(key) || c.id.toLowerCase().includes(key));
+
+    updateCustomerSelect(filtered);
+
+    if (filtered.length === 1) {
+
+      document.getElementById('custSelect').value = filtered[0].id;
+
+      updateDisplay();
+
+    }
+
+  }
+
+
+
+  function updateDisplay() {
+
+    selectedItems = [];
+
+    filterProducts();
+
+    renderSelected();
+
+  }
+
+
+
+  function filterProducts() {
+
+    const category = document.getElementById('categoryFilter').value;
+
+    const keyword = document.getElementById('pSearch').value.toLowerCase();
+
+    let filtered = products;
+
+    if (category) filtered = filtered.filter(p => p.category === category);
+
+    if (keyword) filtered = filtered.filter(p => p.name.toLowerCase().includes(keyword) || p.id.toLowerCase().includes(keyword));
+
+    render(filtered);
+
+  }
+
+
+
+function render(list) {
+
+  const cid = document.getElementById('custSelect').value;
+
+ 
+
+  // ⭐ 取得客戶價格群組（你的P欄是「一般」）
+
+  const customer = allCustomers.find(c => c.id === cid);
+
+  const priceGroup = customer ? customer.priceGroup || '一般' : '一般';
+
+ 
+
+  // ⭐ 輔助函式：根據價格群組取得正確價格
+
+  function getPriceByGroup(p, group) {
+
+    if (group === '總倉') return p.priceBranch || 0;
+
+    if (group === '店家') return p.priceWholesale || 0;
+
+    if (group === '餐廳') return p.priceGroupBuy || 0;
+
+    return p.price || 0; // 「一般」用 F欄一般售價
+
+  }
+
+ 
+
+  /// ⭐ 修改：直接顯示所有搜尋到的商品，不管原價是不是 0
+// 因為我們就是要來這裡設定特價的，所以 0 元商品更應該顯示出來
+const validList = list; 
+
+const div = document.getElementById('pList');
+
+if (validList.length === 0) {
+  // 提示文字稍微改一下，比較準確
+  div.innerHTML = '<div style="text-align:center; color:#999; padding:20px;">查無符合搜尋條件的商品</div>';
+  return;
+}
+
+ 
+
+  div.innerHTML = validList.map(p => {
+
+    const sp = specialPrices.find(s => s.custId === cid && s.prodId === p.id);
+
+    const hint = sp ? `<span class="set-badge">★ 已設: $${sp.price} (排序${sp.sortOrder || '無'})</span>` : '';
+
+    const isSelected = selectedItems.some(item => item.id === p.id);
+
+    const cardClass = isSelected ? 'p-card selected' : 'p-card';
+
+    const displayPrice = getPriceByGroup(p, priceGroup); // ⭐ 顯示該群組的正確價格
+
+   
+
+    return `
+
+      <div class="${cardClass}" onclick="toggleSelect('${p.id}', '${p.name}', ${sp ? sp.price : displayPrice}, ${displayPrice})">
+
+        <div>
+
+          <input type="checkbox" ${isSelected ? 'checked' : ''} onclick="event.stopPropagation();" style="margin-right:8px;">
+
+          <span class="p-name">${p.name}</span>
+
+          <span class="category-badge">${p.category}</span>
+
+          ${hint}
+
+          <div class="p-price">[${priceGroup}] 原價：$${displayPrice.toFixed(1)}</div>
+
+        </div>
+
+      </div>
+
+    `;
+
+  }).join('');
+
+}
+
+
+
+
+
+
+
+  function toggleSelect(id, name, currentPrice, origPrice) {
+
+    const idx = selectedItems.findIndex(item => item.id === id);
+
+    if (idx > -1) {
+
+      selectedItems.splice(idx, 1);
+
+    } else {
+
+      const sortOrder = selectedItems.length + 1;
+
+      selectedItems.push({ id, name, price: currentPrice, origPrice: origPrice || currentPrice, sortOrder });
+
+    }
+
+    filterProducts();
+
+    renderSelected();
+
+  }
+
+
+
+  function applyBatchDiscount() {
+
+      const rateVal = document.getElementById('batchRate').value;
+
+      if (!rateVal || rateVal <= 0) { alert("請輸入有效的折數"); return; }
+
+      let rate = Number(rateVal);
+
+      if (rate >= 10) rate = rate / 100; else rate = rate / 10;
+
+      selectedItems.forEach(item => { item.price = Math.round(item.origPrice * rate * 10) / 10; });
+
+      renderSelected();
+
+  }
+
+
+
+  function resetBatchDiscount() {
+
+      selectedItems.forEach(item => { item.price = item.origPrice; });
+
+      document.getElementById('batchRate').value = '';
+
+      renderSelected();
+
+  }
+
+
+
+  function renderSelected() {
+
+    const zone = document.getElementById('selectedZone');
+
+    const list = document.getElementById('selectedList');
+
+    const count = document.getElementById('selectedCount');
+
+    if (selectedItems.length === 0) { zone.style.display = 'none'; return; }
+
+    zone.style.display = 'block';
+
+    count.innerText = selectedItems.length;
+
+    list.innerHTML = selectedItems.map((item, idx) => `
+
+      <div class="selected-item">
+
+        <div style="display:flex; align-items:center; gap:10px;">
+
+          <span class="sort-badge">#${item.sortOrder}</span>
+
+          <span>${item.name}</span>
+
+        </div>
+
+        <div style="display:flex; gap:10px; align-items:center;">
+
+          <input type="number" step="0.1" class="price-input" value="${item.price}"
+
+                 onchange="selectedItems[${idx}].price=Number(this.value)" placeholder="輸入特價">
+
+          <button class="btn-remove" onclick="removeItem(${idx})">移除</button>
+
+        </div>
+
+      </div>
+
+    `).join('');
+
+  }
+
+
+
+  function removeItem(idx) {
+
+    selectedItems.splice(idx, 1);
+
+    selectedItems.forEach((item, i) => { item.sortOrder = i + 1; });
+
+    filterProducts();
+
+    renderSelected();
+
+  }
+
+
+
+  function batchSave() {
+
+  const cid = document.getElementById('custSelect').value;
+
+  if (!cid) { alert('請先選擇客戶！'); return; }
+
+  if (selectedItems.length === 0) { alert('請至少勾選一項商品！'); return; }
+
+
+
+  // 檢查是否有 0 元或空值的價格
+
+  const hasEmpty = selectedItems.some(item => !item.price || item.price <= 0);
+
+  if (hasEmpty) { alert('請為所有商品填寫有效的特價！'); return; }
+
+
+
+  const btn = document.getElementById('saveBtn');
+
+  btn.disabled = true;
+
+  btn.innerText = '正在儲存 ' + selectedItems.length + ' 筆資料...';
+
+
+
+  // ⭐ 關鍵步驟 1：整理資料
+
+  // 把所有要存的商品資料，打包成一個乾淨的陣列 (Payload)
+
+  const itemsPayload = selectedItems.map(item => ({
+
+    id: item.id,
+
+    price: item.price,
+
+    sortOrder: item.sortOrder
+
+  }));
+
+
+
+  // ⭐ 關鍵步驟 2：只呼叫一次後端
+
+  // 改用 saveSpecialPricesBatch 這個新函式，一次傳送整包資料
+
+  google.script.run
+
+    .withSuccessHandler(function(res) {
+
+      btn.disabled = false;
+
+      btn.innerText = '💾 統一儲存所有特價（含排序）';
+
+
+
+      if (res.success) {
+
+        alert('✅ 成功儲存 ' + res.count + ' 筆特價及排序！');
+
+
+
+        // ⭐ 關鍵步驟 3：更新前端快取 (讓畫面不用重新整理就能看到變更)
+
+        selectedItems.forEach(item => {
+
+          // 檢查快取中是否已經有這筆資料
+
+          const idx = specialPrices.findIndex(s => s.custId === cid && s.prodId === item.id);
+
+
+
+          if (idx > -1) {
+
+            // 如果有，更新它
+
+            specialPrices[idx].price = item.price;
+
+            specialPrices[idx].sortOrder = item.sortOrder;
+
+          } else {
+
+            // 如果沒有，新增它
+
+            specialPrices.push({
+
+              custId: cid,
+
+              prodId: item.id,
+
+              price: item.price,
+
+              sortOrder: item.sortOrder
+
+            });
+
+          }
+
+        });
+
+
+
+        // 清空已選區，重新渲染畫面
+
+        selectedItems = [];
+
+        renderSelected();
+
+        filterProducts(); // 重新渲染左側列表，讓「★ 已設」標記顯示出來
+
+      } else {
+
+        alert('❌ 儲存失敗：' + res.error);
+
+      }
+
+    })
+
+    .withFailureHandler(function(error) {
+
+      btn.disabled = false;
+
+      btn.innerText = '💾 統一儲存所有特價（含排序）';
+
+      alert('❌ 系統錯誤：' + error);
+
+    })
+
+    .saveSpecialPricesBatch(cid, itemsPayload); // 呼叫後端的批次處理函式
+
+}
+
+
+
+  // ==========================================
+
+  // ⭐ 快速新增商品相關邏輯
+
+  // ==========================================
+
+  let newSpecCounter = 0;
+
+
+
+  function openAddProductModal() {
+
+    document.getElementById('addProductModal').classList.remove('hidden');
+
+    document.getElementById('quickProductForm').reset();
+
+    document.getElementById('newSpecList').innerHTML = '';
+
+    newSpecCounter = 0;
+
+    addNewSpecRow();
+
+    document.getElementById('newBaseName').focus();
+
+  }
+
+
+
+  function closeAddProductModal() {
+
+    document.getElementById('addProductModal').classList.add('hidden');
+
+  }
+
+
+
+  function addNewSpecRow() {
+
+    newSpecCounter++;
+
+    const div = document.createElement('div');
+
+    div.className = 'spec-row';
+
+    div.id = 'new-spec-' + newSpecCounter;
+
+    div.style.cssText = 'background:white; padding:10px; border:1px solid #ccc; margin-bottom:5px; border-radius:4px;';
+
+   
+
+    div.innerHTML = `
+
+      <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+
+        <span style="font-weight:bold; color:#1976D2;">規格 #${newSpecCounter}</span>
+
+        ${newSpecCounter > 1 ? `<button type="button" style="background:#f44336; color:white; border:none; border-radius:4px; cursor:pointer;" onclick="this.parentElement.parentElement.remove()">刪除</button>` : ''}
+
+      </div>
+
+      <div style="display:grid; grid-template-columns: 1fr 1fr 0.8fr 1fr; gap:8px;">
+
+        <input type="text" class="n-id" placeholder="編號(必填)" required>
+
+        <input type="text" class="n-spec" placeholder="規格名(必填)" required>
+
+        <select class="n-unit">
+
+          <option value="個">個</option><option value="包">包</option><option value="盒">盒</option>
+
+          <option value="瓶">瓶</option><option value="罐">罐</option><option value="箱">箱</option>
+
+          <option value="公斤">公斤</option><option value="台斤">台斤</option>
+
+        </select>
+
+        <input type="number" class="n-price" placeholder="售價" required>
+
+      </div>
+
+    `;
+
+    document.getElementById('newSpecList').appendChild(div);
+
+  }
+
+
+
+  // ⭐ 修正點：將設定表單監聽器的動作包裝成函式，並在 window.onload 呼叫
+
+  function setupQuickAddFormListener() {
+
+    const form = document.getElementById('quickProductForm');
+
+    if (!form) return;
+
+
+
+    form.addEventListener('submit', function(e) {
+
+      e.preventDefault();
+
+     
+
+      const baseName = document.getElementById('newBaseName').value.trim();
+
+      const category = document.getElementById('newCategory').value || '未分類';
+
+      const rows = document.querySelectorAll('#newSpecList .spec-row');
+
+     
+
+      let productsToSave = [];
+
+     
+
+      rows.forEach(row => {
+
+        const id = row.querySelector('.n-id').value.trim();
+
+        const spec = row.querySelector('.n-spec').value.trim();
+
+        const unit = row.querySelector('.n-unit').value;
+
+        const price = row.querySelector('.n-price').value;
+
+       
+
+        if(id && spec) {
+
+          productsToSave.push({
+
+            id: id,
+
+            name: baseName + ' - ' + spec,
+
+            category: category,
+
+            spec: spec,
+
+            unit: unit,
+
+            price: price,
+
+            cost: 0,
+
+            supplier: '',
+
+            status: '啟用'
+
+          });
+
+        }
+
+      });
+
+
+
+      if(productsToSave.length === 0) {
+
+        alert('請至少填寫一個完整的規格');
+
+        return;
+
+      }
+
+
+
+      const btn = e.target.querySelector('button[type="submit"]');
+
+      const originalText = btn.innerText;
+
+      btn.disabled = true;
+
+      btn.innerText = '儲存中...';
+
+
+
+      let savedCount = 0;
+
+      let completed = 0;
+
+
+
+      productsToSave.forEach(p => {
+
+        google.script.run
+
+          .withSuccessHandler(res => {
+
+            completed++;
+
+            if(res.success) savedCount++;
+
+            checkFinish();
+
+          })
+
+          .withFailureHandler(err => {
+
+            completed++;
+
+            console.error(err);
+
+            checkFinish();
+
+          })
+
+          .saveProduct(p);
+
+      });
+
+
+
+      function checkFinish() {
+
+        if(completed === productsToSave.length) {
+
+          btn.disabled = false;
+
+          btn.innerText = originalText;
+
+          closeAddProductModal();
+
+          alert(`✅ 成功新增 ${savedCount} 筆商品，正在更新清單...`);
+
+          refreshProductList();
+
+        }
+
+      }
+
+    });
+
+  }
+
+
+
+  function refreshProductList() {
+
+    const listDiv = document.getElementById('pList');
+
+    listDiv.innerHTML = '<div style="text-align:center; padding:20px;">⏳ 正在更新商品清單...</div>';
+
+   
+
+    google.script.run
+
+      .withSuccessHandler(function(prods) {
+
+        products = prods; // 更新全域商品變數
+
+        extractCategories();
+
+        renderCategoryFilter();
+
+        document.getElementById('pSearch').value = '';
+
+        filterProducts();
+
+      })
+
+      .getProductsLite();
+
+  }
+
+</script>
+
+
+
+</body>
+
+</html>

@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: "Microsoft JhengHei", Arial, sans-serif;
+      font-size: 16px;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .container {
+      background: white;
+      padding: 25px;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    h2 {
+      color: #E53935;
+      font-size: 24px;
+      margin-bottom: 20px;
+      border-bottom: 3px solid #E53935;
+      padding-bottom: 10px;
+    }
+    .form-group {
+      margin-bottom: 18px;
+    }
+    label {
+      display: block;
+      font-weight: bold;
+      font-size: 16px;
+      margin-bottom: 8px;
+      color: #333;
+    }
+    input, select, textarea {
+      width: 100%;
+      padding: 12px 15px;
+      font-size: 16px;
+      border: 2px solid #ddd;
+      border-radius: 6px;
+    }
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: #E53935;
+    }
+    .btn {
+      padding: 14px 28px;
+      font-size: 18px;
+      font-weight: bold;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      margin: 5px;
+      width: 100%;
+    }
+    .btn-success {
+      background: #4CAF50;
+      color: white;
+    }
+    .btn-success:hover {
+      background: #45a049;
+    }
+    .btn-success:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    .btn-secondary {
+      background: #757575;
+      color: white;
+    }
+    .hidden { display: none; }
+    
+    #customPaymentInput {
+      margin-top: 10px;
+    }
+    
+    #statusMsg {
+      margin-top: 15px;
+      padding: 10px;
+      border-radius: 5px;
+      display: none;
+    }
+    #statusMsg.success {
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+      display: block;
+    }
+    #statusMsg.error {
+      background: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>🏢 新增供應商</h2>
+    
+    <div id="statusMsg"></div>
+    
+    <form id="supplierForm">
+      <div class="form-group">
+        <label for="name">🏢 供應商名稱 *</label>
+        <input type="text" id="name" required>
+      </div>
+      
+      <div class="form-group">
+        <label for="contact">👤 聯絡人</label>
+        <input type="text" id="contact">
+      </div>
+      
+      <div class="form-group">
+        <label for="phone">📞 電話</label>
+        <input type="text" id="phone">
+      </div>
+      
+      <div class="form-group">
+        <label for="mobile">📱 手機</label>
+        <input type="text" id="mobile">
+      </div>
+      
+      <div class="form-group">
+        <label for="address">📍 地址</label>
+        <input type="text" id="address">
+      </div>
+      
+      <div class="form-group">
+        <label for="email">📧 Email</label>
+        <input type="email" id="email">
+      </div>
+      
+      <div class="form-group">
+        <label for="taxId">🧾 統一編號</label>
+        <input type="text" id="taxId" maxlength="8">
+      </div>
+      
+      <div class="form-group">
+        <label for="paymentTerm">💰 付款條件 *</label>
+        <select id="paymentTerm" required>
+          <option value="貨到付現">貨到付現</option>
+          <option value="月結15天">月結15天</option>
+          <option value="月結30天">月結30天</option>
+          <option value="月結45天">月結45天</option>
+          <option value="月結60天">月結60天</option>
+        </select>
+      </div>
+      
+      <div class="form-group">
+        <label for="paymentMethod">💳 付款方式 *</label>
+        <select id="paymentMethod" required>
+          <option value="現金">現金</option>
+          <option value="轉帳">轉帳</option>
+        </select>
+      </div>
+      
+      <div class="form-group">
+  <label for="supplierType">🏷️ 供應商類型 *</label>
+  <select id="supplierType" required>
+    <option value="進貨供應商">進貨供應商</option>
+    <option value="公用事業">公用事業（水電瓦斯等）</option>
+    <option value="房東">房東</option>
+    <option value="餐飲">餐飲（員工餐費）</option>
+    <option value="其他">其他</option>
+  </select>
+</div>
+      
+      <div class="form-group">
+        <label for="bankAccount">🏦 銀行帳號</label>
+        <input type="text" id="bankAccount">
+      </div>
+      
+      <div class="form-group">
+        <label for="note">📝 備註</label>
+        <textarea id="note" rows="2"></textarea>
+      </div>
+      
+      <button type="submit" class="btn btn-success" id="submitBtn">✅ 儲存供應商</button>
+      <button type="button" class="btn btn-secondary" onclick="resetForm()">🔄 清除</button>
+    </form>
+  </div>
+
+  <script>
+    // 顯示狀態訊息
+    function showStatus(message, isError) {
+      var statusMsg = document.getElementById('statusMsg');
+      statusMsg.textContent = message;
+      statusMsg.className = isError ? 'error' : 'success';
+      
+      // 3秒後自動隱藏成功訊息
+      if (!isError) {
+        setTimeout(function() {
+          statusMsg.style.display = 'none';
+        }, 3000);
+      }
+    }
+    
+    // 表單提交處理
+    document.getElementById('supplierForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      
+      var submitBtn = document.getElementById('submitBtn');
+      submitBtn.disabled = true;
+      submitBtn.textContent = '⏳ 儲存中...';
+      
+      var supplierData = {
+        name: document.getElementById('name').value.trim(),
+        contact: document.getElementById('contact').value.trim(),
+        phone: document.getElementById('phone').value.trim(),
+        mobile: document.getElementById('mobile').value.trim(),
+        address: document.getElementById('address').value.trim(),
+        email: document.getElementById('email').value.trim(),
+        taxId: document.getElementById('taxId').value.trim(),
+        paymentTerm: document.getElementById('paymentTerm').value,
+        paymentMethod: document.getElementById('paymentMethod').value,
+        bankAccount: document.getElementById('bankAccount').value.trim(),
+        note: document.getElementById('note').value.trim(),
+        supplierType: document.getElementById('supplierType').value,
+      };
+      
+      // 呼叫後端函數
+      google.script.run
+        .withSuccessHandler(function(result) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = '✅ 儲存供應商';
+          
+          if (result.success) {
+            showStatus('✅ 儲存成功！編號：' + result.supplierId + '，名稱：' + supplierData.name, false);
+            // 清空表單
+            document.getElementById('supplierForm').reset();
+            
+            // 3秒後自動關閉視窗
+            setTimeout(function() {
+              google.script.host.close();
+            }, 3000);
+          } else {
+            showStatus('❌ 儲存失敗：' + result.error, true);
+          }
+        })
+        .withFailureHandler(function(error) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = '✅ 儲存供應商';
+          showStatus('❌ 系統錯誤：' + error.message, true);
+        })
+        .addSupplier(supplierData);
+    });
+    
+    // 清除表單
+    function resetForm() {
+      document.getElementById('supplierForm').reset();
+      document.getElementById('statusMsg').style.display = 'none';
+    }
+  </script>
+</body>
+</html>

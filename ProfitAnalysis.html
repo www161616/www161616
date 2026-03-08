@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>利潤分析表 - 央廚 ERP</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg:#fffbf0;
+  --surface:#ffffff;
+  --surface2:#fdf5d8;
+  --surface-sidebar:#fef9ec;
+  --border:#f5e0a0;
+  --text:#3d2a00;
+  --text2:#92660a;
+  --accent:#b45309;
+  --accent2:#d97706;
+  --danger:#c53030;
+  --success:#276749;
+  --warning:#b7791f;
+  --orange:#c05621;
+  --purple:#553c9a;
+  --pink:#b83280;
+  --teal:#0e7490;
+  --surface-dark:#f5c842;
+  --text-on-dark:#5a3a00;
+  --accent-light:#fef3c7;
+  --shadow:rgba(180,83,9,0.07);
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column;}
+
+#loading{position:fixed;inset:0;background:rgba(180,83,9,0.15);display:none;align-items:center;justify-content:center;z-index:9999;flex-direction:column;gap:16px;}
+.spinner{width:40px;height:40px;border:4px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+#loadingMsg{color:var(--text2);font-size:13px;}
+
+.toast{position:fixed;top:70px;right:20px;padding:12px 18px;border-radius:8px;font-size:13px;font-weight:500;z-index:10000;box-shadow:0 4px 20px rgba(0,0,0,.4);animation:fadeIn .3s ease;}
+.toast.success{background:#d1fae5;border:1px solid var(--success);color:#1a5c2e;}
+.toast.error{background:#fee2e2;border:1px solid var(--danger);color:var(--danger);}
+.toast.warn{background:#fef3c7;border:1px solid var(--warning);color:var(--warning);}
+@keyframes fadeIn{from{opacity:0;transform:translateY(-8px);}to{opacity:1;transform:translateY(0);}}
+
+.navbar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 20px;height:52px;display:flex;align-items:center;gap:16px;flex-shrink:0;}
+.navbar-brand{font-size:15px;font-weight:700;color:var(--warning);}
+
+.content{flex:1;overflow-y:auto;padding:20px;}
+
+/* 控制列 */
+.ctrl-bar{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 20px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:20px;}
+.ctrl-bar label{font-size:12px;color:var(--text2);}
+.ctrl-input{padding:7px 12px;background:var(--bg);border:1px solid var(--border);border-radius:7px;color:var(--text);font-size:13px;font-family:inherit;outline:none;transition:border-color .2s;}
+.ctrl-input:focus{border-color:var(--warning);}
+.btn-analyze{padding:8px 20px;background:var(--warning);color:#fff;border:none;border-radius:7px;font-size:13px;font-family:inherit;cursor:pointer;font-weight:700;transition:all .2s;}
+.btn-analyze:hover{background:#e6bc5c;}
+.btn-analyze:disabled{background:var(--border);color:var(--text2);cursor:not-allowed;}
+.quick-btns{display:flex;gap:6px;margin-left:auto;}
+.qbtn{padding:5px 12px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--text2);font-size:11px;cursor:pointer;font-family:inherit;transition:all .2s;}
+.qbtn:hover{border-color:var(--warning);color:var(--warning);}
+
+/* KPI 卡片 */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;}
+.kpi-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 20px;border-left:4px solid var(--border);}
+.kpi-card.revenue{border-left-color:var(--orange);}
+.kpi-card.profit{border-left-color:var(--success);}
+.kpi-card.margin{border-left-color:var(--accent);}
+.kpi-card.orders{border-left-color:var(--purple);}
+.kpi-label{font-size:11px;color:var(--text2);margin-bottom:8px;font-weight:500;text-transform:uppercase;letter-spacing:.5px;}
+.kpi-value{font-size:22px;font-weight:700;margin-bottom:4px;}
+.kpi-card.revenue .kpi-value{color:var(--orange);}
+.kpi-card.profit .kpi-value{color:var(--success);}
+.kpi-card.margin .kpi-value{color:var(--accent);}
+.kpi-card.orders .kpi-value{color:var(--purple);}
+.kpi-sub{font-size:11px;color:var(--text2);}
+
+/* 圖表區 */
+.charts-grid{display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:20px;}
+.chart-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 20px;}
+.chart-title{font-size:13px;font-weight:600;color:var(--text2);margin-bottom:14px;display:flex;align-items:center;gap:6px;}
+.chart-wrap{position:relative;height:260px;}
+
+/* 明細表格 */
+.table-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:20px;}
+.table-header{padding:12px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;}
+.table-title{font-size:13px;font-weight:600;color:var(--text2);}
+.table-wrap{overflow-x:auto;max-height:360px;}
+table{width:100%;border-collapse:collapse;min-width:700px;}
+thead th{padding:9px 14px;font-size:11px;color:var(--text2);background:var(--surface2);font-weight:600;border-bottom:1px solid var(--border);text-align:left;position:sticky;top:0;white-space:nowrap;}
+tbody tr{border-bottom:1px solid var(--border);transition:background .15s;}
+tbody tr:hover{background:var(--surface2);}
+tbody td{padding:9px 14px;font-size:12px;}
+td.num{text-align:right;font-variant-numeric:tabular-nums;}
+.empty-row{text-align:center;padding:40px;color:var(--text2);font-size:13px;}
+
+/* 初始提示 */
+.initial-hint{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:var(--text2);padding:40px;}
+.hint-icon{font-size:48px;opacity:.3;}
+
+::-webkit-scrollbar{width:4px;height:4px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+</style>
+</head>
+<body>
+
+<div id="loading"><div class="spinner"></div><div id="loadingMsg">分析中...</div></div>
+
+<nav class="navbar">
+  <div class="navbar-brand">💡 利潤分析報表</div>
+</nav>
+
+<div class="content">
+
+  <!-- 控制列 -->
+  <div class="ctrl-bar">
+    <label>分析區間</label>
+    <input type="date" id="dateFrom" class="ctrl-input">
+    <span style="color:var(--text2)">至</span>
+    <input type="date" id="dateTo" class="ctrl-input">
+    <button class="btn-analyze" id="analyzeBtn" onclick="loadData()">📊 開始分析</button>
+    <div class="quick-btns">
+      <button class="qbtn" onclick="setRange('this_month')">本月</button>
+      <button class="qbtn" onclick="setRange('last_month')">上月</button>
+      <button class="qbtn" onclick="setRange('this_year')">今年</button>
+    </div>
+  </div>
+
+  <!-- KPI 卡片 -->
+  <div class="kpi-grid" id="kpiGrid" style="display:none">
+    <div class="kpi-card revenue">
+      <div class="kpi-label">📦 銷貨收入</div>
+      <div class="kpi-value" id="kpiRevenue">-</div>
+      <div class="kpi-sub" id="kpiRevSub">含稅總計</div>
+    </div>
+    <div class="kpi-card profit">
+      <div class="kpi-label">💰 銷貨毛利</div>
+      <div class="kpi-value" id="kpiProfit">-</div>
+      <div class="kpi-sub" id="kpiProfitSub">收入 - 成本</div>
+    </div>
+    <div class="kpi-card margin">
+      <div class="kpi-label">📈 平均毛利率</div>
+      <div class="kpi-value" id="kpiMargin">-</div>
+      <div class="kpi-sub">毛利 / 收入</div>
+    </div>
+    <div class="kpi-card orders">
+      <div class="kpi-label">🧾 銷貨單數</div>
+      <div class="kpi-value" id="kpiOrders">-</div>
+      <div class="kpi-sub" id="kpiOrdersSub">筆訂單</div>
+    </div>
+  </div>
+
+  <!-- 圖表 -->
+  <div class="charts-grid" id="chartsSection" style="display:none">
+    <div class="chart-card">
+      <div class="chart-title">📈 每日營收與毛利趨勢</div>
+      <div class="chart-wrap"><canvas id="trendChart"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">🏆 熱銷商品毛利 TOP 5</div>
+      <div class="chart-wrap"><canvas id="productChart"></canvas></div>
+    </div>
+  </div>
+
+  <!-- 明細表 -->
+  <div class="table-card" id="tableSection" style="display:none">
+    <div class="table-header">
+      <div class="table-title">📋 逐日銷售利潤明細</div>
+      <span id="tableSub" style="font-size:12px;color:var(--text2)"></span>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>日期</th>
+            <th>銷貨單號</th>
+            <th>客戶</th>
+            <th class="num">銷售金額</th>
+            <th class="num">商品成本</th>
+            <th class="num">毛利</th>
+            <th class="num">毛利率</th>
+            <th>付款狀態</th>
+          </tr>
+        </thead>
+        <tbody id="detailTable"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 初始提示 -->
+  <div class="initial-hint" id="initialHint">
+    <div class="hint-icon">💡</div>
+    <div style="font-size:15px;">選擇分析區間後點擊「開始分析」</div>
+    <div style="font-size:13px;">可查看銷售收入、毛利、毛利率趨勢及商品排名</div>
+  </div>
+
+</div>
+
+<script>
+const SB_URL='https://xuykenpvonfqwsgbuvvj.supabase.co';
+const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh1eWtlbnB2b25mcXdzZ2J1dnZqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwMDY3MzgsImV4cCI6MjA4NzU4MjczOH0.HmIktEbkPc0e7eTdqJdMWVxMzYIh4YkZ4LewZfC4Qr4';
+const H={'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json'};
+
+async function api(table,params=''){
+  const r=await fetch(`${SB_URL}/rest/v1/${table}?${params}`,{headers:H});
+  if(!r.ok)throw new Error(await r.text());
+  return r.json();
+}
+
+function showLoading(msg='分析中...'){document.getElementById('loading').style.display='flex';document.getElementById('loadingMsg').textContent=msg;}
+function hideLoading(){document.getElementById('loading').style.display='none';}
+function toast(msg,type='success'){const t=document.createElement('div');t.className=`toast ${type}`;t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),3000);}
+function fmt(n){return'NT$'+Number(n||0).toLocaleString();}
+function pct(n){return Number(n||0).toFixed(1)+'%';}
+
+let trendChartInst=null, productChartInst=null;
+
+window.onload=function(){
+  const now=new Date();
+  const y=now.getFullYear(), m=String(now.getMonth()+1).padStart(2,'0');
+  document.getElementById('dateFrom').value=`${y}-${m}-01`;
+  document.getElementById('dateTo').value=now.toISOString().slice(0,10);
+};
+
+function setRange(type){
+  const now=new Date();
+  const y=now.getFullYear(), m=now.getMonth();
+  let from,to;
+  if(type==='this_month'){
+    from=new Date(y,m,1);to=now;
+  }else if(type==='last_month'){
+    from=new Date(y,m-1,1);to=new Date(y,m,0);
+  }else if(type==='this_year'){
+    from=new Date(y,0,1);to=now;
+  }
+  document.getElementById('dateFrom').value=from.toISOString().slice(0,10);
+  document.getElementById('dateTo').value=to.toISOString().slice(0,10);
+}
+
+async function loadData(){
+  const from=document.getElementById('dateFrom').value;
+  const to=document.getElementById('dateTo').value;
+  if(!from||!to){toast('請選擇日期區間','warn');return;}
+  if(from>to){toast('開始日期不能晚於結束日期','warn');return;}
+
+  const btn=document.getElementById('analyzeBtn');
+  btn.disabled=true;
+  showLoading('載入銷售資料中...');
+
+  try{
+    // 1. 取得區間內所有銷貨單
+    const orders=await api('sales_orders',`select=*&date=gte.${from}&date=lte.${to}&order=date`);
+    if(!orders.length){
+      hideLoading();btn.disabled=false;
+      toast('此區間無銷貨資料','warn');
+      document.getElementById('initialHint').style.display='flex';
+      document.getElementById('kpiGrid').style.display='none';
+      document.getElementById('chartsSection').style.display='none';
+      document.getElementById('tableSection').style.display='none';
+      return;
+    }
+
+    // 2. 取得銷售明細（用於毛利計算）
+    const orderIds=orders.map(o=>o.id).join(',');
+    const details=await api('sales_details',`select=*&order_id=in.(${orderIds})`);
+
+    hideLoading();
+    btn.disabled=false;
+    renderAll(orders,details,from,to);
+
+  }catch(e){
+    hideLoading();btn.disabled=false;
+    toast('❌ 載入失敗：'+e.message,'error');
+  }
+}
+
+function renderAll(orders,details,from,to){
+  document.getElementById('initialHint').style.display='none';
+
+  // ── KPI 計算 ──
+  const totalRevenue=orders.reduce((s,o)=>s+Number(o.grand_total||0),0);
+  const totalProfit=details.reduce((s,d)=>s+Number(d.profit||0),0);
+  const totalCost=details.reduce((s,d)=>s+Number(d.cost||0)*(Number(d.qty||0)),0);
+  const margin=totalRevenue>0?(totalProfit/totalRevenue*100):0;
+
+  document.getElementById('kpiRevenue').textContent=fmt(totalRevenue);
+  document.getElementById('kpiProfit').textContent=fmt(totalProfit);
+  document.getElementById('kpiMargin').textContent=pct(margin);
+  document.getElementById('kpiOrders').textContent=orders.length;
+  document.getElementById('kpiProfitSub').textContent=totalProfit>=0?'盈利':'虧損';
+  document.getElementById('kpiGrid').style.display='grid';
+
+  // ── 趨勢圖（每日）──
+  const dayMap={};
+  orders.forEach(o=>{
+    const d=o.date;
+    if(!dayMap[d])dayMap[d]={rev:0,profit:0};
+    dayMap[d].rev+=Number(o.grand_total||0);
+  });
+  details.forEach(d=>{
+    const order=orders.find(o=>o.id===d.order_id);
+    if(order&&dayMap[order.date])dayMap[order.date].profit+=Number(d.profit||0);
+  });
+  const days=Object.keys(dayMap).sort();
+  const revData=days.map(d=>dayMap[d].rev);
+  const profitData=days.map(d=>dayMap[d].profit);
+
+  const trendCtx=document.getElementById('trendChart').getContext('2d');
+  if(trendChartInst)trendChartInst.destroy();
+  trendChartInst=new Chart(trendCtx,{
+    type:'line',
+    data:{
+      labels:days.map(d=>d.slice(5)),
+      datasets:[
+        {label:'銷售額',data:revData,borderColor:'#c05621',backgroundColor:'rgba(255,159,67,.1)',borderWidth:2,fill:true,tension:.3,pointRadius:3},
+        {label:'毛利',data:profitData,borderColor:'#276749',backgroundColor:'rgba(56,232,197,.1)',borderWidth:2,fill:true,tension:.3,pointRadius:3}
+      ]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{labels:{color:'#92660a',font:{family:'Noto Sans TC'}}}},
+      scales:{
+        x:{ticks:{color:'#92660a',maxRotation:45},grid:{color:'#f5e0a0'}},
+        y:{ticks:{color:'#92660a',callback:v=>'$'+v.toLocaleString()},grid:{color:'#f5e0a0'}}
+      }
+    }
+  });
+
+  // ── 商品毛利 TOP 5 ──
+  const prodMap={};
+  details.forEach(d=>{
+    const key=d.product_name||d.product_id;
+    if(!prodMap[key])prodMap[key]=0;
+    prodMap[key]+=Number(d.profit||0);
+  });
+  const top5=Object.entries(prodMap).sort((a,b)=>b[1]-a[1]).slice(0,5);
+
+  const prodCtx=document.getElementById('productChart').getContext('2d');
+  if(productChartInst)productChartInst.destroy();
+  productChartInst=new Chart(prodCtx,{
+    type:'bar',
+    data:{
+      labels:top5.map(([k])=>k.length>8?k.slice(0,8)+'…':k),
+      datasets:[{label:'毛利',data:top5.map(([,v])=>v),backgroundColor:['#b45309','#276749','#c05621','#553c9a','#b83280'],borderRadius:4}]
+    },
+    options:{
+      indexAxis:'y',responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{
+        x:{ticks:{color:'#92660a',callback:v=>'$'+v.toLocaleString()},grid:{color:'#f5e0a0'}},
+        y:{ticks:{color:'#3d2a00',font:{family:'Noto Sans TC'}},grid:{color:'#f5e0a0'}}
+      }
+    }
+  });
+
+  document.getElementById('chartsSection').style.display='grid';
+
+  // ── 明細表 ──
+  const tbody=document.getElementById('detailTable');
+  const orderDetailMap={};
+  details.forEach(d=>{
+    if(!orderDetailMap[d.order_id])orderDetailMap[d.order_id]={cost:0,profit:0};
+    orderDetailMap[d.order_id].cost+=Number(d.cost||0)*Number(d.qty||0);
+    orderDetailMap[d.order_id].profit+=Number(d.profit||0);
+  });
+
+  tbody.innerHTML=orders.map(o=>{
+    const od=orderDetailMap[o.id]||{cost:0,profit:0};
+    const rev=Number(o.grand_total||0);
+    const marg=rev>0?(od.profit/rev*100):0;
+    const margColor=marg>=20?'var(--success)':marg>=10?'var(--warning)':'var(--danger)';
+    return`<tr>
+      <td style="color:var(--text2)">${o.date}</td>
+      <td style="color:var(--accent);font-weight:600">${o.id}</td>
+      <td>${o.customer_name||'-'}</td>
+      <td class="num" style="color:var(--orange)">${fmt(rev)}</td>
+      <td class="num" style="color:var(--text2)">${fmt(od.cost)}</td>
+      <td class="num" style="color:var(--success)">${fmt(od.profit)}</td>
+      <td class="num" style="color:${margColor}">${pct(marg)}</td>
+      <td>${o.payment_status==='已收款'?'<span style="color:var(--success)">✓ 已收款</span>':'<span style="color:var(--warning)">⏳ '+o.payment_status+'</span>'}</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('tableSub').textContent=`共 ${orders.length} 筆，${from} ～ ${to}`;
+  document.getElementById('tableSection').style.display='block';
+
+  toast(`✅ 分析完成：${orders.length} 筆訂單，總毛利 ${fmt(totalProfit)}`);
+}
+</script>
+</body>
+</html>

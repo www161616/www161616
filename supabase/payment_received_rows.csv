@@ -1,0 +1,4 @@
+id,order_id,customer_id,date,amount,payment_method,note,created_at
+PR00001,SO00071,C00017,2026-02-26,20110,現金,,
+PR00002,SO00067,C00018,2026-02-26,4473,匯款,,
+PR00003,SO00045,C00018,2026-02-26,52175,匯款,,

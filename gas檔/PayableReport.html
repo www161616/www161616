@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: 'Microsoft JhengHei', sans-serif; margin: 0; padding: 15px; background: #f5f5f5; }
+    .container { background: white; padding: 20px; border-radius: 12px; max-width: 1200px; margin: 0 auto; }
+    h2 { color: #E53935; margin-top: 0; }
+    .summary-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; }
+    .card { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 10px; }
+    .card-title { font-size: 14px; opacity: 0.9; margin-bottom: 5px; }
+    .card-value { font-size: 28px; font-weight: bold; }
+    
+    .filter-box { background: #fff3e0; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+    label { font-weight: bold; display: block; margin-bottom: 5px; color: #666; }
+    input, select { padding: 8px; border: 1px solid #ddd; border-radius: 6px; margin-right: 10px; }
+    .btn-search { padding: 10px 20px; background: #E53935; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
+    .btn-print { padding: 10px 20px; background: #1976D2; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; margin-left: 10px; }
+    .btn-print:hover { background: #1565C0; }
+    .btn-export { padding: 10px 20px; background: #1D6F42; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; margin-left: 10px; }
+.btn-export:hover { background: #165a36; }
+.btn-export:disabled { background: #ccc; cursor: not-allowed; }
+    
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th { background: #f5f5f5; padding: 12px; text-align: left; border-bottom: 2px solid #ddd; font-weight: bold; }
+    td { padding: 10px; border-bottom: 1px solid #eee; }
+    tr:hover { background: #f9f9f9; }
+    
+    .status-paid { color: #4CAF50; font-weight: bold; }
+    .status-unpaid { color: #E53935; font-weight: bold; }
+    .status-partial { color: #FF9800; font-weight: bold; }
+    
+    .no-result { text-align: center; padding: 40px; color: #999; }
+    .loading { text-align: center; padding: 40px; color: #E53935; }
+
+    /* 📄 彈窗樣式 */
+    .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 1000; }
+    .overlay-content { background: white; width: 90%; max-width: 450px; border-radius: 12px; padding: 25px; position: relative; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+    .close-overlay { position: absolute; top: 15px; right: 20px; font-size: 28px; cursor: pointer; color: #999; }
+    .close-overlay:hover { color: #333; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>📊 應付帳款報表</h2>
+    
+    <div class="summary-cards">
+      <div class="card">
+        <div class="card-title">總應付金額</div>
+        <div class="card-value" id="totalPayable">$0</div>
+      </div>
+      <div class="card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+        <div class="card-title">未付金額</div>
+        <div class="card-value" id="totalUnpaid">$0</div>
+      </div>
+      <div class="card" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+        <div class="card-title">已付金額</div>
+        <div class="card-value" id="totalPaid">$0</div>
+      </div>
+    </div>
+    
+    <div class="filter-box">
+      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr auto auto; gap: 10px; align-items: end;">
+        <div>
+          <label>📅 起始日期</label>
+          <input type="date" id="dateFrom">
+        </div>
+        <div>
+          <label>📅 結束日期</label>
+          <input type="date" id="dateTo">
+        </div>
+        <div>
+          <label>💰 付款狀態</label>
+          <select id="statusFilter">
+            <option value="">全部</option>
+            <option value="未付款">未付款</option>
+            <option value="已付款">已付款</option>
+            <option value="部分付款">部分付款</option>
+          </select>
+        </div>
+        <button class="btn-search" onclick="loadReport()">🔍 查詢</button>
+<button id="exportBtn" class="btn-export" onclick="exportToExcel()" disabled>📥 匯出 Excel</button>
+<button class="btn-print" onclick="openPrintModal()">🖨️ 列印月結總表</button>
+      </div>
+    </div>
+    
+    <div id="results"></div>
+  </div>
+
+  <!-- 🖨️ 列印月結選擇彈窗 -->
+  <div id="printModal" class="overlay">
+    <div class="overlay-content">
+      <span class="close-overlay" onclick="closePrintModal()">&times;</span>
+      <h3 style="margin-bottom:20px; color:#E53935;">🖨️ 列印每月應付帳款彙總表</h3>
+      <div style="margin-bottom: 15px;">
+        <label style="font-weight: bold; display: block; margin-bottom: 8px;">📅 選擇月份</label>
+        <input type="month" id="printMonth" style="width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 8px; font-size: 16px;">
+      </div>
+      <button onclick="printMonthlySummary()" style="width: 100%; padding: 15px; background: #4CAF50; color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer;">🖨️ 產生並列印</button>
+    </div>
+  </div>
+
+  <script>
+    var currentData = []; // 儲存查詢結果供匯出使用
+
+    window.onload = function() {
+      const today = new Date();
+      const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+      document.getElementById('dateFrom').value = firstDay.toISOString().split('T')[0];
+      document.getElementById('dateTo').value = today.toISOString().split('T')[0];
+      document.getElementById('printMonth').value = today.toISOString().substring(0, 7);
+      loadReport();
+    };
+    
+    function loadReport() {
+      const dateFrom = document.getElementById('dateFrom').value;
+      const dateTo = document.getElementById('dateTo').value;
+      const status = document.getElementById('statusFilter').value;
+      
+      document.getElementById('results').innerHTML = '<div class="loading">🔄 載入中...</div>';
+      
+      google.script.run
+        .withSuccessHandler(displayReport)
+        .withFailureHandler(function(error) {
+          document.getElementById('results').innerHTML = '<div class="no-result">❌ 載入失敗：' + error + '</div>';
+        })
+        .getPayableReport(dateFrom, dateTo, status);
+    }
+    
+    function displayReport(data) {
+  const exportBtn = document.getElementById('exportBtn');
+  
+  if (!data || data.length === 0) {
+    document.getElementById('results').innerHTML = '<div class="no-result">😕 找不到符合條件的資料</div>';
+    updateSummary(0, 0, 0);
+    currentData = [];
+    exportBtn.disabled = true;
+    return;
+  }
+  
+  currentData = data; // 儲存查詢結果
+  exportBtn.disabled = false; // 啟用匯出按鈕
+      
+      let totalPayable = 0;
+      let totalPaid = 0;
+      let totalUnpaid = 0;
+      
+      let html = '<table><thead><tr><th>進貨單號</th><th>日期</th><th>供應商</th><th>應付金額</th><th>已付金額</th><th>未付金額</th><th>付款狀態</th></tr></thead><tbody>';
+      
+      data.forEach(function(row) {
+        totalPayable += row.totalAmount;
+        totalPaid += row.paidAmount;
+        totalUnpaid += row.unpaidAmount;
+        
+        let statusClass = 'status-unpaid';
+        if (row.status === '已付款') statusClass = 'status-paid';
+        else if (row.status === '部分付款') statusClass = 'status-partial';
+        
+        html += '<tr>';
+        html += '<td style="font-weight:bold; color:#E53935; cursor:pointer; text-decoration:underline;" ' +
+        'onclick="google.script.run.showPurchaseOrderDetailPopup(\'' + row.purchaseId + '\')">' + 
+        row.purchaseId + '</td>';
+        html += '<td>' + row.date + '</td>';
+        html += '<td>' + row.supplierName + '</td>';
+        html += '<td>$' + row.totalAmount.toLocaleString() + '</td>';
+        html += '<td>$' + row.paidAmount.toLocaleString() + '</td>';
+        html += '<td>$' + row.unpaidAmount.toLocaleString() + '</td>';
+        html += '<td class="' + statusClass + '">' + row.status + '</td>';
+        html += '</tr>';
+      });
+      
+      html += '</tbody></table>';
+      document.getElementById('results').innerHTML = html;
+      updateSummary(totalPayable, totalPaid, totalUnpaid);
+    }
+    
+    function updateSummary(payable, paid, unpaid) {
+      document.getElementById('totalPayable').textContent = '$' + payable.toLocaleString();
+      document.getElementById('totalPaid').textContent = '$' + paid.toLocaleString();
+      document.getElementById('totalUnpaid').textContent = '$' + unpaid.toLocaleString();
+    }
+
+    // ========== 🖨️ 列印月結總表 ==========
+    function openPrintModal() {
+      document.getElementById('printModal').style.display = 'flex';
+    }
+
+    function closePrintModal() {
+      document.getElementById('printModal').style.display = 'none';
+    }
+
+    function printMonthlySummary() {
+      const month = document.getElementById('printMonth').value;
+      
+      if (!month) {
+        alert('請選擇月份！');
+        return;
+      }
+      
+      const btn = event.target;
+      btn.disabled = true;
+      btn.innerText = '🔄 產生中...';
+
+      google.script.run
+        .withSuccessHandler(function(res) {
+          btn.disabled = false;
+          btn.innerText = '🖨️ 產生並列印';
+          
+          if (!res.success) {
+            alert('查詢失敗：' + res.error);
+            return;
+          }
+          
+          if (res.data.length === 0) {
+            alert('該月份尚無帳務紀錄');
+            return;
+          }
+          
+          closePrintModal();
+          openPrintWindow(res.data, month);
+        })
+        .withFailureHandler(function(err) {
+          btn.disabled = false;
+          btn.innerText = '🖨️ 產生並列印';
+          alert('系統錯誤：' + err);
+        })
+        .getMonthlyPayableSummary(month);
+    }
+
+    // ⭐ 專業列印格式
+    function openPrintWindow(data, month) {
+      let sumPurchase = 0, sumPaid = 0, sumUnpaid = 0;
+      data.forEach(row => {
+        sumPurchase += row.purchase;
+        sumPaid += row.paid;
+        sumUnpaid += row.unpaid;
+      });
+
+      const w = window.open('', '_blank');
+      w.document.write(`
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>每月應付帳款彙總表-${month}</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { 
+      font-family: "Microsoft JhengHei", sans-serif; 
+      padding: 8mm;
+      font-size: 12px;
+    }
+    .header { 
+      text-align: center; 
+      margin-bottom: 6mm;
+      border-bottom: 2px solid #000;
+      padding-bottom: 4mm;
+    }
+    .header h1 { font-size: 20px; margin-bottom: 3mm; }
+    .header h2 { font-size: 16px; margin-bottom: 3mm; }
+    .header p { font-size: 12px; color: #333; }
+    table { 
+      width: 100%; 
+      border-collapse: collapse; 
+      margin-top: 5mm;
+    }
+    th { 
+      background: #d0d0d0; 
+      padding: 3mm 2mm; 
+      border: 1px solid #000; 
+      text-align: center; 
+      font-size: 12px;
+      font-weight: bold;
+    }
+    td { 
+      padding: 3mm 2mm; 
+      border: 1px solid #999; 
+      font-size: 12px;
+    }
+    .text-right { text-align: right; }
+    .text-center { text-align: center; }
+    .total-row { 
+      background: #e8e8e8; 
+      font-weight: bold; 
+      font-size: 13px;
+    }
+    .unpaid { color: #c00; font-weight: bold; }
+    .paid { color: #060; }
+    .footer {
+      margin-top: 8mm;
+      padding-top: 4mm;
+      border-top: 2px solid #000;
+      text-align: right;
+      font-size: 12px;
+    }
+    .footer-row { margin: 2mm 0; }
+    .footer-total { font-size: 16px; font-weight: bold; margin-top: 4mm; }
+    @page { 
+      margin: 8mm;
+      size: A4; 
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>丸十水產股份有限公司</h1>
+    <h2>每月應付帳款彙總表</h2>
+    <p>統計月份：${month}</p>
+  </div>
+  
+  <table>
+    <thead>
+      <tr>
+        <th width="25%">供應商名稱</th>
+        <th width="25%">本月總進貨 (含稅)</th>
+        <th width="25%">本月已付款</th>
+        <th width="25%">結餘未付款</th>
+      </tr>
+    </thead>
+    <tbody>
+      `);
+      
+      data.forEach(row => {
+        w.document.write(`
+      <tr>
+        <td>${row.supplierName}</td>
+        <td class="text-right">$${row.purchase.toLocaleString()}</td>
+        <td class="text-right paid">$${row.paid.toLocaleString()}</td>
+        <td class="text-right unpaid">$${row.unpaid.toLocaleString()}</td>
+      </tr>
+        `);
+      });
+      
+      w.document.write(`
+      <tr class="total-row">
+        <td>全體供應商總計</td>
+        <td class="text-right">$${sumPurchase.toLocaleString()}</td>
+        <td class="text-right paid">$${sumPaid.toLocaleString()}</td>
+        <td class="text-right unpaid">$${sumUnpaid.toLocaleString()}</td>
+      </tr>
+    </tbody>
+  </table>
+  
+  <div class="footer">
+    <div class="footer-row">供應商數：${data.length} 家</div>
+    <div class="footer-row">本月總進貨：$${sumPurchase.toLocaleString()}</div>
+    <div class="footer-row">本月已付款：$${sumPaid.toLocaleString()}</div>
+    <div class="footer-row footer-total">應付總計：$${sumUnpaid.toLocaleString()}</div>
+  </div>
+  
+  <script>
+    window.addEventListener('load', function() {
+      setTimeout(function() {
+        window.print();
+        window.addEventListener('afterprint', function() {
+          window.close();
+        });
+      }, 500);
+    });
+  <\/script>
+</body>
+</html>
+      `);
+      w.document.close();
+    }
+    // ========== 匯出 Excel 功能 ==========
+function exportToExcel() {
+  if (currentData.length === 0) {
+    alert('❌ 沒有資料可匯出');
+    return;
+  }
+  
+  const btn = document.getElementById('exportBtn');
+  btn.disabled = true;
+  btn.innerText = '⏳ 匯出中...';
+  
+  const dateFrom = document.getElementById('dateFrom').value;
+  const dateTo = document.getElementById('dateTo').value;
+  
+  let csvContent = '\uFEFF'; // BOM，確保中文正確顯示
+  
+  // 標題資訊
+  csvContent += '應付帳款報表\n';
+  csvContent += `查詢期間,${dateFrom} ~ ${dateTo}\n`;
+  csvContent += '\n';
+  
+  // 表格標題
+  csvContent += '進貨單號,日期,供應商,應付金額,已付金額,未付金額,付款狀態\n';
+  
+  // 資料列
+  let totalPayable = 0, totalPaid = 0, totalUnpaid = 0;
+  
+  currentData.forEach(function(row) {
+    totalPayable += row.totalAmount || 0;
+    totalPaid += row.paidAmount || 0;
+    totalUnpaid += row.unpaidAmount || 0;
+    
+    csvContent += `"${row.purchaseId}","${row.date}","${row.supplierName}",${row.totalAmount},${row.paidAmount},${row.unpaidAmount},"${row.status}"\n`;
+  });
+  
+  // 統計列
+  csvContent += '\n';
+  csvContent += `"","","合計",${totalPayable},${totalPaid},${totalUnpaid},""\n`;
+  csvContent += `"","","共 ${currentData.length} 筆","","","",""\n`;
+  
+  // 建立下載連結
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  
+  const today = new Date().toISOString().split('T')[0];
+  link.setAttribute('href', url);
+  link.setAttribute('download', `應付帳款報表_${dateFrom}_${dateTo}.csv`);
+  link.style.display = 'none';
+  
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+  
+  btn.disabled = false;
+  btn.innerText = '📥 匯出 Excel';
+}
+  </script>
+</body>
+</html>

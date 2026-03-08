@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <style>
+    /* 全域設定 */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: "Microsoft JhengHei", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      font-size: 15px;
+      padding: 15px;
+      background-color: #f0f2f5; /* 更柔和的背景灰 */
+      color: #333;
+    }
+
+    /* 標題區 */
+    .header-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+      background: white;
+      padding: 15px 20px;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      border-left: 5px solid #4CAF50;
+    }
+    .header-title { font-size: 20px; font-weight: bold; color: #2e7d32; display: flex; align-items: center; gap: 10px; }
+    .counter-badge { background: #1976D2; color: white; padding: 5px 12px; border-radius: 20px; font-size: 13px; font-weight: bold; }
+
+    /* 🔥 核心佈局：兩欄式設計 (Grid) */
+    .main-layout {
+      display: grid;
+      grid-template-columns: 320px 1fr; /* 左側固定 320px，右側自動填滿 */
+      gap: 20px;
+      align-items: start; /* 讓兩邊頂端對齊 */
+    }
+
+    /* 左側面板：基本資料 */
+    .panel-left {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      border-top: 3px solid #1976D2; /* 藍色頂條識別 */
+      position: sticky; /* 🔥 讓左側固定住，不會隨右側捲動 */
+      top: 10px;
+      height: fit-content;
+    }
+
+    /* 右側面板：規格列表 */
+    .panel-right {
+      /* 這裡不設背景，讓卡片獨立顯示 */
+    }
+
+    /* 區塊標題 */
+    .section-title {
+      font-size: 16px;
+      font-weight: bold;
+      color: #555;
+      margin-bottom: 15px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #eee;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    /* 表單元件優化 */
+    .form-group { margin-bottom: 15px; }
+    label { display: block; font-weight: 600; font-size: 14px; margin-bottom: 6px; color: #444; }
+    input, select, textarea {
+      width: 100%;
+      padding: 10px;
+      font-size: 15px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      background-color: #fff;
+      transition: border-color 0.2s;
+    }
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: #1976D2;
+      box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.1);
+    }
+    input::placeholder { color: #aaa; font-size: 13px; }
+
+    /* 規格卡片樣式 */
+    .spec-card {
+      background: white;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 15px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      border-left: 4px solid #ff9800; /* 橘色識別規格 */
+      position: relative;
+      animation: fadeIn 0.3s ease;
+    }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+    .spec-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+    .spec-id-badge {
+      background: #fff3e0; color: #e65100; padding: 4px 8px; border-radius: 4px; font-size: 13px; font-weight: bold;
+    }
+
+    /* 規格內容 Grid 佈局 */
+    .grid-row-3 { display: grid; grid-template-columns: 1.2fr 2fr 1fr; gap: 12px; margin-bottom: 12px; }
+    .grid-row-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+    .grid-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+    /* 價格區塊特別樣式 */
+    .price-block {
+      background-color: #fffdeb; /* 非常淡的黃色 */
+      border: 1px dashed #fdd835;
+      padding: 12px;
+      border-radius: 6px;
+      margin-bottom: 12px;
+    }
+    .price-label { font-size: 12px; color: #f57f17; font-weight: bold; margin-bottom: 5px; display: block; }
+    
+    /* 按鈕樣式 */
+    .btn {
+      padding: 10px 20px;
+      font-size: 15px;
+      font-weight: 600;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      transition: background 0.2s;
+    }
+    .btn-full { width: 100%; margin-top: 10px; }
+    .btn-success { background: #43a047; color: white; padding: 12px; font-size: 16px; }
+    .btn-success:hover { background: #2e7d32; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+    .btn-add { background: #f0f7ff; color: #1976D2; border: 1px dashed #1976D2; padding: 12px; }
+    .btn-add:hover { background: #e3f2fd; }
+    .btn-danger { background: #ffebee; color: #c62828; padding: 4px 8px; font-size: 13px; }
+    .btn-danger:hover { background: #ffcdd2; }
+    
+    .action-bar {
+      margin-top: 20px;
+      display: flex;
+      gap: 10px;
+    }
+    .btn-secondary { background: #78909c; color: white; flex: 1; }
+    .btn-close { background: #e0e0e0; color: #333; flex: 1; }
+
+    /* Alert */
+    .alert { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 1000; padding: 15px 25px; border-radius: 30px; color: white; box-shadow: 0 4px 12px rgba(0,0,0,0.2); font-weight: bold; animation: slideDown 0.3s; }
+    .alert-success { background: #43a047; }
+    .alert-error { background: #d32f2f; }
+    .hidden { display: none; }
+    @keyframes slideDown { from { top: -50px; } to { top: 20px; } }
+
+    /* RWD: 手機版自動變回單欄 */
+    @media (max-width: 600px) {
+      .main-layout { grid-template-columns: 1fr; }
+      .panel-left { position: static; margin-bottom: 20px; border-top: none; border-left: 3px solid #1976D2; }
+      .grid-row-3, .grid-row-4, .grid-row-2 { grid-template-columns: 1fr; gap: 10px; }
+      .grid-row-4 { grid-template-columns: 1fr 1fr; } /* 手機價格保持兩排 */
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header-bar">
+    <div class="header-title">
+      📦 批次新增商品
+      <span class="counter-badge">已新增: <span id="counter">0</span></span>
+    </div>
+    </div>
+
+  <div id="alertBox" class="hidden"></div>
+
+  <form id="productForm">
+    <div class="main-layout">
+      
+      <div class="panel-left">
+        <div class="section-title">
+          📋 基本資料
+          <small style="font-weight: normal; color: #999; font-size: 12px;">(所有規格共用)</small>
+        </div>
+        
+        <div class="form-group">
+          <label for="baseName">商品名稱 (主名稱) *</label>
+          <input type="text" id="baseName" required placeholder="例如: 爆漿流沙包" autofocus>
+        </div>
+
+        <div class="form-group">
+          <label for="category">類別</label>
+          <input type="text" id="category" list="categoryList" placeholder="選擇或輸入">
+          <datalist id="categoryList">
+            <option value="包子饅頭">
+            <option value="團購商品">
+            <option value="港式點心">
+            <option value="生鮮肉品">
+            <option value="自有商品">
+          </datalist>
+        </div>
+
+        <div class="form-group">
+          <label for="supplier">供應商</label>
+          <input type="text" id="supplier" placeholder="例如: 龍潭總倉">
+        </div>
+
+        <div class="form-group">
+          <label for="note">備註</label>
+          <textarea id="note" rows="4" placeholder="商品備註..."></textarea>
+        </div>
+
+        <button type="submit" class="btn btn-success btn-full">💾 立即儲存 (Enter)</button>
+        
+        <div class="action-bar">
+          <button type="button" class="btn btn-secondary" onclick="resetForm()">清除</button>
+          <button type="button" class="btn btn-close" onclick="closeWindow()">關閉</button>
+        </div>
+      </div>
+
+      <div class="panel-right">
+        
+        <div id="specList">
+          </div>
+
+        <button type="button" class="btn btn-add btn-full" onclick="addSpecRow()">
+          ➕ 新增另一個規格 (例如: 整箱)
+        </button>
+
+      </div>
+
+    </div>
+  </form>
+
+  <script>
+    let savedCount = 0;
+    let specCounter = 0;
+    
+    // 初始化
+    window.onload = function() {
+      addSpecRow();
+    };
+    
+    function addSpecRow() {
+      specCounter++;
+      const specList = document.getElementById('specList');
+      const specCard = document.createElement('div');
+      specCard.className = 'spec-card';
+      specCard.id = 'spec-' + specCounter;
+      
+      specCard.innerHTML = `
+        <div class="spec-header">
+          <span class="spec-id-badge">規格 #${specCounter}</span>
+          <button type="button" class="btn btn-danger" onclick="removeSpecRow(${specCounter})">🗑️ 移除</button>
+        </div>
+
+        <div class="grid-row-3">
+            <div>
+                <label>編號 (Auto)</label>
+                <input type="text" class="spec-id" placeholder="自動" style="background:#f9f9f9;">
+            </div>
+            <div>
+                <label>規格名稱 (選填)</label>
+                <input type="text" class="spec-name" placeholder="例: 10入/盒">
+            </div>
+            <div>
+                <label>單位 *</label>
+                <select class="spec-unit" required>
+                    <option value="個">個</option><option value="包">包</option><option value="盒">盒</option>
+                    <option value="袋">袋</option><option value="瓶">瓶</option><option value="罐">罐</option>
+                    <option value="箱">箱</option><option value="公斤">公斤</option><option value="台斤">台斤</option>
+                    <option value="組">組</option><option value="顆">顆</option><option value="片">片</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="price-block">
+            <span class="price-label">💰 價格設定</span>
+            <div class="grid-row-4">
+                <div>
+                    <label style="color:#d32f2f;">售價 *</label>
+                    <input type="number" class="spec-price" required placeholder="0" min="0">
+                </div>
+                <div>
+                    <label>總倉價</label>
+                    <input type="number" class="spec-price-branch" placeholder="0" min="0">
+                </div>
+                <div>
+                    <label>店家價</label>
+                    <input type="number" class="spec-price-store" placeholder="0" min="0">
+                </div>
+                <div>
+                    <label>餐廳價</label>
+                    <input type="number" class="spec-price-rest" placeholder="0" min="0">
+                </div>
+            </div>
+        </div>
+
+        <div class="grid-row-2">
+            <div>
+                <label>預估成本</label>
+                <input type="number" class="spec-cost" placeholder="0" min="0">
+            </div>
+            <div>
+                <label>安全庫存</label>
+                <input type="number" class="spec-safety" placeholder="10" value="10" min="0">
+            </div>
+        </div>
+      `;
+      
+      specList.appendChild(specCard);
+      
+      // 自動聚焦在規格名稱，方便連續輸入
+      // 如果是第一筆，聚焦在基本資料的名稱，如果是新增規格，聚焦在該規格名稱
+      if(specCounter > 1) {
+         specCard.querySelector('.spec-name').focus();
+      }
+    }
+    
+    function removeSpecRow(id) {
+      const card = document.getElementById('spec-' + id);
+      if (card) card.remove();
+      // 如果全部刪光，自動補一個
+      if (document.getElementById('specList').children.length === 0) addSpecRow();
+    }
+    
+    // 提交表單
+    document.getElementById('productForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      
+      const baseName = document.getElementById('baseName').value.trim();
+      const category = document.getElementById('category').value || '未分類';
+      const supplier = document.getElementById('supplier').value;
+      const note = document.getElementById('note').value;
+      
+      const specCards = document.querySelectorAll('.spec-card');
+      const products = [];
+      
+      specCards.forEach(card => {
+        let id = card.querySelector('.spec-id').value.trim();
+        if (id === "") id = "AUTO";
+
+        const specName = card.querySelector('.spec-name').value.trim();
+        const unit = card.querySelector('.spec-unit').value;
+        
+        // 價格處理
+        const price = parseFloat(card.querySelector('.spec-price').value) || 0;
+        const priceBranch = parseFloat(card.querySelector('.spec-price-branch').value) || 0;
+        const priceStore = parseFloat(card.querySelector('.spec-price-store').value) || 0;
+        const priceRest = parseFloat(card.querySelector('.spec-price-rest').value) || 0;
+        
+        const cost = parseFloat(card.querySelector('.spec-cost').value) || 0;
+        const safety = parseInt(card.querySelector('.spec-safety').value) || 10;
+        
+        let finalName = baseName;
+        if (specName) finalName += ' - ' + specName;
+        
+        products.push({
+          id: id,
+          name: finalName,
+          category: category,
+          spec: specName,
+          unit: unit,
+          price: price,
+          priceBranch: priceBranch,
+          priceStore: priceStore,
+          priceRest: priceRest,
+          cost: cost,
+          supplier: supplier,
+          safetyStock: safety,
+          note: note
+        });
+      });
+      
+      if (products.length === 0) return;
+      saveBatchProducts(products);
+    });
+    
+    function saveBatchProducts(products) {
+      let successCount = 0;
+      let failedList = [];
+      
+      function saveNext(index) {
+        if (index >= products.length) {
+          savedCount += successCount;
+          document.getElementById('counter').textContent = savedCount;
+          
+          let msg = `✅ 成功新增 ${successCount} 筆商品`;
+          if (failedList.length > 0) {
+            msg += `\n❌ 失敗 ${failedList.length} 筆:\n` + failedList.join('\n');
+            showAlert(msg, 'error');
+          } else {
+            showAlert(msg, 'success');
+            // 延遲後清空表單，但保留類別和供應商可能比較好用？這裡先全部重置
+            setTimeout(resetForm, 1500);
+          }
+          return;
+        }
+        
+        const p = products[index];
+        google.script.run
+          .withSuccessHandler(res => {
+            if (res.success) successCount++;
+            else failedList.push(p.name + ": " + res.error);
+            saveNext(index + 1);
+          })
+          .withFailureHandler(err => {
+            failedList.push(p.name + ": " + err);
+            saveNext(index + 1);
+          })
+          .saveProduct(p);
+      }
+      
+      saveNext(0);
+    }
+    
+    function resetForm() {
+      document.getElementById('productForm').reset();
+      document.getElementById('specList').innerHTML = '';
+      specCounter = 0;
+      addSpecRow();
+      document.getElementById('baseName').focus();
+    }
+    
+    function closeWindow() {
+      if (savedCount > 0 && !confirm(`已新增 ${savedCount} 筆，確定關閉？`)) return;
+      google.script.host.close();
+    }
+    
+    function showAlert(msg, type) {
+      const box = document.getElementById('alertBox');
+      box.textContent = msg;
+      box.className = 'alert ' + (type === 'success' ? 'alert-success' : 'alert-error');
+      box.classList.remove('hidden');
+      setTimeout(() => box.classList.add('hidden'), 4000);
+    }
+  </script>
+</body>
+</html>

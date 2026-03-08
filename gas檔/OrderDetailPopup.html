@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <style>
+    body { font-family: "Microsoft JhengHei", sans-serif; padding: 20px; color: #333; }
+    .header-info { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; background: #f8f9fa; padding: 15px; border-radius: 8px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th { background: #607d8b; color: white; padding: 10px; text-align: left; }
+    td { padding: 10px; border-bottom: 1px solid #ddd; }
+    .total-area { text-align: right; margin-top: 20px; font-size: 18px; font-weight: bold; border-top: 2px solid #333; padding-top: 10px; }
+    /* 進貨單用橘色主題 */
+    .purchase th { background: #FF9800; }
+    .purchase .total-area { border-color: #FF9800; }
+    .purchase .total-value { color: #E65100; }
+    /* 銷貨單用紫色主題 */
+    .sales th { background: #9C27B0; }
+    .sales .total-area { border-color: #9C27B0; }
+    .sales .total-value { color: #7B1FA2; }
+  </style>
+</head>
+<body>
+  <div id="content">⏳ 正在讀取資料...</div>
+
+  <script>
+    const orderId = "<?= orderId ?>";
+    const type = "<?= type ?>";
+
+    window.onload = function() {
+      google.script.run
+        .withSuccessHandler(render)
+        .withFailureHandler(err => {
+          document.getElementById('content').innerText = "讀取失敗: " + err;
+        })
+        .getDetailForPopup(orderId, type);
+    };
+
+    function render(res) {
+      if (!res.success) { 
+        document.getElementById('content').innerText = "讀取失敗: " + (res.error || "未知錯誤"); 
+        return; 
+      }
+      
+      const order = res.order;
+      const isPurchase = (type === 'PURCHASE');
+      
+      // 根據單據類型決定顯示內容
+      const themeClass = isPurchase ? 'purchase' : 'sales';
+      const partnerLabel = isPurchase ? '供應商' : '客戶';
+      const partnerName = isPurchase ? order.supplierName : order.customerName;
+      const priceLabel = isPurchase ? '成本' : '單價';
+      
+      // 建立商品列表 HTML
+      const itemsHtml = order.items.map(function(item) {
+        // ⭐ 關鍵修正：進貨單用 cost，銷貨單用 price
+        const unitPrice = isPurchase ? (item.cost || 0) : (item.price || 0);
+        const subtotal = (item.qty || 0) * unitPrice;
+        
+        return `
+          <tr>
+            <td>${item.productName || ''}</td>
+            <td style="text-align:right">${item.qty || 0} ${item.unit || ''}</td>
+            <td style="text-align:right">$${unitPrice.toLocaleString()}</td>
+            <td style="text-align:right">$${subtotal.toLocaleString()}</td>
+          </tr>
+        `;
+      }).join('');
+
+      // 計算總金額 (防止 undefined)
+      const taxAmount = order.taxAmount || 0;
+      const grandTotal = order.grandTotal || 0;
+      
+      document.getElementById('content').innerHTML = `
+        <div class="${themeClass}">
+          <div class="header-info">
+            <div><b>單號：</b> ${order.orderId}</div>
+            <div><b>日期：</b> ${order.date}</div>
+            <div><b>${partnerLabel}：</b> ${partnerName || '(未指定)'}</div>
+            ${isPurchase && order.paymentStatus ? `<div><b>付款狀態：</b> ${order.paymentStatus}</div>` : ''}
+          </div>
+          
+          <table>
+            <thead>
+              <tr>
+                <th>商品名稱</th>
+                <th style="text-align:right">數量</th>
+                <th style="text-align:right">${priceLabel}</th>
+                <th style="text-align:right">小計</th>
+              </tr>
+            </thead>
+            <tbody>${itemsHtml}</tbody>
+          </table>
+          
+          <div class="total-area">
+            <div style="font-size:14px; color:#666;">稅額：$${taxAmount.toLocaleString()}</div>
+            <div class="total-value" style="font-size:20px;">含稅總計：$${grandTotal.toLocaleString()}</div>
+          </div>
+        </div>
+      `;
+    }
+  </script>
+</body>
+</html>

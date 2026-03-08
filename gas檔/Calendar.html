@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <style>
+    * { box-sizing: border-box; font-family: 'Microsoft JhengHei', Arial, sans-serif; }
+    body { margin: 0; padding: 15px; background: #f5f5f5; }
+    
+    /* 今日提醒區塊 */
+    /* 今日提醒區塊 */
+.reminder-box {
+  background: linear-gradient(135deg, #455a64 0%, #37474f 100%);
+  color: white;
+  padding: 15px 20px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+    .reminder-box h3 { margin: 0 0 10px 0; font-size: 18px; }
+.reminder-item {
+  background: rgba(255,255,255,0.15);
+  padding: 12px 15px;
+  border-radius: 8px;
+  margin-bottom: 8px;
+}
+.reminder-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.reminder-date { font-size: 13px; color: rgba(255,255,255,0.7); margin-bottom: 5px; }
+.reminder-title { font-weight: bold; color: #fff; font-size: 20px; }
+    .reminder-item:last-child { margin-bottom: 0; }
+    .reminder-time { font-weight: bold; margin-right: 10px; }
+    .reminder-title { flex: 1; }
+    .reminder-done {
+      background: rgba(255,255,255,0.3);
+      border: none;
+      color: white;
+      padding: 5px 12px;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .reminder-done:hover { background: rgba(255,255,255,0.5); }
+    
+    .no-reminder {
+      background: linear-gradient(135deg, #4CAF50 0%, #388E3C 100%);
+      color: white;
+      padding: 20px;
+      border-radius: 12px;
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    
+    /* 付款提醒 */
+    .payment-reminder {
+      background: #fff3e0;
+      border-left: 4px solid #ff9800;
+      padding: 12px 15px;
+      margin-bottom: 10px;
+      border-radius: 0 8px 8px 0;
+    }
+    .payment-reminder.urgent {
+      background: #ffebee;
+      border-left-color: #f44336;
+    }
+    .payment-type {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      margin-right: 8px;
+    }
+    .payment-type.收款 { background: #e3f2fd; color: #1976D2; }
+    .payment-type.付款 { background: #fce4ec; color: #c2185b; }
+    
+    /* 主要區塊 */
+    .main-container { display: flex; gap: 20px; }
+    .calendar-section { flex: 1; }
+    .event-section { width: 300px; }
+    
+    /* 月曆 */
+    .calendar-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+    .calendar-header h2 { margin: 0; color: #333; }
+    .nav-btn {
+      background: #2196F3;
+      color: white;
+      border: none;
+      padding: 8px 15px;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .nav-btn:hover { background: #1976D2; }
+    
+    .calendar-grid {
+      background: white;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    .weekdays {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      background: #2196F3;
+      color: white;
+    }
+    .weekday {
+      padding: 12px;
+      text-align: center;
+      font-weight: bold;
+    }
+    .days {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+    }
+    .day {
+      min-height: 80px;
+      border: 1px solid #eee;
+      padding: 5px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .day:hover { background: #f5f5f5; }
+    .day.other-month { background: #fafafa; color: #bbb; }
+    .day.today { background: #e3f2fd; }
+    .day.selected { background: #bbdefb; }
+    .day-number {
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+    .day.today .day-number {
+      background: #2196F3;
+      color: white;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .event-dot {
+      width: 100%;
+      padding: 2px 4px;
+      margin-bottom: 2px;
+      border-radius: 3px;
+      font-size: 11px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .event-dot.送貨 { background: #e3f2fd; color: #1976D2; }
+    .event-dot.收款 { background: #e8f5e9; color: #388E3C; }
+    .event-dot.付款 { background: #fce4ec; color: #c2185b; }
+    .event-dot.會議 { background: #f3e5f5; color: #7B1FA2; }
+    .event-dot.一般 { background: #fff3e0; color: #F57C00; }
+    .event-dot.已完成 { background: #f5f5f5; color: #999; text-decoration: line-through; }
+    
+    /* 右側事件面板 */
+    .event-panel {
+      background: white;
+      border-radius: 12px;
+      padding: 15px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    .event-panel h3 {
+      margin: 0 0 15px 0;
+      padding-bottom: 10px;
+      border-bottom: 2px solid #2196F3;
+    }
+    .add-event-btn {
+      width: 100%;
+      background: #4CAF50;
+      color: white;
+      border: none;
+      padding: 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 15px;
+      margin-bottom: 15px;
+    }
+    .add-event-btn:hover { background: #388E3C; }
+    
+    .event-list { max-height: 400px; overflow-y: auto; }
+    .event-card {
+      background: #f9f9f9;
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 10px;
+      border-left: 4px solid #2196F3;
+    }
+    .event-card.已完成 {
+      opacity: 0.6;
+      border-left-color: #999;
+    }
+    .event-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 5px;
+    }
+    .event-card-title { font-weight: bold; color: #333; font-size: 16px; }
+    .event-card-time { color: #666; font-size: 13px; }
+    .event-card-content { color: #666; font-size: 13px; margin-bottom: 8px; }
+    .event-card-actions button {
+      background: none;
+      border: 1px solid #ddd;
+      padding: 4px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-right: 5px;
+      font-size: 12px;
+    }
+    .event-card-actions button:hover { background: #f0f0f0; }
+    .event-card-actions .done-btn { color: #4CAF50; border-color: #4CAF50; }
+    .event-card-actions .del-btn { color: #f44336; border-color: #f44336; }
+    
+    /* 新增事件表單 */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal.show { display: flex; }
+    .modal-content {
+      background: white;
+      border-radius: 12px;
+      padding: 25px;
+      width: 400px;
+      max-width: 90%;
+    }
+    .modal-content h3 { margin: 0 0 20px 0; }
+    .form-group { margin-bottom: 15px; }
+    .form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
+    .form-group input, .form-group select, .form-group textarea {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+    .form-group textarea { resize: vertical; min-height: 80px; }
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+    .modal-actions button {
+      flex: 1;
+      padding: 12px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 15px;
+    }
+    .btn-save { background: #4CAF50; color: white; }
+    .btn-cancel { background: #e0e0e0; color: #333; }
+  </style>
+</head>
+<body>
+  <!-- 今日待辦提醒 -->
+  <div id="todayReminder"></div>
+  
+  <!-- 付款/收款提醒 -->
+  <div id="paymentReminders"></div>
+  
+  <!-- 主要區域 -->
+  <div class="main-container">
+    <!-- 月曆 -->
+    <div class="calendar-section">
+      <div class="calendar-header">
+        <button class="nav-btn" onclick="changeMonth(-1)">◀ 上月</button>
+        <h2 id="currentMonth"></h2>
+        <button class="nav-btn" onclick="changeMonth(1)">下月 ▶</button>
+      </div>
+      <div class="calendar-grid">
+        <div class="weekdays">
+          <div class="weekday">日</div>
+          <div class="weekday">一</div>
+          <div class="weekday">二</div>
+          <div class="weekday">三</div>
+          <div class="weekday">四</div>
+          <div class="weekday">五</div>
+          <div class="weekday">六</div>
+        </div>
+        <div class="days" id="calendarDays"></div>
+      </div>
+    </div>
+    
+    <!-- 事件面板 -->
+    <div class="event-section">
+      <div class="event-panel">
+        <h3>📋 <span id="selectedDateTitle">選擇日期</span></h3>
+        <button class="add-event-btn" onclick="showAddModal()">➕ 新增事項</button>
+        <div class="event-list" id="eventList">
+          <p style="color:#999; text-align:center;">請點選日期查看事項</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- 新增事件 Modal -->
+  <div class="modal" id="addModal">
+    <div class="modal-content">
+      <h3>➕ 新增事項</h3>
+      <div class="form-group">
+        <label>📅 日期 *</label>
+        <input type="date" id="eventDate">
+      </div>
+      <div class="form-group">
+  <label>🕐 時間</label>
+  <input type="text" id="eventTime" placeholder="例如：930、1400、下午2點" onblur="formatTimeInput(this)">
+</div>
+      <div class="form-group">
+        <label>📌 標題 *</label>
+        <input type="text" id="eventTitle" placeholder="例如：央廚送貨">
+      </div>
+      <div class="form-group">
+        <label>🏷️ 類型</label>
+        <select id="eventType">
+          <option value="一般">一般</option>
+          <option value="送貨">送貨</option>
+          <option value="收款">收款</option>
+          <option value="付款">付款</option>
+          <option value="會議">會議</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>📝 內容</label>
+        <textarea id="eventContent" placeholder="詳細說明..."></textarea>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-cancel" onclick="hideAddModal()">取消</button>
+        <button class="btn-save" onclick="saveEvent()">儲存</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let currentYear, currentMonth;
+    let selectedDate = null;
+    let monthEvents = [];
+    
+    // 初始化
+    document.addEventListener('DOMContentLoaded', function() {
+      var today = new Date();
+      currentYear = today.getFullYear();
+      currentMonth = today.getMonth();
+      
+      loadTodayReminders();
+      loadPaymentReminders();
+      renderCalendar();
+    });
+    
+    // 載入今日待辦
+    // 載入今日待辦
+function loadTodayReminders() {
+  google.script.run
+    .withSuccessHandler(function(events) {
+      var container = document.getElementById('todayReminder');
+      
+      if (events.length === 0) {
+        container.innerHTML = '<div class="no-reminder">✅ 今天沒有待辦事項</div>';
+        return;
+      }
+      
+      var html = '<div class="reminder-box">';
+      html += '<h3>🔔 今日待辦 (' + events.length + ')</h3>';
+      
+      events.forEach(function(e) {
+        // 格式化日期為中文
+        var dateText = formatChineseDate(e.date);
+        var timeText = e.time || '全天';
+        
+        html += '<div class="reminder-item">';
+        html += '<div class="reminder-date">' + dateText + ' ' + timeText + '</div>';
+        html += '<div class="reminder-row">';
+        html += '<span class="reminder-title">' + e.title + '</span>';
+        html += '<button class="reminder-done" onclick="markDone(\'' + e.id + '\')">✓ 完成</button>';
+        html += '</div>';
+        html += '</div>';
+      });
+      
+      html += '</div>';
+      container.innerHTML = html;
+    })
+    .getTodayEvents();
+}
+
+// 格式化日期為中文
+function formatChineseDate(dateStr) {
+  if (!dateStr) return '';
+  var parts = dateStr.split('-');
+  if (parts.length === 3) {
+    return parts[0] + '年' + parseInt(parts[1]) + '月' + parseInt(parts[2]) + '日';
+  }
+  return dateStr;
+}
+    
+    // 載入付款/收款提醒
+    function loadPaymentReminders() {
+      google.script.run
+        .withSuccessHandler(function(reminders) {
+          var container = document.getElementById('paymentReminders');
+          if (reminders.length === 0) {
+            container.innerHTML = '';
+            return;
+          }
+          
+          var html = '';
+          reminders.forEach(function(r) {
+            var urgentClass = r.daysLeft === 0 ? ' urgent' : '';
+            html += '<div class="payment-reminder' + urgentClass + '">';
+            html += '<span class="payment-type ' + r.type + '">' + r.type + '</span>';
+            html += '<strong>' + r.title + '</strong>';
+            html += '<div style="margin-top:5px; color:#666;">' + r.content + '</div>';
+            html += '<div style="margin-top:5px; font-size:12px; color:#999;">';
+            html += r.daysLeft === 0 ? '⚠️ 今天到期！' : '📅 ' + r.dueDate + ' (' + r.daysLeft + '天後)';
+            html += '</div></div>';
+          });
+          
+          container.innerHTML = html;
+        })
+        .getPaymentReminders();
+    }
+    
+    // 切換月份
+    function changeMonth(delta) {
+      currentMonth += delta;
+      if (currentMonth < 0) {
+        currentMonth = 11;
+        currentYear--;
+      } else if (currentMonth > 11) {
+        currentMonth = 0;
+        currentYear++;
+      }
+      renderCalendar();
+    }
+    
+    // 繪製月曆
+    function renderCalendar() {
+      var yearMonth = currentYear + '-' + String(currentMonth + 1).padStart(2, '0');
+      document.getElementById('currentMonth').textContent = currentYear + ' 年 ' + (currentMonth + 1) + ' 月';
+      
+      // 載入該月事件
+      google.script.run
+        .withSuccessHandler(function(events) {
+          monthEvents = events;
+          drawDays();
+        })
+        .getMonthEvents(yearMonth);
+    }
+    
+    function drawDays() {
+      var container = document.getElementById('calendarDays');
+      var firstDay = new Date(currentYear, currentMonth, 1);
+      var lastDay = new Date(currentYear, currentMonth + 1, 0);
+      var startDay = firstDay.getDay();
+      var totalDays = lastDay.getDate();
+      
+      var today = new Date();
+      var todayStr = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+      
+      var html = '';
+      
+      // 上個月的日期
+      var prevMonth = new Date(currentYear, currentMonth, 0);
+      for (var i = startDay - 1; i >= 0; i--) {
+        html += '<div class="day other-month"><div class="day-number">' + (prevMonth.getDate() - i) + '</div></div>';
+      }
+      
+      // 本月日期
+      for (var d = 1; d <= totalDays; d++) {
+        var dateStr = currentYear + '-' + String(currentMonth + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+        var isToday = dateStr === todayStr;
+        var isSelected = dateStr === selectedDate;
+        
+        var classes = 'day';
+        if (isToday) classes += ' today';
+        if (isSelected) classes += ' selected';
+        
+        html += '<div class="' + classes + '" onclick="selectDate(\'' + dateStr + '\')">';
+        html += '<div class="day-number">' + d + '</div>';
+        
+        // 顯示該日事件
+        var dayEvents = monthEvents.filter(function(e) { return e.date === dateStr; });
+        dayEvents.slice(0, 3).forEach(function(e) {
+          var statusClass = e.status === '已完成' ? '已完成' : e.type;
+          html += '<div class="event-dot ' + statusClass + '">' + e.title + '</div>';
+        });
+        if (dayEvents.length > 3) {
+          html += '<div style="font-size:11px; color:#999;">+' + (dayEvents.length - 3) + ' 更多</div>';
+        }
+        
+        html += '</div>';
+      }
+      
+      // 下個月的日期
+      var remaining = 42 - (startDay + totalDays);
+      for (var i = 1; i <= remaining; i++) {
+        html += '<div class="day other-month"><div class="day-number">' + i + '</div></div>';
+      }
+      
+      container.innerHTML = html;
+    }
+    
+    // 選擇日期
+    function selectDate(dateStr) {
+      selectedDate = dateStr;
+      document.getElementById('selectedDateTitle').textContent = dateStr;
+      document.getElementById('eventDate').value = dateStr;
+      drawDays();
+      
+      // 顯示該日事件
+      var dayEvents = monthEvents.filter(function(e) { return e.date === dateStr; });
+      var container = document.getElementById('eventList');
+      
+      if (dayEvents.length === 0) {
+        container.innerHTML = '<p style="color:#999; text-align:center;">這天沒有事項</p>';
+        return;
+      }
+      
+      var html = '';
+      dayEvents.forEach(function(e) {
+        html += '<div class="event-card ' + e.status + '">';
+        html += '<div class="event-card-header">';
+        html += '<span class="event-card-title">' + e.title + '</span>';
+        html += '<span class="event-card-time">' + (e.time || '全天') + '</span>';
+        html += '</div>';
+        if (e.content) {
+          html += '<div class="event-card-content">' + e.content + '</div>';
+        }
+        html += '<div class="event-card-actions">';
+        if (e.status !== '已完成') {
+          html += '<button class="done-btn" onclick="markDone(\'' + e.id + '\')">✓ 完成</button>';
+        }
+        html += '<button class="del-btn" onclick="deleteEvent(\'' + e.id + '\')">🗑 刪除</button>';
+        html += '</div></div>';
+      });
+      
+      container.innerHTML = html;
+    }
+    
+    // 標記完成
+    function markDone(eventId) {
+      google.script.run
+        .withSuccessHandler(function(res) {
+          if (res.success) {
+            loadTodayReminders();
+            renderCalendar();
+            if (selectedDate) selectDate(selectedDate);
+          }
+        })
+        .updateEventStatus(eventId, '已完成');
+    }
+    
+    // 刪除事件
+    function deleteEvent(eventId) {
+      if (!confirm('確定要刪除此事項？')) return;
+      
+      google.script.run
+        .withSuccessHandler(function(res) {
+          if (res.success) {
+            renderCalendar();
+            if (selectedDate) selectDate(selectedDate);
+          }
+        })
+        .deleteCalendarEvent(eventId);
+    }
+    
+    // 顯示/隱藏新增視窗
+    function showAddModal() {
+      if (!selectedDate) {
+        var today = new Date();
+        document.getElementById('eventDate').value = today.toISOString().split('T')[0];
+      }
+      document.getElementById('addModal').classList.add('show');
+    }
+    
+    function hideAddModal() {
+      document.getElementById('addModal').classList.remove('show');
+      document.getElementById('eventTitle').value = '';
+      document.getElementById('eventTime').value = '';
+      document.getElementById('eventContent').value = '';
+      document.getElementById('eventType').value = '一般';
+    }
+    
+    // 儲存事件
+    function saveEvent() {
+      var data = {
+        date: document.getElementById('eventDate').value,
+        time: document.getElementById('eventTime').value,
+        title: document.getElementById('eventTitle').value,
+        content: document.getElementById('eventContent').value,
+        type: document.getElementById('eventType').value
+      };
+      
+      if (!data.date || !data.title) {
+        alert('請填寫日期和標題！');
+        return;
+      }
+      
+      google.script.run
+        .withSuccessHandler(function(res) {
+          if (res.success) {
+            hideAddModal();
+            renderCalendar();
+            selectDate(data.date);
+            alert('✅ 已新增事項！');
+          } else {
+            alert('❌ 儲存失敗：' + res.error);
+          }
+        })
+        .addCalendarEvent(data);
+    }
+    // 自動格式化時間輸入
+function formatTimeInput(input) {
+  var val = input.value.trim();
+  if (!val) return;
+  
+  // 如果已經有冒號或中文，不處理
+  if (val.indexOf(':') > -1 || val.indexOf('點') > -1) return;
+  
+  // 純數字處理
+  var num = val.replace(/\D/g, ''); // 只保留數字
+  if (!num) return;
+  
+  var formatted = '';
+  
+  if (num.length <= 2) {
+    // 輸入 9 -> 9:00，輸入 14 -> 14:00
+    formatted = num + ':00';
+  } else if (num.length === 3) {
+    // 輸入 930 -> 9:30
+    formatted = num.substring(0, 1) + ':' + num.substring(1);
+  } else if (num.length === 4) {
+    // 輸入 1430 -> 14:30
+    formatted = num.substring(0, 2) + ':' + num.substring(2);
+  } else {
+    // 超過4位數，取前4位
+    formatted = num.substring(0, 2) + ':' + num.substring(2, 4);
+  }
+  
+  input.value = formatted;
+}
+  </script>
+</body>
+</html>

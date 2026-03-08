@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html>
+<head>
+<base target="_top">
+<meta charset="UTF-8">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:"Microsoft JhengHei",Arial,sans-serif; font-size:15px; padding:20px; background:#f5f5f5; }
+  .container { background:white; padding:25px; border-radius:10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); max-width: 900px; margin: 0 auto; }
+  
+  h2 { color:#5E35B1; font-size:22px; margin-bottom:20px; border-bottom:3px solid #5E35B1; padding-bottom:10px; display:flex; justify-content:space-between; align-items:center; }
+  
+  .controls { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+  .input-group { flex: 1; min-width: 150px; }
+  label { display: block; font-size: 13px; color: #666; margin-bottom: 5px; }
+  input[type="date"] { width:100%; padding:10px; font-size:16px; border:1px solid #ddd; border-radius:6px; background: #fff; }
+  
+  .btn-group { display: flex; gap: 10px; width: 100%; margin-top: 10px; }
+  .btn { flex: 1; padding:12px; font-size:16px; font-weight:bold; border:none; border-radius:6px; cursor:pointer; transition: 0.2s; }
+  .btn-search { background:#5E35B1; color:white; }
+  .btn-search:hover { background:#4527a0; }
+  .btn-export { background:#2E7D32; color:white; display: none; }
+  .btn-export:hover { background:#1b5e20; }
+
+  .summary-bar { background: #ede7f6; padding: 15px; border-radius: 8px; margin-bottom: 15px; display: flex; justify-content: space-around; font-weight: bold; color: #4527a0; }
+
+  .list-header { display: flex; padding: 10px; background: #eee; font-weight: bold; font-size: 14px; color: #555; border-radius: 6px 6px 0 0; }
+  .list-body { max-height: 500px; overflow-y: auto; border: 1px solid #eee; border-top: none; }
+  
+  .item { display: flex; padding:12px 10px; border-bottom:1px solid #eee; align-items: center; }
+  .item:nth-child(even) { background: #fafafa; }
+  
+  .col-rank { width: 50px; text-align: center; font-weight: bold; color: #5E35B1; }
+  .col-info { flex: 1; padding-right: 10px; display: flex; flex-direction: column; }
+  .col-qty { width: 100px; text-align: right; color: #0277bd; }
+  .col-profit { width: 120px; text-align: right; color: #2e7d32; font-weight: bold; }
+  
+  .prod-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+  .prod-id { font-size: 12px; color: #999; }
+  .prod-cat { font-size: 11px; background: #e0e0e0; color: #444; padding: 2px 6px; border-radius: 4px; }
+  .prod-name { font-size: 16px; color: #333; font-weight: 500; }
+  
+  .loader { border: 4px solid #f3f3f3; border-top: 4px solid #5E35B1; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; margin: 20px auto; display: none; }
+  @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h2>📦 商品銷售分析</h2>
+
+  <div class="controls">
+    <div class="input-group">
+      <label>開始日期</label>
+      <input type="date" id="dateFrom" />
+    </div>
+    <div class="input-group">
+      <label>結束日期</label>
+      <input type="date" id="dateTo" />
+    </div>
+  </div>
+
+  <div class="btn-group">
+    <button class="btn btn-search" onclick="analyze()">📊 開始分析</button>
+    <button class="btn btn-export" id="btnExport" onclick="exportToExcel()">📥 匯出 Excel (含類別)</button>
+  </div>
+
+  <div id="summaryBar" class="summary-bar" style="display:none;"></div>
+  <div class="loader" id="loader"></div>
+
+  <div id="resultContainer" style="display:none;">
+    <div class="list-header">
+      <div class="col-rank">排名</div>
+      <div class="col-info">商品資訊</div>
+      <div class="col-qty">銷量</div>
+      <div class="col-profit">毛利</div>
+    </div>
+    <div class="list-body" id="resultList"></div>
+  </div>
+</div>
+
+<script>
+  const today = new Date();
+  const yyyy = today.getFullYear();
+  const mm = String(today.getMonth() + 1).padStart(2, '0');
+  
+  document.getElementById('dateFrom').value = `${yyyy}-${mm}-01`;
+  document.getElementById('dateTo').value = today.toISOString().split('T')[0];
+
+  let currentData = [];
+
+  function analyze() {
+    const dateFrom = document.getElementById('dateFrom').value;
+    const dateTo = document.getElementById('dateTo').value;
+
+    if(!dateFrom || !dateTo) { alert("請選擇日期範圍"); return; }
+
+    document.getElementById('loader').style.display = 'block';
+    document.getElementById('resultList').innerHTML = '';
+    document.getElementById('summaryBar').style.display = 'none';
+    document.getElementById('resultContainer').style.display = 'none';
+    document.getElementById('btnExport').style.display = 'none';
+
+    google.script.run
+      .withSuccessHandler(display)
+      .withFailureHandler(e => { alert("錯誤: " + e); document.getElementById('loader').style.display = 'none'; })
+      .analyzeProducts(dateFrom, dateTo);
+  }
+
+  function display(data) {
+    document.getElementById('loader').style.display = 'none';
+    currentData = data;
+
+    if (data.length === 0) {
+      document.getElementById('resultList').innerHTML = '<p style="text-align:center;padding:20px;color:#999;">查無資料</p>';
+      document.getElementById('resultContainer').style.display = 'block';
+      return;
+    }
+
+    let totalRevenue = 0;
+    let totalProfit = 0;
+
+    const html = data.map((item, i) => {
+      totalRevenue += item.revenue;
+      totalProfit += item.profit;
+
+      return `
+        <div class="item">
+          <span class="col-rank">#${i+1}</span>
+          <div class="col-info">
+            <div class="prod-meta">
+              <span class="prod-cat">${item.category}</span>
+              <span class="prod-id">${item.productId}</span>
+            </div>
+            <span class="prod-name">${item.productName}</span>
+          </div>
+          <div class="col-qty">
+            ${item.qty} ${item.unit}<br>
+            <small style="color:#999">$${item.revenue.toLocaleString()}</small>
+          </div>
+          <div class="col-profit">
+            $${item.profit.toLocaleString()}<br>
+            <small style="color:#66bb6a">${item.profitRate}%</small>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    const summaryHtml = `
+      <div>總銷售額: $${totalRevenue.toLocaleString()}</div>
+      <div>總毛利: $${totalProfit.toLocaleString()}</div>
+    `;
+    
+    document.getElementById('summaryBar').innerHTML = summaryHtml;
+    document.getElementById('summaryBar').style.display = 'flex';
+    document.getElementById('resultList').innerHTML = html;
+    document.getElementById('resultContainer').style.display = 'block';
+    document.getElementById('btnExport').style.display = 'block';
+  }
+
+  function exportToExcel() {
+    if (currentData.length === 0) { alert("無資料"); return; }
+
+    let csvContent = "\uFEFF"; // 加入 BOM
+    // 修改標題列，加入「類別」
+    csvContent += "排名,類別,商品編號,商品名稱,數量,單位,銷售額,毛利,毛利率\n";
+
+    currentData.forEach((item, index) => {
+      const safeName = `"${item.productName.replace(/"/g, '""')}"`;
+      const row = [
+        index + 1,
+        item.category, // 匯出類別
+        item.productId,
+        safeName,
+        item.qty,
+        item.unit,
+        item.revenue,
+        item.profit,
+        item.profitRate + "%"
+      ];
+      csvContent += row.join(",") + "\n";
+    });
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    const dFrom = document.getElementById('dateFrom').value;
+    const dTo = document.getElementById('dateTo').value;
+    link.setAttribute("href", url);
+    link.setAttribute("download", `商品分析(含類別)_${dFrom}_${dTo}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+</script>
+
+</body>
+</html>

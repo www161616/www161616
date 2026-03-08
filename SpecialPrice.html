@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>客戶特價設定 - 央廚 ERP</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#fffbf0;
+  --surface:#ffffff;
+  --surface2:#fdf5d8;
+  --surface-sidebar:#fef9ec;
+  --border:#f5e0a0;
+  --text:#3d2a00;
+  --text2:#92660a;
+  --accent:#b45309;
+  --accent2:#d97706;
+  --danger:#c53030;
+  --success:#276749;
+  --warning:#b7791f;
+  --orange:#c05621;
+  --purple:#553c9a;
+  --pink:#b83280;
+  --teal:#0e7490;
+  --surface-dark:#f5c842;
+  --text-on-dark:#5a3a00;
+  --accent-light:#fef3c7;
+  --shadow:rgba(180,83,9,0.07);
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--text);height:100vh;display:flex;flex-direction:column;overflow:hidden;}
+
+/* loading */
+#loading{position:fixed;inset:0;background:rgba(180,83,9,0.15);display:none;align-items:center;justify-content:center;z-index:9999;flex-direction:column;gap:16px;}
+.spinner{width:40px;height:40px;border:4px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+#loadingMsg{color:var(--text2);font-size:13px;}
+
+/* toast */
+.toast{position:fixed;top:70px;right:20px;padding:12px 18px;border-radius:8px;font-size:13px;font-weight:500;z-index:10000;box-shadow:0 4px 20px rgba(0,0,0,.4);animation:slideIn .3s ease;pointer-events:none;}
+.toast.success{background:#d1fae5;border:1px solid var(--success);color:#1a5c2e;}
+.toast.error{background:#fee2e2;border:1px solid var(--danger);color:var(--danger);}
+.toast.warn{background:#fef3c7;border:1px solid var(--warning);color:var(--warning);}
+@keyframes slideIn{from{opacity:0;transform:translateX(20px);}to{opacity:1;transform:translateX(0);}}
+
+/* navbar */
+.navbar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 20px;height:52px;display:flex;align-items:center;gap:16px;flex-shrink:0;}
+.navbar-brand{font-size:15px;font-weight:700;color:var(--pink);margin-right:4px;}
+.navbar-brand span{color:var(--text2);font-weight:400;font-size:12px;}
+.tab-group{display:flex;gap:4px;margin-left:auto;}
+.tab-btn{padding:6px 16px;border-radius:6px;border:none;font-size:13px;font-family:inherit;cursor:pointer;font-weight:500;transition:all .2s;}
+.tab-btn.active{background:var(--pink);color:#fff;}
+.tab-btn:not(.active){background:transparent;color:var(--text2);border:1px solid var(--border);}
+.tab-btn:not(.active):hover{background:var(--surface2);color:var(--text);}
+
+/* main layout */
+.main{flex:1;overflow:hidden;display:flex;}
+.tab-content{display:none;flex:1;overflow:hidden;}
+.tab-content.active{display:flex;}
+
+/* ===== TAB 1: 設定特價 ===== */
+.setup-layout{display:flex;flex-direction:column;flex:1;overflow:hidden;}
+.customer-bar{background:var(--surface);border-bottom:1px solid var(--border);padding:12px 20px;display:flex;align-items:center;gap:12px;flex-shrink:0;}
+.customer-bar label{font-size:12px;color:var(--text2);white-space:nowrap;}
+.cust-search{padding:8px 12px;background:var(--bg);border:1px solid var(--border);border-radius:7px;color:var(--text);font-size:13px;font-family:inherit;outline:none;width:200px;transition:border-color .2s;}
+.cust-search:focus{border-color:var(--pink);}
+.cust-select{padding:8px 12px;background:var(--bg);border:1px solid var(--border);border-radius:7px;color:var(--text);font-size:13px;font-family:inherit;outline:none;flex:1;max-width:360px;cursor:pointer;transition:border-color .2s;}
+.cust-select:focus{border-color:var(--pink);}
+.cust-info{display:flex;align-items:center;gap:8px;margin-left:8px;}
+.price-group-badge{padding:3px 10px;border-radius:10px;font-size:11px;font-weight:600;}
+.pg-general{background:rgba(79,124,255,.2);color:var(--accent);}
+.pg-branch{background:rgba(56,232,197,.2);color:var(--success);}
+.pg-store{background:rgba(255,159,67,.2);color:var(--orange);}
+.pg-rest{background:rgba(162,155,254,.2);color:var(--purple);}
+
+.products-area{display:flex;flex:1;overflow:hidden;}
+
+/* product panel */
+.prod-panel{width:55%;border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;}
+.prod-header{padding:10px 14px;border-bottom:1px solid var(--border);flex-shrink:0;}
+.prod-filters{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.cat-tags{display:flex;flex-wrap:wrap;gap:4px;flex:1;}
+.cat-tag{padding:3px 10px;border-radius:10px;font-size:11px;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--text2);font-family:inherit;transition:all .2s;white-space:nowrap;}
+.cat-tag:hover{border-color:var(--pink);color:var(--pink);}
+.cat-tag.active{background:var(--pink);border-color:var(--pink);color:#fff;}
+.prod-search{padding:7px 12px;background:var(--bg);border:1px solid var(--border);border-radius:7px;color:var(--text);font-size:13px;font-family:inherit;outline:none;width:180px;transition:border-color .2s;flex-shrink:0;}
+.prod-search:focus{border-color:var(--pink);}
+.prod-list{flex:1;overflow-y:auto;padding:8px;}
+.prod-card{padding:10px 14px;border-radius:8px;border:1px solid var(--border);margin-bottom:5px;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:10px;background:var(--surface);}
+.prod-card:hover{border-color:var(--pink);background:rgba(253,121,168,.04);}
+.prod-card.selected{border-color:var(--pink);background:rgba(253,121,168,.08);}
+.prod-check{width:16px;height:16px;accent-color:var(--pink);cursor:pointer;flex-shrink:0;}
+.prod-info{flex:1;min-width:0;}
+.prod-name{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.prod-meta{font-size:11px;color:var(--text2);margin-top:2px;display:flex;gap:8px;align-items:center;}
+.cat-badge{display:inline-block;padding:1px 6px;border-radius:4px;font-size:10px;background:var(--surface2);color:var(--text2);}
+.set-badge{display:inline-block;padding:1px 6px;border-radius:4px;font-size:10px;background:rgba(56,232,197,.15);color:var(--success);font-weight:600;}
+.prod-price{font-size:13px;font-weight:600;color:var(--text2);text-align:right;flex-shrink:0;}
+.prod-empty{text-align:center;padding:40px 20px;color:var(--text2);font-size:13px;}
+
+/* selected panel */
+.sel-panel{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+.sel-header{padding:10px 16px;border-bottom:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:space-between;}
+.sel-title{font-size:13px;font-weight:600;color:var(--pink);}
+.sel-count{display:inline-block;background:var(--pink);color:#fff;border-radius:10px;padding:1px 8px;font-size:11px;font-weight:700;margin-left:6px;}
+.batch-bar{padding:10px 14px;border-bottom:1px solid var(--border);flex-shrink:0;display:flex;gap:8px;align-items:center;background:rgba(253,121,168,.04);}
+.batch-bar label{font-size:11px;color:var(--text2);white-space:nowrap;}
+.batch-input{width:70px;padding:5px 8px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;text-align:center;font-family:inherit;outline:none;}
+.batch-input:focus{border-color:var(--pink);}
+.btn-sm{padding:5px 12px;border-radius:6px;border:none;font-size:12px;font-family:inherit;cursor:pointer;font-weight:600;transition:all .2s;}
+.btn-apply{background:rgba(253,121,168,.2);color:var(--pink);}
+.btn-apply:hover{background:var(--pink);color:#fff;}
+.btn-reset-disc{background:var(--surface2);color:var(--text2);border:1px solid var(--border);}
+.btn-reset-disc:hover{background:var(--border);color:var(--text);}
+.sel-list{flex:1;overflow-y:auto;padding:8px;}
+.sel-item{padding:10px 12px;border-radius:8px;border:1px solid var(--border);margin-bottom:5px;background:var(--surface);display:flex;align-items:center;gap:10px;}
+.sel-item-num{font-size:11px;font-weight:700;color:var(--pink);background:rgba(253,121,168,.15);width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.sel-item-name{flex:1;font-size:12px;font-weight:500;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.sel-item-orig{font-size:10px;color:var(--text2);white-space:nowrap;}
+.price-input{width:90px;padding:5px 8px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;text-align:right;font-family:inherit;outline:none;transition:border-color .2s;flex-shrink:0;}
+.price-input:focus{border-color:var(--pink);}
+.price-input.changed{border-color:var(--warning);color:var(--warning);}
+.btn-remove-item{background:transparent;border:none;color:var(--text2);cursor:pointer;font-size:16px;padding:0 2px;line-height:1;flex-shrink:0;transition:color .2s;}
+.btn-remove-item:hover{color:var(--danger);}
+.sel-footer{padding:12px 16px;border-top:1px solid var(--border);flex-shrink:0;}
+.btn-save-all{width:100%;padding:11px;border-radius:8px;border:none;font-size:14px;font-family:inherit;cursor:pointer;font-weight:700;transition:all .2s;background:var(--pink);color:#fff;}
+.btn-save-all:hover{background:#e96c9c;}
+.btn-save-all:disabled{background:var(--border);color:var(--text2);cursor:not-allowed;}
+.sel-empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--text2);gap:8px;padding:20px;}
+.sel-empty-icon{font-size:36px;opacity:.3;}
+.sel-empty-text{font-size:13px;}
+
+/* ===== TAB 2: 查詢現有 ===== */
+.query-layout{flex:1;overflow-y:auto;padding:20px;}
+.query-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;max-width:1100px;margin:0 auto;}
+.query-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;}
+.query-header h2{font-size:15px;font-weight:700;color:var(--pink);}
+.query-select-wrap{display:flex;gap:10px;align-items:center;flex:1;}
+.query-cust-search{padding:8px 12px;background:var(--bg);border:1px solid var(--border);border-radius:7px;color:var(--text);font-size:13px;font-family:inherit;outline:none;width:180px;transition:border-color .2s;}
+.query-cust-search:focus{border-color:var(--pink);}
+.query-cust-select{flex:1;max-width:340px;padding:8px 12px;background:var(--bg);border:1px solid var(--border);border-radius:7px;color:var(--text);font-size:13px;font-family:inherit;outline:none;cursor:pointer;}
+.query-cust-select:focus{border-color:var(--pink);}
+.query-body{overflow:auto;}
+table{width:100%;border-collapse:collapse;}
+thead th{padding:9px 14px;font-size:11px;color:var(--text2);background:var(--surface2);font-weight:600;border-bottom:1px solid var(--border);text-align:left;white-space:nowrap;}
+tbody tr{border-bottom:1px solid var(--border);transition:background .15s;}
+tbody tr:hover{background:var(--surface2);}
+tbody tr:last-child{border-bottom:none;}
+tbody td{padding:9px 14px;font-size:12px;}
+.btn-del{padding:3px 10px;border-radius:5px;border:1px solid var(--danger);background:transparent;color:var(--danger);font-size:11px;cursor:pointer;font-family:inherit;transition:all .2s;}
+.btn-del:hover{background:var(--danger);color:#fff;}
+.empty-row{text-align:center;padding:40px;color:var(--text2);font-size:13px;}
+.query-stats{display:flex;gap:16px;padding:10px 20px;border-bottom:1px solid var(--border);background:rgba(253,121,168,.04);}
+.qstat{font-size:12px;color:var(--text2);}
+.qstat strong{color:var(--pink);}
+
+::-webkit-scrollbar{width:4px;height:4px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+</style>
+</head>
+<body>
+
+<!-- Loading -->
+<div id="loading">
+  <div class="spinner"></div>
+  <div id="loadingMsg">載入資料中...</div>
+</div>
+
+<!-- Navbar -->
+<nav class="navbar">
+  <div class="navbar-brand">🏷️ 客戶特價設定 <span>Special Price</span></div>
+  <div class="tab-group">
+    <button class="tab-btn active" onclick="switchTab('setup',this)">✏️ 設定特價</button>
+    <button class="tab-btn" onclick="switchTab('query',this)">🔍 查詢現有</button>
+  </div>
+</nav>
+
+<div class="main">
+
+  <!-- ===== TAB 1: 設定特價 ===== -->
+  <div id="tab-setup" class="tab-content active">
+    <div class="setup-layout">
+
+      <!-- 客戶選擇列 -->
+      <div class="customer-bar">
+        <label>👤 選擇客戶</label>
+        <input class="cust-search" id="custSearch" placeholder="搜尋客戶..." oninput="filterCustSetup()">
+        <select class="cust-select" id="custSelect" onchange="onCustomerChange()">
+          <option value="">-- 請先選擇客戶 --</option>
+        </select>
+        <div class="cust-info" id="custInfo"></div>
+      </div>
+
+      <!-- 商品區（客戶選擇後顯示）-->
+      <div class="products-area" id="productsArea" style="display:none">
+
+        <!-- 左側：商品瀏覽 -->
+        <div class="prod-panel">
+          <div class="prod-header">
+            <div class="prod-filters">
+              <div class="cat-tags" id="catTags"></div>
+              <input class="prod-search" id="prodSearch" placeholder="搜尋商品..." oninput="filterProducts()">
+            </div>
+          </div>
+          <div class="prod-list" id="prodList">
+            <div class="prod-empty">請先選擇客戶</div>
+          </div>
+        </div>
+
+        <!-- 右側：已選商品 -->
+        <div class="sel-panel">
+          <div class="sel-header">
+            <div>
+              <span class="sel-title">已選商品</span>
+              <span class="sel-count" id="selCount">0</span>
+            </div>
+            <button class="btn-sm btn-reset-disc" onclick="clearAll()" style="display:none" id="clearAllBtn">清除全部</button>
+          </div>
+
+          <!-- 批量工具 -->
+          <div class="batch-bar" id="batchBar" style="display:none">
+            <label>⚡ 批量折扣</label>
+            <input class="batch-input" id="batchRate" type="number" placeholder="折數" title="例: 8=八折, 85=85折">
+            <button class="btn-sm btn-apply" onclick="applyDiscount()">套用</button>
+            <button class="btn-sm btn-reset-disc" onclick="resetDiscount()">還原原價</button>
+          </div>
+
+          <!-- 選擇清單 -->
+          <div id="selEmpty" class="sel-empty">
+            <div class="sel-empty-icon">☑️</div>
+            <div class="sel-empty-text">點選左側商品以加入</div>
+          </div>
+          <div class="sel-list" id="selList" style="display:none"></div>
+
+          <!-- 儲存 -->
+          <div class="sel-footer" id="selFooter" style="display:none">
+            <button class="btn-save-all" id="saveBtn" onclick="batchSave()">💾 儲存所有特價設定</button>
+          </div>
+        </div>
+
+      </div><!-- /products-area -->
+
+      <!-- 尚未選擇客戶的提示 -->
+      <div id="noCustomerHint" style="flex:1;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;color:var(--text2);">
+        <div style="font-size:48px;opacity:.3">🏷️</div>
+        <div style="font-size:15px;">請先在上方選擇客戶</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ===== TAB 2: 查詢現有 ===== -->
+  <div id="tab-query" class="tab-content">
+    <div class="query-layout">
+      <div class="query-card">
+        <div class="query-header">
+          <h2>🔍 查詢客戶特價</h2>
+          <div class="query-select-wrap">
+            <input class="query-cust-search" id="qCustSearch" placeholder="搜尋客戶..." oninput="filterCustQuery()">
+            <select class="query-cust-select" id="qCustSelect" onchange="loadQueryPrices()">
+              <option value="">-- 請選擇客戶 --</option>
+            </select>
+          </div>
+        </div>
+        <div class="query-stats" id="queryStats" style="display:none">
+          <div class="qstat">客戶：<strong id="qStatName">-</strong></div>
+          <div class="qstat">特價筆數：<strong id="qStatCount">0</strong></div>
+          <div class="qstat">價格群組：<strong id="qStatGroup">-</strong></div>
+        </div>
+        <div class="query-body">
+          <table>
+            <thead>
+              <tr>
+                <th>排序</th>
+                <th>商品編號</th>
+                <th>商品名稱</th>
+                <th>原價</th>
+                <th>特價</th>
+                <th>差異</th>
+                <th>設定日期</th>
+                <th>備註</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="queryTable">
+              <tr><td colspan="9" class="empty-row">請先選擇客戶</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /main -->
+
+<script>
+const SB_URL = 'https://xuykenpvonfqwsgbuvvj.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh1eWtlbnB2b25mcXdzZ2J1dnZqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwMDY3MzgsImV4cCI6MjA4NzU4MjczOH0.HmIktEbkPc0e7eTdqJdMWVxMzYIh4YkZ4LewZfC4Qr4';
+const H = { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY, 'Content-Type': 'application/json' };
+
+async function api(table, params = '') {
+  const r = await fetch(`${SB_URL}/rest/v1/${table}?${params}`, { headers: H });
+  if (!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+async function apiPost(table, body, prefer = '') {
+  const headers = { ...H };
+  if (prefer) headers['Prefer'] = prefer;
+  const r = await fetch(`${SB_URL}/rest/v1/${table}`, { method: 'POST', headers, body: JSON.stringify(body) });
+  if (!r.ok) throw new Error(await r.text());
+  return r.status === 204 ? null : r.json().catch(() => null);
+}
+async function apiPatch(table, params, body) {
+  const r = await fetch(`${SB_URL}/rest/v1/${table}?${params}`, { method: 'PATCH', headers: H, body: JSON.stringify(body) });
+  if (!r.ok) throw new Error(await r.text());
+}
+async function apiDelete(table, params) {
+  const r = await fetch(`${SB_URL}/rest/v1/${table}?${params}`, { method: 'DELETE', headers: H });
+  if (!r.ok) throw new Error(await r.text());
+}
+
+// ── 全域資料 ──
+let allCustomers = [];
+let allProducts = [];
+let currentSpecialPrices = [];  // 當前客戶的特價清單
+let selectedItems = [];          // 待儲存的選擇清單
+let currentCategory = '';
+
+function showLoading(msg = '處理中...') {
+  document.getElementById('loading').style.display = 'flex';
+  document.getElementById('loadingMsg').textContent = msg;
+}
+function hideLoading() { document.getElementById('loading').style.display = 'none'; }
+
+function toast(msg, type = 'success') {
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3000);
+}
+
+function fmt(n) { return 'NT$' + Number(n || 0).toLocaleString(); }
+
+// ── 初始化 ──
+window.onload = async function () {
+  showLoading('載入客戶與商品資料中...');
+  try {
+    const [customers, products] = await Promise.all([
+      api('customers', 'select=*&status=eq.啟用&order=name'),
+      api('products', 'select=*&status=eq.啟用&order=category,name')
+    ]);
+    allCustomers = customers;
+    allProducts = products;
+    buildCustSelects();
+    buildCategoryTags();
+    hideLoading();
+  } catch (e) {
+    hideLoading();
+    alert('❌ 載入失敗：' + e.message + '\n\n請確認網路連線並重新整理頁面');
+  }
+};
+
+function buildCustSelects() {
+  const opts = '<option value="">-- 請選擇客戶 --</option>' +
+    allCustomers.map(c => `<option value="${c.id}">[${c.price_group || '一般'}] ${c.name}</option>`).join('');
+  document.getElementById('custSelect').innerHTML = opts;
+  document.getElementById('qCustSelect').innerHTML = opts;
+}
+
+function filterCustSetup() {
+  const kw = document.getElementById('custSearch').value.toLowerCase();
+  const list = kw ? allCustomers.filter(c => c.name.toLowerCase().includes(kw) || c.id.toLowerCase().includes(kw)) : allCustomers;
+  const sel = document.getElementById('custSelect');
+  sel.innerHTML = '<option value="">-- 請選擇客戶 --</option>' +
+    list.map(c => `<option value="${c.id}">[${c.price_group || '一般'}] ${c.name}</option>`).join('');
+  if (list.length === 1) { sel.value = list[0].id; onCustomerChange(); }
+}
+
+function filterCustQuery() {
+  const kw = document.getElementById('qCustSearch').value.toLowerCase();
+  const list = kw ? allCustomers.filter(c => c.name.toLowerCase().includes(kw) || c.id.toLowerCase().includes(kw)) : allCustomers;
+  const sel = document.getElementById('qCustSelect');
+  sel.innerHTML = '<option value="">-- 請選擇客戶 --</option>' +
+    list.map(c => `<option value="${c.id}">[${c.price_group || '一般'}] ${c.name}</option>`).join('');
+  if (list.length === 1) { sel.value = list[0].id; loadQueryPrices(); }
+}
+
+// ── 客戶改變 → 載入特價 ──
+async function onCustomerChange() {
+  const cid = document.getElementById('custSelect').value;
+  selectedItems = [];
+  currentSpecialPrices = [];
+
+  if (!cid) {
+    document.getElementById('productsArea').style.display = 'none';
+    document.getElementById('noCustomerHint').style.display = 'flex';
+    document.getElementById('custInfo').innerHTML = '';
+    renderSelectedPanel();
+    return;
+  }
+
+  const customer = allCustomers.find(c => c.id === cid);
+  const pg = customer?.price_group || '一般';
+  document.getElementById('custInfo').innerHTML =
+    `<span class="price-group-badge ${pgClass(pg)}">${pg}客戶</span>`;
+
+  showLoading('載入特價資料...');
+  try {
+    currentSpecialPrices = await api('special_prices', `customer_id=eq.${cid}&order=sort_order`);
+  } catch (e) {
+    toast('⚠️ 特價載入失敗：' + e.message, 'warn');
+    currentSpecialPrices = [];
+  }
+  hideLoading();
+
+  document.getElementById('productsArea').style.display = 'flex';
+  document.getElementById('noCustomerHint').style.display = 'none';
+  currentCategory = '';
+  renderCategoryTags();
+  filterProducts();
+  renderSelectedPanel();
+}
+
+function pgClass(pg) {
+  if (pg === '總倉') return 'pg-branch';
+  if (pg === '店家') return 'pg-store';
+  if (pg === '餐廳') return 'pg-rest';
+  return 'pg-general';
+}
+
+function getBasePrice(p, pg) {
+  if (pg === '總倉') return p.price_branch || p.price || 0;
+  if (pg === '店家') return p.price_store || p.price || 0;
+  if (pg === '餐廳') return p.price_rest || p.price || 0;
+  return p.price || 0;
+}
+
+// ── 類別標籤 ──
+function buildCategoryTags() {
+  const cats = [...new Set(allProducts.map(p => p.category).filter(Boolean))].sort();
+  const container = document.getElementById('catTags');
+  container.innerHTML = `<button class="cat-tag active" onclick="setCat('',this)">全部</button>` +
+    cats.map(c => `<button class="cat-tag" onclick="setCat('${c}',this)">${c}</button>`).join('');
+}
+
+function renderCategoryTags() {
+  document.querySelectorAll('#catTags .cat-tag').forEach(btn => {
+    btn.classList.toggle('active', (btn.dataset.cat || '') === currentCategory);
+  });
+}
+
+function setCat(cat, btn) {
+  currentCategory = cat;
+  document.querySelectorAll('#catTags .cat-tag').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  btn.dataset.cat = cat;
+  filterProducts();
+}
+
+// ── 商品列表渲染 ──
+function filterProducts() {
+  const kw = document.getElementById('prodSearch').value.toLowerCase();
+  const cid = document.getElementById('custSelect').value;
+  const customer = allCustomers.find(c => c.id === cid);
+  const pg = customer?.price_group || '一般';
+
+  let list = allProducts;
+  if (currentCategory) list = list.filter(p => p.category === currentCategory);
+  if (kw) list = list.filter(p => p.name.toLowerCase().includes(kw) || p.id.toLowerCase().includes(kw));
+
+  const div = document.getElementById('prodList');
+  if (!list.length) {
+    div.innerHTML = '<div class="prod-empty">沒有符合條件的商品</div>';
+    return;
+  }
+
+  div.innerHTML = list.map(p => {
+    const sp = currentSpecialPrices.find(s => s.product_id === p.id);
+    const basePrice = getBasePrice(p, pg);
+    const isSelected = selectedItems.some(s => s.product_id === p.id);
+    const spBadge = sp ? `<span class="set-badge">★ 已設 ${fmt(sp.price)}</span>` : '';
+    return `<div class="prod-card${isSelected ? ' selected' : ''}" onclick="toggleProduct('${p.id}')">
+      <input type="checkbox" class="prod-check" ${isSelected ? 'checked' : ''} onclick="event.stopPropagation();toggleProduct('${p.id}')">
+      <div class="prod-info">
+        <div class="prod-name">${p.name}</div>
+        <div class="prod-meta">
+          <span class="cat-badge">${p.category || '未分類'}</span>
+          <span style="color:var(--text2)">${p.id}</span>
+          ${spBadge}
+        </div>
+      </div>
+      <div class="prod-price" style="color:${basePrice ? 'var(--text)' : 'var(--text2)'}">
+        ${basePrice ? fmt(basePrice) : '-'}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── 選擇商品 ──
+function toggleProduct(pid) {
+  const cid = document.getElementById('custSelect').value;
+  const customer = allCustomers.find(c => c.id === cid);
+  const pg = customer?.price_group || '一般';
+  const prod = allProducts.find(p => p.id === pid);
+  if (!prod) return;
+
+  const idx = selectedItems.findIndex(s => s.product_id === pid);
+  if (idx > -1) {
+    selectedItems.splice(idx, 1);
+  } else {
+    const sp = currentSpecialPrices.find(s => s.product_id === pid);
+    const basePrice = getBasePrice(prod, pg);
+    selectedItems.push({
+      product_id: pid,
+      product_name: prod.name,
+      sort_order: selectedItems.length + 1,
+      price: sp ? sp.price : basePrice,
+      orig_price: basePrice,
+      existing_id: sp ? sp.id : null
+    });
+  }
+  filterProducts();
+  renderSelectedPanel();
+}
+
+function clearAll() {
+  selectedItems = [];
+  filterProducts();
+  renderSelectedPanel();
+}
+
+// ── 右側選擇面板 ──
+function renderSelectedPanel() {
+  const count = selectedItems.length;
+  document.getElementById('selCount').textContent = count;
+  const clearBtn = document.getElementById('clearAllBtn');
+  const batchBar = document.getElementById('batchBar');
+  const selEmpty = document.getElementById('selEmpty');
+  const selList = document.getElementById('selList');
+  const selFooter = document.getElementById('selFooter');
+
+  clearBtn.style.display = count > 0 ? '' : 'none';
+  batchBar.style.display = count > 0 ? 'flex' : 'none';
+  selEmpty.style.display = count === 0 ? 'flex' : 'none';
+  selList.style.display = count > 0 ? 'block' : 'none';
+  selFooter.style.display = count > 0 ? 'block' : 'none';
+
+  if (count === 0) return;
+
+  selList.innerHTML = selectedItems.map((item, idx) => {
+    const origLabel = item.orig_price ? `原: ${fmt(item.orig_price)}` : '';
+    const isChanged = item.orig_price && Number(item.price) !== Number(item.orig_price);
+    return `<div class="sel-item">
+      <div class="sel-item-num">${item.sort_order}</div>
+      <div style="flex:1;min-width:0;">
+        <div class="sel-item-name" title="${item.product_name}">${item.product_name}</div>
+        <div class="sel-item-orig">${origLabel}</div>
+      </div>
+      <input type="number" step="0.5" class="price-input${isChanged ? ' changed' : ''}" value="${item.price}"
+        onchange="updatePrice(${idx}, this.value)" placeholder="特價">
+      <button class="btn-remove-item" onclick="removeItem(${idx})" title="移除">×</button>
+    </div>`;
+  }).join('');
+}
+
+function updatePrice(idx, val) {
+  selectedItems[idx].price = Number(val);
+  renderSelectedPanel();
+}
+
+function removeItem(idx) {
+  selectedItems.splice(idx, 1);
+  selectedItems.forEach((s, i) => s.sort_order = i + 1);
+  filterProducts();
+  renderSelectedPanel();
+}
+
+function applyDiscount() {
+  const val = Number(document.getElementById('batchRate').value);
+  if (!val || val <= 0 || val > 100) { toast('請輸入 1~100 的折數（例：8=八折、85=85折）', 'warn'); return; }
+  const rate = val >= 10 ? val / 100 : val / 10;
+  selectedItems.forEach(item => {
+    item.price = Math.round(item.orig_price * rate * 10) / 10;
+  });
+  renderSelectedPanel();
+}
+
+function resetDiscount() {
+  selectedItems.forEach(item => { item.price = item.orig_price; });
+  document.getElementById('batchRate').value = '';
+  renderSelectedPanel();
+}
+
+// ── 儲存特價 ──
+async function batchSave() {
+  const cid = document.getElementById('custSelect').value;
+  if (!cid) { toast('請先選擇客戶', 'warn'); return; }
+  if (!selectedItems.length) { toast('請至少選擇一項商品', 'warn'); return; }
+
+  const invalid = selectedItems.filter(s => !s.price || s.price <= 0);
+  if (invalid.length) { toast(`有 ${invalid.length} 項商品未填特價，請確認`, 'warn'); return; }
+
+  const customer = allCustomers.find(c => c.id === cid);
+  const btn = document.getElementById('saveBtn');
+  btn.disabled = true;
+  btn.textContent = `儲存中 (0/${selectedItems.length})...`;
+
+  const today = new Date().toISOString().slice(0, 10);
+  let ok = 0, fail = 0;
+
+  for (let i = 0; i < selectedItems.length; i++) {
+    const item = selectedItems[i];
+    btn.textContent = `儲存中 (${i + 1}/${selectedItems.length})...`;
+    try {
+      const payload = {
+        customer_id: cid,
+        customer_name: customer?.name || '',
+        product_id: item.product_id,
+        product_name: item.product_name,
+        price: item.price,
+        original_price: item.orig_price,
+        sort_order: item.sort_order,
+        start_date: today,
+        note: '批次設定'
+      };
+
+      if (item.existing_id) {
+        // 更新現有記錄
+        await apiPatch('special_prices', `id=eq.${item.existing_id}`, {
+          price: item.price,
+          original_price: item.orig_price,
+          sort_order: item.sort_order,
+          start_date: today
+        });
+        // 更新快取
+        const ci = currentSpecialPrices.findIndex(s => s.id === item.existing_id);
+        if (ci > -1) {
+          currentSpecialPrices[ci].price = item.price;
+          currentSpecialPrices[ci].sort_order = item.sort_order;
+        }
+      } else {
+        // 新增記錄，先產生ID
+        const newId = await genNextId();
+        payload.id = newId;
+        await apiPost('special_prices', payload, 'return=minimal');
+        currentSpecialPrices.push({ ...payload, id: newId });
+        item.existing_id = newId;
+      }
+      ok++;
+    } catch (e) {
+      console.error('儲存失敗:', item.product_name, e);
+      fail++;
+    }
+  }
+
+  btn.disabled = false;
+  btn.textContent = '💾 儲存所有特價設定';
+
+  if (ok > 0) toast(`✅ 成功儲存 ${ok} 筆特價${fail > 0 ? `，${fail} 筆失敗` : ''}`, fail > 0 ? 'warn' : 'success');
+  else toast('❌ 儲存失敗，請重試', 'error');
+
+  selectedItems = [];
+  filterProducts();
+  renderSelectedPanel();
+}
+
+async function genNextId() {
+  try {
+    const rows = await api('special_prices', 'select=id&order=id.desc&limit=1');
+    if (rows.length) {
+      const last = rows[0].id; // e.g. SP00226
+      const num = parseInt(last.replace(/\D/g, '')) + 1;
+      return 'SP' + String(num).padStart(5, '0');
+    }
+  } catch (e) { /* fallback */ }
+  return 'SP' + Date.now().toString().slice(-5);
+}
+
+// ── Tab 2: 查詢特價 ──
+async function loadQueryPrices() {
+  const cid = document.getElementById('qCustSelect').value;
+  const tbody = document.getElementById('queryTable');
+  if (!cid) {
+    tbody.innerHTML = '<tr><td colspan="9" class="empty-row">請先選擇客戶</td></tr>';
+    document.getElementById('queryStats').style.display = 'none';
+    return;
+  }
+  tbody.innerHTML = '<tr><td colspan="9" class="empty-row"><div class="spinner" style="margin:0 auto;width:24px;height:24px;border-width:3px;"></div></td></tr>';
+  try {
+    const prices = await api('special_prices', `customer_id=eq.${cid}&order=sort_order`);
+    const customer = allCustomers.find(c => c.id === cid);
+    const pg = customer?.price_group || '一般';
+
+    document.getElementById('queryStats').style.display = 'flex';
+    document.getElementById('qStatName').textContent = customer?.name || cid;
+    document.getElementById('qStatCount').textContent = prices.length;
+    document.getElementById('qStatGroup').innerHTML = `<span class="price-group-badge ${pgClass(pg)}">${pg}</span>`;
+
+    if (!prices.length) {
+      tbody.innerHTML = '<tr><td colspan="9" class="empty-row">此客戶尚無特價設定</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = prices.map(sp => {
+      const orig = Number(sp.original_price || 0);
+      const price = Number(sp.price || 0);
+      const diff = orig > 0 ? (price - orig) : 0;
+      const diffHtml = diff !== 0
+        ? `<span style="color:${diff < 0 ? 'var(--success)' : 'var(--danger)'}">${diff > 0 ? '+' : ''}${diff.toFixed(1)}</span>`
+        : '<span style="color:var(--text2)">-</span>';
+      return `<tr>
+        <td style="color:var(--text2);text-align:center">${sp.sort_order || '-'}</td>
+        <td style="color:var(--text2);font-size:11px">${sp.product_id}</td>
+        <td style="font-weight:500">${sp.product_name}</td>
+        <td style="color:var(--text2)">${orig > 0 ? fmt(orig) : '-'}</td>
+        <td style="color:var(--pink);font-weight:600">${fmt(price)}</td>
+        <td>${diffHtml}</td>
+        <td style="color:var(--text2);font-size:11px">${sp.start_date || '-'}</td>
+        <td style="color:var(--text2);font-size:11px">${sp.note || ''}</td>
+        <td><button class="btn-del" onclick="deletePrice('${sp.id}', '${(sp.product_name || '').replace(/'/g,"\\'")}', this)">刪除</button></td>
+      </tr>`;
+    }).join('');
+  } catch (e) {
+    tbody.innerHTML = `<tr><td colspan="9" class="empty-row" style="color:var(--danger)">載入失敗：${e.message}</td></tr>`;
+  }
+}
+
+async function deletePrice(id, name, btn) {
+  if (!confirm(`確定要刪除「${name}」的特價設定嗎？`)) return;
+  btn.disabled = true;
+  btn.textContent = '刪除中...';
+  try {
+    await apiDelete('special_prices', `id=eq.${id}`);
+    toast(`✅ 已刪除「${name}」的特價`, 'success');
+    loadQueryPrices();
+  } catch (e) {
+    toast('❌ 刪除失敗：' + e.message, 'error');
+    btn.disabled = false;
+    btn.textContent = '刪除';
+  }
+}
+
+// ── Tab 切換 ──
+function switchTab(name, btn) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  if (name === 'query') {
+    // 同步客戶選擇
+    const cid = document.getElementById('custSelect').value;
+    if (cid) { document.getElementById('qCustSelect').value = cid; loadQueryPrices(); }
+  }
+}
+
+</script>
+</body>
+</html>

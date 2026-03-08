@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find /mnt/c/Users/www16/Desktop -maxdepth 2 -name \"*.py\" -type f 2>/dev/null | head -20)",
+      "Bash(find /mnt/c/Users/www16/Documents -maxdepth 3 -name \"*.py\" -type f 2>/dev/null | grep -v venv | head -20)",
+      "Bash(find /mnt/c/Users/www16/Downloads -maxdepth 3 -name \"*.py\" -type f 2>/dev/null | grep -v venv | head -20)",
+      "Bash(git config user.email \"www161616@gmail.com\" && git config user.name \"www161616\")",
+      "Bash(git push origin master)",
+      "Bash(git init && git config user.email \"www161616@gmail.com\" && git config user.name \"www161616\")"
+    ]
+  }
+}

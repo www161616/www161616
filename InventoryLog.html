@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>庫存異動記錄 - 央廚 ERP</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+    :root {
+    --bg:#fffbf0;
+    --surface:#ffffff;
+    --surface2:#fdf5d8;
+    --surface-sidebar:#fef9ec;
+    --border:#f5e0a0;
+    --text:#3d2a00;
+    --text2:#92660a;
+    --accent:#b45309;
+    --accent2:#d97706;
+    --danger:#c53030;
+    --success:#276749;
+    --warning:#b7791f;
+    --orange:#c05621;
+    --purple:#553c9a;
+    --pink:#b83280;
+    --teal:#0e7490;
+    --surface-dark:#f5c842;
+    --text-on-dark:#5a3a00;
+    --accent-light:#fef3c7;
+    --shadow:rgba(180,83,9,0.07);
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:'Noto Sans TC',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; display:flex; flex-direction:column; }
+
+  /* Loading */
+  #loading { display:none; position:fixed; inset:0; background:rgba(180,83,9,0.15); z-index:9999; align-items:center; justify-content:center; flex-direction:column; gap:16px; }
+  .spinner { width:48px; height:48px; border:4px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:spin .8s linear infinite; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  #loadingMsg { color:var(--text2); font-size:14px; }
+
+  /* Toast */
+  .toast { position:fixed; bottom:24px; right:24px; padding:12px 20px; border-radius:8px; font-size:14px; font-weight:500; z-index:10000; animation:slideIn .3s ease; }
+  .toast.success { background:#d1fae5; border:1px solid var(--success); color:var(--success); }
+  .toast.error { background:#fee2e2; border:1px solid var(--danger); color:var(--danger); }
+  .toast.warning { background:#fef3c7; border:1px solid var(--warning); color:var(--warning); }
+  @keyframes slideIn { from { transform:translateX(120%); opacity:0; } to { transform:translateX(0); opacity:1; } }
+
+  /* Navbar */
+  .navbar { background:var(--surface); border-bottom:1px solid var(--border); padding:0 20px; display:flex; align-items:center; gap:8px; height:56px; flex-shrink:0; }
+  .navbar-brand { font-size:16px; font-weight:700; color:var(--text); margin-right:16px; }
+  .nav-link { padding:8px 16px; border-radius:6px; font-size:13px; font-weight:500; color:var(--text2); text-decoration:none; transition:all .2s; }
+  .nav-link:hover { background:var(--surface2); color:var(--text); }
+  .nav-link.active { background:var(--accent); color:#fff; }
+
+  /* Main */
+  .main { flex:1; overflow-y:auto; padding:20px; }
+  .main::-webkit-scrollbar { width:6px; }
+  .main::-webkit-scrollbar-track { background:transparent; }
+  .main::-webkit-scrollbar-thumb { background:var(--border); border-radius:4px; }
+
+  /* Stats bar */
+  .stats-bar { display:flex; gap:16px; margin-bottom:20px; flex-wrap:wrap; }
+  .stat-card { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:14px 20px; display:flex; flex-direction:column; gap:4px; min-width:160px; }
+  .stat-label { font-size:11px; color:var(--text2); text-transform:uppercase; letter-spacing:.05em; }
+  .stat-value { font-size:22px; font-weight:700; }
+  .stat-value.in { color:var(--success); }
+  .stat-value.out { color:var(--danger); }
+  .stat-value.adjust { color:var(--warning); }
+  .stat-value.total { color:var(--accent); }
+
+  /* Filter bar */
+  .filter-bar { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:16px 20px; margin-bottom:20px; display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap; }
+  .filter-group { display:flex; flex-direction:column; gap:6px; }
+  .filter-group label { font-size:12px; color:var(--text2); font-weight:500; }
+  .filter-group input, .filter-group select { background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:9px 14px; color:var(--text); font-family:inherit; font-size:13px; outline:none; transition:border-color .2s; }
+  .filter-group input:focus, .filter-group select:focus { border-color:var(--accent); }
+  .filter-group input[type="date"]::-webkit-calendar-picker-indicator { filter:invert(1); opacity:.5; cursor:pointer; }
+  .btn { padding:9px 18px; border-radius:8px; border:none; font-family:inherit; font-size:13px; font-weight:600; cursor:pointer; transition:all .2s; }
+  .btn-primary { background:var(--accent); color:#fff; }
+  .btn-primary:hover { background:#3a6aee; }
+  .btn-secondary { background:var(--surface2); color:var(--text); border:1px solid var(--border); }
+  .btn-secondary:hover { background:var(--surface2); }
+
+  /* Result info */
+  .result-info { font-size:13px; color:var(--text2); margin-bottom:12px; padding:0 2px; }
+  .result-info span { color:var(--accent); font-weight:600; }
+
+  /* Table */
+  .table-wrap { background:var(--surface); border:1px solid var(--border); border-radius:12px; overflow:hidden; }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  thead { background:var(--surface2); }
+  thead th { padding:12px 16px; text-align:left; font-weight:600; font-size:11px; color:var(--text2); text-transform:uppercase; letter-spacing:.05em; white-space:nowrap; }
+  tbody tr { border-top:1px solid var(--border); transition:background .15s; }
+  tbody tr:hover { background:var(--surface2); }
+  tbody td { padding:12px 16px; color:var(--text); white-space:nowrap; }
+  .td-date { color:var(--text2); font-size:12px; }
+  .td-type { display:inline-block; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:600; }
+  .td-type.in { background:#d1fae5; color:var(--success); border:1px solid var(--success); }
+  .td-type.out { background:#fee2e2; color:var(--danger); border:1px solid var(--danger); }
+  .td-type.adjust { background:#fef3c7; color:var(--warning); border:1px solid var(--warning); }
+  .td-qty.pos { color:var(--success); font-weight:700; }
+  .td-qty.neg { color:var(--danger); font-weight:700; }
+  .td-docno { font-size:12px; color:var(--text2); font-family:monospace; }
+  .td-note { color:var(--text2); font-size:12px; max-width:200px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .empty-row td { text-align:center; padding:40px; color:var(--text2); }
+</style>
+</head>
+<body>
+
+<!-- Loading -->
+<div id="loading">
+  <div class="spinner"></div>
+  <div id="loadingMsg">載入中...</div>
+</div>
+
+<!-- Navbar -->
+<nav class="navbar">
+  <span class="navbar-brand">央廚 ERP</span>
+  <a href="InventoryLog.html" class="nav-link active">📝 庫存異動</a>
+  <a href="Inventory.html" class="nav-link">📦 庫存查詢</a>
+  <a href="Lowstockalert.html" class="nav-link">⚠️ 庫存預警</a>
+  <a href="Stocktake.html" class="nav-link">✅ 庫存盤點</a>
+</nav>
+
+<!-- Main -->
+<div class="main">
+
+  <!-- Stats -->
+  <div class="stats-bar" id="statsBar">
+    <div class="stat-card">
+      <div class="stat-label">入庫總次數</div>
+      <div class="stat-value in" id="statIn">0</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">出庫總次數</div>
+      <div class="stat-value out" id="statOut">0</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">手動調整次數</div>
+      <div class="stat-value adjust" id="statAdjust">0</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">顯示筆數</div>
+      <div class="stat-value total" id="statTotal">0</div>
+    </div>
+  </div>
+
+  <!-- Filter bar -->
+  <div class="filter-bar">
+    <div class="filter-group">
+      <label>開始日期</label>
+      <input type="date" id="dateFrom">
+    </div>
+    <div class="filter-group">
+      <label>結束日期</label>
+      <input type="date" id="dateTo">
+    </div>
+    <div class="filter-group">
+      <label>類型篩選</label>
+      <select id="typeFilter">
+        <option value="">全部類型</option>
+        <option value="入庫">入庫</option>
+        <option value="出庫">出庫</option>
+        <option value="手動調整">手動調整</option>
+        <option value="手動盤點">手動盤點</option>
+      </select>
+    </div>
+    <div class="filter-group" style="flex:1;min-width:180px;">
+      <label>關鍵字（品名 / 單號）</label>
+      <input type="text" id="keyword" placeholder="輸入品名或單號...">
+    </div>
+    <div class="filter-group">
+      <label style="opacity:0;">-</label>
+      <button class="btn btn-primary" onclick="applyFilter()">🔍 查詢</button>
+    </div>
+    <div class="filter-group">
+      <label style="opacity:0;">-</label>
+      <button class="btn btn-secondary" onclick="resetFilter()">重置</button>
+    </div>
+  </div>
+
+  <!-- Result info -->
+  <div class="result-info" id="resultInfo"></div>
+
+  <!-- Table -->
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>日期時間</th>
+          <th>商品名稱</th>
+          <th>類型</th>
+          <th>數量變動</th>
+          <th>單位</th>
+          <th>單號</th>
+          <th>結餘</th>
+          <th>備註</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody">
+        <tr class="empty-row"><td colspan="8">載入中...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL='https://xuykenpvonfqwsgbuvvj.supabase.co';
+const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh1eWtlbnB2b25mcXdzZ2J1dnZqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwMDY3MzgsImV4cCI6MjA4NzU4MjczOH0.HmIktEbkPc0e7eTdqJdMWVxMzYIh4YkZ4LewZfC4Qr4';
+const H={'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Content-Type':'application/json'};
+
+async function api(table,params=''){
+  const r=await fetch(`${SUPABASE_URL}/rest/v1/${table}?${params}`,{headers:H});
+  if(!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+function showToast(msg,type='success'){
+  const t=document.createElement('div');t.className=`toast ${type}`;t.textContent=msg;
+  document.body.appendChild(t);setTimeout(()=>t.remove(),3500);
+}
+function showLoading(msg='處理中...'){document.getElementById('loading').style.display='flex';document.getElementById('loadingMsg').textContent=msg;}
+function hideLoading(){document.getElementById('loading').style.display='none';}
+
+let allLogs=[];
+
+function getTypeClass(type){
+  if(!type) return 'adjust';
+  if(type.includes('入庫')) return 'in';
+  if(type.includes('出庫')) return 'out';
+  return 'adjust';
+}
+
+function renderTable(logs){
+  const tbody=document.getElementById('tableBody');
+  if(!logs.length){
+    tbody.innerHTML='<tr class="empty-row"><td colspan="8">沒有符合條件的記錄</td></tr>';
+    updateStats([]);
+    return;
+  }
+  tbody.innerHTML=logs.map(log=>{
+    const dt=log.created_at?new Date(log.created_at).toLocaleString('zh-TW',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}):'—';
+    const qty=Number(log.qty_change||0);
+    const qtyClass=qty>=0?'pos':'neg';
+    const qtyStr=(qty>=0?'+':'')+qty;
+    const typeClass=getTypeClass(log.type);
+    return `<tr>
+      <td class="td-date">${dt}</td>
+      <td style="font-weight:500;">${log.product_name||'—'}</td>
+      <td><span class="td-type ${typeClass}">${log.type||'—'}</span></td>
+      <td class="td-qty ${qtyClass}">${qtyStr}</td>
+      <td style="color:var(--text2);">${log.unit||'—'}</td>
+      <td class="td-docno">${log.doc_no||'—'}</td>
+      <td style="color:var(--text2);">${log.balance!=null?log.balance:'—'}</td>
+      <td class="td-note" title="${log.note||''}">${log.note||'—'}</td>
+    </tr>`;
+  }).join('');
+  updateStats(logs);
+}
+
+function updateStats(logs){
+  let inCount=0,outCount=0,adjustCount=0;
+  logs.forEach(l=>{
+    const t=l.type||'';
+    if(t.includes('入庫')) inCount++;
+    else if(t.includes('出庫')) outCount++;
+    else adjustCount++;
+  });
+  document.getElementById('statIn').textContent=inCount;
+  document.getElementById('statOut').textContent=outCount;
+  document.getElementById('statAdjust').textContent=adjustCount;
+  document.getElementById('statTotal').textContent=logs.length;
+}
+
+function applyFilter(){
+  const from=document.getElementById('dateFrom').value;
+  const to=document.getElementById('dateTo').value;
+  const kw=document.getElementById('keyword').value.toLowerCase();
+  const type=document.getElementById('typeFilter').value;
+
+  let filtered=allLogs.filter(log=>{
+    const logDate=log.created_at?log.created_at.slice(0,10):'';
+    if(from && logDate<from) return false;
+    if(to && logDate>to) return false;
+    if(type && log.type!==type) return false;
+    if(kw){
+      const name=(log.product_name||'').toLowerCase();
+      const doc=(log.doc_no||'').toLowerCase();
+      if(!name.includes(kw)&&!doc.includes(kw)) return false;
+    }
+    return true;
+  });
+
+  const info=document.getElementById('resultInfo');
+  const parts=[];
+  if(from||to) parts.push(`日期: ${from||'最早'} ~ ${to||'最新'}`);
+  if(type) parts.push(`類型: ${type}`);
+  if(kw) parts.push(`關鍵字: "${kw}"`);
+  info.innerHTML=parts.length?`篩選條件: ${parts.join(' ｜ ')} — 共 <span>${filtered.length}</span> 筆`:`共顯示 <span>${filtered.length}</span> 筆記錄`;
+
+  renderTable(filtered);
+}
+
+function resetFilter(){
+  document.getElementById('dateFrom').value='';
+  document.getElementById('dateTo').value='';
+  document.getElementById('dateTo').value='';
+  document.getElementById('keyword').value='';
+  document.getElementById('typeFilter').value='';
+  document.getElementById('resultInfo').innerHTML=`共顯示 <span>${allLogs.length}</span> 筆記錄`;
+  renderTable(allLogs);
+}
+
+// Init default dates
+function initDates(){
+  const today=new Date();
+  const firstDay=new Date(today.getFullYear(),today.getMonth(),1);
+  document.getElementById('dateTo').value=today.toISOString().slice(0,10);
+  document.getElementById('dateFrom').value=firstDay.toISOString().slice(0,10);
+}
+
+async function loadLogs(){
+  showLoading('載入異動記錄...');
+  try{
+    allLogs=await api('inventory_log','select=*&order=id.desc&limit=500');
+    renderTable(allLogs);
+    document.getElementById('resultInfo').innerHTML=`共顯示 <span>${allLogs.length}</span> 筆記錄`;
+  }catch(e){
+    showToast('載入失敗：'+e.message,'error');
+    document.getElementById('tableBody').innerHTML='<tr class="empty-row"><td colspan="8">載入失敗，請重新整理</td></tr>';
+  }finally{
+    hideLoading();
+  }
+}
+
+initDates();
+loadLogs();
+</script>
+</body>
+</html>

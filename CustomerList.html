@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>龍潭央廚 - 客戶管理</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg:#fffbf0;
+  --surface:#ffffff;
+  --surface2:#fdf5d8;
+  --surface-sidebar:#fef9ec;
+  --border:#f5e0a0;
+  --text:#3d2a00;
+  --text2:#92660a;
+  --accent:#b45309;
+  --accent2:#d97706;
+  --danger:#c53030;
+  --success:#276749;
+  --warning:#b7791f;
+  --orange:#c05621;
+  --purple:#553c9a;
+  --pink:#b83280;
+  --teal:#0e7490;
+  --surface-dark:#f5c842;
+  --text-on-dark:#5a3a00;
+  --accent-light:#fef3c7;
+  --shadow:rgba(180,83,9,0.07);
+}
+body { 
+  font-family: 'Noto Sans TC', Arial, sans-serif; 
+  background: var(--bg); 
+  color: var(--text); 
+  min-height: 100vh;
+  display: flex; 
+  flex-direction: column; 
+  overflow: hidden; 
+}
+
+/* ========== 導覽列 ========== */
+.navbar { background:var(--surface); border-bottom:1px solid var(--border); padding:0 20px; height:52px; display:flex; align-items:center; justify-content:space-between; flex-shrink:0; }
+.navbar-brand { font-size:15px; font-weight:700; color:var(--accent); }
+.navbar-brand span { color:var(--text2); font-weight:400; font-size:13px; margin-left:10px; }
+.nav-links { display:flex; gap:4px; }
+.nav-btn { padding:6px 14px; border-radius:6px; border:none; background:transparent; color:var(--text2); font-size:13px; cursor:pointer; font-family:inherit; transition:all 0.15s; }
+.nav-btn:hover { background:var(--surface2); color:var(--text); }
+.nav-btn.active { background:var(--accent); color:white; }
+
+/* ========== 主要內容區 ========== */
+.main { flex: 1; overflow-y: auto; padding: 20px; }
+.container { max-width: 800px; margin: 0 auto; background: var(--surface); border-radius: 12px; border: 1px solid var(--border); overflow: hidden; display: flex; flex-direction: column; }
+
+/* ========== 頂部標題 ========== */
+.header { background: var(--surface2); padding: 20px 30px; border-bottom: 1px solid var(--border); }
+.header h1 { font-size: 20px; font-weight: 700; color: var(--accent); margin-bottom: 5px; }
+.header p { color: var(--text2); font-size: 13px; }
+
+/* ========== 標籤頁導航 ========== */
+.tabs { display: flex; background: var(--bg); border-bottom: 1px solid var(--border); }
+.tab-btn { flex: 1; padding: 14px 20px; border: none; background: transparent; font-size: 14px; font-weight: 600; color: var(--text2); cursor: pointer; transition: all 0.2s; position: relative; font-family: inherit; }
+.tab-btn:hover { background: var(--surface2); color: var(--text); }
+.tab-btn.active { color: var(--accent); background: var(--surface); border-bottom: 2px solid var(--accent); }
+.tab-btn .icon { margin-right: 8px; font-size: 16px; }
+
+/* ========== 內容區塊 ========== */
+.tab-content { display: none; padding: 25px 30px; animation: fadeIn 0.3s ease; }
+.tab-content.active { display: block; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ========== 搜尋區塊 ========== */
+.search-box { display: flex; gap: 10px; margin-bottom: 20px; }
+.search-box input { flex: 1; padding: 12px 16px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 14px; font-family: inherit; outline: none; transition: all 0.3s; }
+.search-box input:focus { border-color: var(--accent); }
+
+/* ========== 表單樣式 ========== */
+.form-header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 15px; margin-bottom: 20px; border-bottom: 1px solid var(--border); }
+.form-header h3 { font-size: 18px; color: var(--text); }
+.customer-badge { background: rgba(79,124,255,0.15); color: var(--accent); padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 600; }
+
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.form-group { display: flex; flex-direction: column; }
+.form-group.full-width { grid-column: 1 / -1; }
+.form-group label { font-size: 12px; font-weight: 500; color: var(--text2); margin-bottom: 6px; display: flex; align-items: center; gap: 4px; }
+.form-group label .required { color: var(--danger); }
+
+.form-group input, .form-group select, .form-group textarea { padding: 10px 14px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 14px; font-family: inherit; transition: all 0.2s; outline: none; }
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--accent); }
+.form-group textarea { resize: vertical; min-height: 80px; }
+.form-group select { cursor: pointer; }
+.form-group.highlight select { border-color: var(--accent2); color: var(--accent2); background: rgba(56,232,197,0.05); }
+
+/* ========== 按鈕樣式 ========== */
+.button-row { display: flex; gap: 10px; margin-top: 25px; justify-content: flex-end; }
+.button-row.space-between { justify-content: space-between; }
+.btn { padding: 10px 20px; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-family: inherit; }
+.btn-primary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+.btn-primary:hover { border-color: var(--accent); color: var(--accent); }
+.btn-success { background: var(--accent); color: white; }
+.btn-success:hover { background: #3d6be8; }
+.btn-danger { background: rgba(255,107,107,0.15); color: var(--danger); border: 1px solid var(--danger); }
+.btn-danger:hover { background: var(--danger); color: white; }
+.btn-secondary { background: var(--surface2); color: var(--text2); }
+.btn-secondary:hover { background: var(--border); color: var(--text); }
+.btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* ========== 搜尋結果列表 ========== */
+.result-list { max-height: 350px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+.result-item { display: flex; justify-content: space-between; align-items: center; padding: 14px 18px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; cursor: pointer; transition: all 0.2s; }
+.result-item:hover { border-color: var(--accent); background: rgba(79,124,255,0.05); }
+.result-item .info { flex: 1; }
+.result-item .name { font-weight: 600; color: var(--text); font-size: 15px; margin-bottom: 4px; }
+.result-item .detail { color: var(--text2); font-size: 12px; }
+.result-item .arrow { color: var(--accent); font-size: 14px; font-weight: 600; }
+
+.no-result { padding: 30px; text-align: center; color: var(--text2); font-size: 14px; background: var(--surface2); border-radius: 8px; border: 1px dashed var(--border); }
+.no-result .icon { font-size: 32px; margin-bottom: 10px; }
+
+/* ========== 返回按鈕 ========== */
+.back-link { display: inline-flex; align-items: center; gap: 6px; color: var(--text2); font-weight: 500; cursor: pointer; margin-bottom: 15px; font-size: 13px; transition: all 0.2s; }
+.back-link:hover { color: var(--accent); }
+
+/* ========== 表單區塊隱藏/顯示 ========== */
+.form-section { display: none; animation: slideIn 0.3s ease; }
+.form-section.active { display: block; }
+@keyframes slideIn { from { opacity: 0; transform: translateX(10px); } to { opacity: 1; transform: translateX(0); } }
+
+/* ========== Toast 通知 ========== */
+.toast-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: flex; justify-content: center; align-items: center; z-index: 9999; opacity: 0; visibility: hidden; transition: all 0.3s ease; backdrop-filter: blur(2px); }
+.toast-overlay.show { opacity: 1; visibility: visible; }
+.toast-box { background: var(--surface); padding: 30px 40px; border-radius: 16px; border: 1px solid var(--border); text-align: center; box-shadow: 0 15px 40px rgba(0,0,0,0.5); transform: scale(0.8) translateY(-20px); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); max-width: 400px; min-width: 320px; }
+.toast-overlay.show .toast-box { transform: scale(1) translateY(0); }
+.toast-icon { font-size: 48px; margin-bottom: 15px; display: block; }
+.toast-title { font-size: 18px; font-weight: 700; color: var(--text); margin-bottom: 10px; }
+.toast-message { font-size: 14px; color: var(--text2); margin-bottom: 25px; line-height: 1.6; }
+.toast-btn { background: var(--accent); color: white; border: none; padding: 10px 30px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+.toast-btn:hover { background: #3d6be8; }
+.toast-btn.error-btn { background: var(--danger); }
+.toast-btn.error-btn:hover { background: #ff4d4d; }
+.toast-btn.warning-btn { background: var(--warning); color: #000; }
+
+/* ========== Loading ========== */
+.loading-text { text-align: center; padding: 30px; color: var(--text2); display: flex; flex-direction: column; align-items: center; gap: 10px; font-size: 13px; }
+.loading-text .spinner { width: 30px; height: 30px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s ease infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="navbar-brand">🐟 龍潭央廚<span>進銷存系統</span></div>
+  <div class="nav-links">
+    <button class="nav-btn" onclick="location.href='SearchSales.html'">📋 銷貨查詢</button>
+    <button class="nav-btn" onclick="location.href='SalesOrder.html'">➕ 開銷貨單</button>
+    <button class="nav-btn active">👥 客戶管理</button>
+    <button class="nav-btn" onclick="location.href='AddExpense.html'">📝 新增支出</button>
+    <button class="nav-btn" onclick="location.href='月結報表.html'">📊 收支報表</button>
+  </div>
+</nav>
+
+<div class="main">
+  <div class="container">
+    <div class="header">
+      <h1>👥 客戶管理系統</h1>
+      <p>新增、修改、刪除與查詢客戶資料</p>
+    </div>
+    
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab('add')">
+        <span class="icon">➕</span>新增客戶
+      </button>
+      <button class="tab-btn" onclick="switchTab('edit')">
+        <span class="icon">🔍</span>修改/查詢/刪除
+      </button>
+    </div>
+    
+    <div id="tab-add" class="tab-content active">
+      <form id="addForm" onsubmit="submitAddForm(event)">
+        <div class="form-grid">
+          <div class="form-group">
+            <label><span class="required">*</span> 客戶名稱</label>
+            <input type="text" id="add-name" required placeholder="請輸入客戶名稱">
+          </div>
+          <div class="form-group">
+            <label>聯絡人</label>
+            <input type="text" id="add-contact" placeholder="聯絡人姓名">
+          </div>
+          <div class="form-group">
+            <label>📞 電話 (市話)</label>
+            <input type="text" id="add-phone" placeholder="市話">
+          </div>
+          <div class="form-group">
+            <label>📱 手機</label>
+            <input type="text" id="add-mobile" placeholder="手機號碼">
+          </div>
+          <div class="form-group full-width">
+            <label>📍 地址</label>
+            <input type="text" id="add-address" placeholder="完整地址">
+          </div>
+          <div class="form-group">
+            <label>📧 Email</label>
+            <input type="email" id="add-email" placeholder="電子郵件">
+          </div>
+          <div class="form-group">
+            <label>🧾 統一編號</label>
+            <input type="text" id="add-taxId" maxlength="8" placeholder="8位數字">
+          </div>
+          <div class="form-group">
+            <label>📄 發票抬頭</label>
+            <input type="text" id="add-invoiceTitle" placeholder="發票抬頭">
+          </div>
+          <div class="form-group">
+            <label>💰 付款方式</label>
+            <select id="add-paymentTerm">
+              <option value="現金">現金</option>
+              <option value="匯款">匯款</option>
+              <option value="月結">月結</option>
+              <option value="貨到付款">貨到付款</option>
+              <option value="支票">支票</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>🏷️ 稅制</label>
+            <select id="add-taxType">
+              <option value="免稅">免稅</option>
+              <option value="應稅">應稅</option>
+              <option value="外加5%">外加5%</option>
+            </select>
+          </div>
+          <div class="form-group highlight">
+            <label>💎 價格群組</label>
+            <select id="add-priceGroup">
+              <option value="一般">一般客戶 (原價)</option>
+              <option value="總倉">🏪 總倉 (總倉價)</option>
+              <option value="店家">🚚 店家 (店家價)</option>
+              <option value="餐廳">👨‍👩‍👧‍👦 餐廳 (餐廳價)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>狀態</label>
+            <select id="add-status">
+              <option value="啟用" selected>啟用</option>
+              <option value="停用">停用</option>
+            </select>
+          </div>
+          <div class="form-group full-width">
+            <label>📝 備註</label>
+            <textarea id="add-note" placeholder="其他備註事項..."></textarea>
+          </div>
+        </div>
+        
+        <div class="button-row">
+          <button type="button" class="btn btn-secondary" onclick="resetAddForm()">🔄 清空表單</button>
+          <button type="submit" class="btn btn-success" id="addBtn">✅ 儲存客戶資料</button>
+        </div>
+      </form>
+    </div>
+    
+    <div id="tab-edit" class="tab-content">
+      <div id="searchSection">
+        <div class="search-box">
+          <input type="text" id="searchInput" placeholder="輸入客戶編號、名稱或電話 (留空搜尋全部)..." onkeypress="if(event.key==='Enter') searchCustomer()">
+          <button class="btn btn-primary" onclick="searchCustomer()">🔍 搜尋</button>
+        </div>
+        
+        <div id="searchResults">
+          <div class="no-result">
+            <div class="icon">🔍</div>
+            <div>請點擊搜尋或輸入關鍵字</div>
+          </div>
+        </div>
+      </div>
+      
+      <div id="editFormSection" class="form-section">
+        <div class="back-link" onclick="backToSearch()">← 返回客戶列表</div>
+        
+        <div class="form-header">
+          <h3>✏️ 編輯客戶資料</h3>
+          <span id="displayId" class="customer-badge"></span>
+        </div>
+        
+        <input type="hidden" id="edit-id">
+        
+        <div class="form-grid">
+          <div class="form-group">
+            <label><span class="required">*</span> 客戶名稱</label>
+            <input type="text" id="edit-name" required>
+          </div>
+          <div class="form-group">
+            <label>聯絡人</label>
+            <input type="text" id="edit-contact">
+          </div>
+          <div class="form-group">
+            <label>📞 電話 (市話)</label>
+            <input type="text" id="edit-phone">
+          </div>
+          <div class="form-group">
+            <label>📱 手機</label>
+            <input type="text" id="edit-mobile">
+          </div>
+          <div class="form-group full-width">
+            <label>📍 地址</label>
+            <input type="text" id="edit-address">
+          </div>
+          <div class="form-group">
+            <label>📧 Email</label>
+            <input type="email" id="edit-email">
+          </div>
+          <div class="form-group">
+            <label>🧾 統一編號</label>
+            <input type="text" id="edit-taxId" maxlength="8">
+          </div>
+          <div class="form-group">
+            <label>📄 發票抬頭</label>
+            <input type="text" id="edit-invoiceTitle">
+          </div>
+          <div class="form-group">
+            <label>💰 付款方式</label>
+            <select id="edit-paymentTerm">
+              <option value="現金">現金</option>
+              <option value="匯款">匯款</option>
+              <option value="月結">月結</option>
+              <option value="貨到付款">貨到付款</option>
+              <option value="支票">支票</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>💳 信用額度</label>
+            <input type="number" id="edit-creditLimit" value="0">
+          </div>
+          <div class="form-group">
+            <label>🏷️ 稅制</label>
+            <select id="edit-taxType">
+              <option value="免稅">免稅</option>
+              <option value="應稅">應稅</option>
+              <option value="稅外加">稅外加</option>
+              <option value="外加5%">外加5%</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>📊 狀態</label>
+            <select id="edit-status">
+              <option value="啟用">啟用</option>
+              <option value="停用">停用</option>
+            </select>
+          </div>
+          <div class="form-group highlight">
+            <label>💎 價格群組</label>
+            <select id="edit-priceGroup">
+              <option value="一般">一般客戶 (原價)</option>
+              <option value="總倉">🏪 總倉 (總倉價)</option>
+              <option value="店家">🚚 店家 (店家價)</option>
+              <option value="餐廳">👨‍👩‍👧‍👦 餐廳 (餐廳價)</option>
+              <option value="分店">分店</option>
+              <option value="團購">團購</option>
+            </select>
+          </div>
+          <div class="form-group full-width">
+            <label>📝 備註</label>
+            <textarea id="edit-note"></textarea>
+          </div>
+        </div>
+        
+        <div class="button-row space-between">
+          <button type="button" class="btn btn-danger" id="deleteBtn" onclick="deleteCustomer()">🗑️ 刪除客戶</button>
+          <button type="button" class="btn btn-success" id="saveBtn" onclick="saveChanges()">💾 儲存修改</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toastOverlay" class="toast-overlay">
+  <div class="toast-box">
+    <span id="toastIcon" class="toast-icon">✅</span>
+    <div id="toastTitle" class="toast-title">操作成功</div>
+    <div id="toastMessage" class="toast-message">資料已更新完成！</div>
+    <button id="toastBtn" class="toast-btn" onclick="closeToast()">確定</button>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://xuykenpvonfqwsgbuvvj.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh1eWtlbnB2b25mcXdzZ2J1dnZqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwMDY3MzgsImV4cCI6MjA4NzU4MjczOH0.HmIktEbkPc0e7eTdqJdMWVxMzYIh4YkZ4LewZfC4Qr4';
+const H = { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' };
+
+async function api(table, params='', method='GET', body=null) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${params}`, { method, headers: H, body: body ? JSON.stringify(body) : null });
+  if (!res.ok) throw new Error(await res.text());
+  return method === 'GET' ? res.json() : true;
+}
+
+// ==================== 標籤頁切換 ====================
+function switchTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+  event.target.closest('.tab-btn').classList.add('active');
+  
+  document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  
+  if (tab === 'edit') {
+    backToSearch();
+    if(document.getElementById('searchResults').innerHTML.includes('no-result')) {
+       searchCustomer(); // 自動載入列表
+    }
+  }
+}
+
+// ==================== Toast 通知 ====================
+function showToast(type, title, message, autoClose = false) {
+  const overlay = document.getElementById('toastOverlay');
+  const icon = document.getElementById('toastIcon');
+  const btn = document.getElementById('toastBtn');
+  
+  document.getElementById('toastTitle').textContent = title;
+  document.getElementById('toastMessage').textContent = message;
+  
+  if (type === 'success') {
+    icon.textContent = '✅';
+    btn.className = 'toast-btn';
+  } else if (type === 'error') {
+    icon.textContent = '❌';
+    btn.className = 'toast-btn error-btn';
+  } else if (type === 'warning') {
+    icon.textContent = '⚠️';
+    btn.className = 'toast-btn warning-btn';
+  }
+  
+  overlay.classList.add('show');
+  
+  if (autoClose) {
+    setTimeout(() => closeToast(), 2500);
+  }
+}
+
+function closeToast() {
+  document.getElementById('toastOverlay').classList.remove('show');
+}
+
+document.getElementById('toastOverlay').addEventListener('click', function(e) {
+  if (e.target === this) closeToast();
+});
+
+// ==================== 新增客戶 ====================
+async function submitAddForm(e) {
+  e.preventDefault();
+  
+  const name = document.getElementById('add-name').value.trim();
+  if (!name) { showToast('warning', '欄位不完整', '請輸入客戶名稱！'); return; }
+  
+  const btn = document.getElementById('addBtn');
+  btn.innerText = '⏳ 儲存中...';
+  btn.disabled = true;
+  
+  try {
+    // 產生新客戶編號 (C000XX)
+    const lastList = await api('customers', 'select=id&order=id.desc&limit=1');
+    let newNum = 1;
+    if (lastList.length > 0) newNum = parseInt(lastList[0].id.replace(/[^0-9]/g,''), 10) + 1;
+    const newId = 'C' + String(newNum).padStart(5, '0');
+
+    const insertData = {
+      id: newId,
+      name: name,
+      contact: document.getElementById('add-contact').value.trim(),
+      phone: document.getElementById('add-phone').value.trim(),
+      mobile: document.getElementById('add-mobile').value.trim(),
+      address: document.getElementById('add-address').value.trim(),
+      email: document.getElementById('add-email').value.trim(),
+      tax_id: document.getElementById('add-taxId').value.trim(),
+      invoice_title: document.getElementById('add-invoiceTitle').value.trim(),
+      payment_term: document.getElementById('add-paymentTerm').value,
+      tax_type: document.getElementById('add-taxType').value,
+      price_group: document.getElementById('add-priceGroup').value,
+      status: document.getElementById('add-status').value,
+      note: document.getElementById('add-note').value.trim(),
+      credit_limit: 0
+    };
+
+    await fetch(`${SUPABASE_URL}/rest/v1/customers`, {
+      method: 'POST', headers: H, body: JSON.stringify(insertData)
+    });
+
+    showToast('success', '新增成功！', `客戶編號：${newId}\n客戶名稱：${name}`, true);
+    resetAddForm();
+    
+    // 如果有載入過搜尋列表，順便清空讓下次點擊時重抓
+    document.getElementById('searchResults').innerHTML = '<div class="no-result"><div class="icon">🔍</div><div>請重新搜尋</div></div>';
+
+  } catch (err) {
+    showToast('error', '新增失敗', err.message);
+  } finally {
+    btn.innerHTML = '✅ 儲存客戶資料';
+    btn.disabled = false;
+  }
+}
+
+function resetAddForm() {
+  document.getElementById('addForm').reset();
+}
+
+// ==================== 搜尋客戶 ====================
+async function searchCustomer() {
+  const keyword = document.getElementById('searchInput').value.trim();
+  const container = document.getElementById('searchResults');
+  
+  container.innerHTML = '<div class="loading-text"><div class="spinner"></div>資料讀取中...</div>';
+  
+  try {
+    // 改為 limit=1000 確保列表足夠長
+    let params = 'select=id,name,phone,mobile&order=id.asc&limit=1000';
+    if (keyword) {
+      params += `&or=(id.ilike.%25${keyword}%25,name.ilike.%25${keyword}%25,phone.ilike.%25${keyword}%25,mobile.ilike.%25${keyword}%25)`;
+    }
+    
+    const results = await api('customers', params);
+    
+    if (!results || results.length === 0) {
+      container.innerHTML = '<div class="no-result"><div class="icon">😕</div><div>找不到符合的客戶</div></div>';
+      return;
+    }
+    
+    container.innerHTML = `<div class="result-list">` + results.map(c => `
+      <div class="result-item" onclick="loadCustomer('${c.id}')">
+        <div class="info">
+          <div class="name">${c.name}</div>
+          <div class="detail">${c.id} • ${c.phone || c.mobile || '無聯絡電話'}</div>
+        </div>
+        <div class="arrow">✏️ 編輯</div>
+      </div>
+    `).join('') + `</div>`;
+    
+  } catch (err) {
+    showToast('error', '搜尋失敗', err.message);
+    container.innerHTML = '';
+  }
+}
+
+// ==================== 載入客戶資料 ====================
+async function loadCustomer(customerId) {
+  try {
+    const data = await api('customers', `id=eq.${customerId}&select=*`);
+    
+    if (data.length > 0) {
+      fillEditForm(data[0]);
+      document.getElementById('searchSection').style.display = 'none';
+      document.getElementById('editFormSection').classList.add('active');
+    } else {
+      showToast('error', '載入失敗', '找不到該客戶資料');
+    }
+  } catch (err) {
+    showToast('error', '載入失敗', err.message);
+  }
+}
+
+function fillEditForm(c) {
+  document.getElementById('edit-id').value = c.id;
+  document.getElementById('displayId').textContent = c.id;
+  document.getElementById('edit-name').value = c.name || '';
+  document.getElementById('edit-contact').value = c.contact || '';
+  document.getElementById('edit-phone').value = c.phone || '';
+  document.getElementById('edit-mobile').value = c.mobile || '';
+  document.getElementById('edit-address').value = c.address || '';
+  document.getElementById('edit-email').value = c.email || '';
+  document.getElementById('edit-taxId').value = c.tax_id || c.taxId || '';
+  document.getElementById('edit-invoiceTitle').value = c.invoice_title || c.invoiceTitle || '';
+  document.getElementById('edit-paymentTerm').value = c.payment_term || c.paymentTerm || '現金';
+  document.getElementById('edit-creditLimit').value = c.credit_limit || c.creditLimit || 0;
+  document.getElementById('edit-taxType').value = c.tax_type || c.taxType || '免稅';
+  document.getElementById('edit-status').value = c.status || '啟用';
+  document.getElementById('edit-priceGroup').value = c.price_group || c.priceGroup || '一般';
+  document.getElementById('edit-note').value = c.note || '';
+}
+
+function backToSearch() {
+  document.getElementById('searchSection').style.display = 'block';
+  document.getElementById('editFormSection').classList.remove('active');
+}
+
+// ==================== 儲存修改 ====================
+async function saveChanges() {
+  const customerId = document.getElementById('edit-id').value;
+  const name = document.getElementById('edit-name').value.trim();
+  
+  if (!name) { showToast('warning', '欄位不完整', '客戶名稱為必填欄位！'); return; }
+  
+  const btn = document.getElementById('saveBtn');
+  btn.innerText = '⏳ 儲存中...';
+  btn.disabled = true;
+  
+  try {
+    const updateData = {
+      name: name,
+      contact: document.getElementById('edit-contact').value.trim(),
+      phone: document.getElementById('edit-phone').value.trim(),
+      mobile: document.getElementById('edit-mobile').value.trim(),
+      address: document.getElementById('edit-address').value.trim(),
+      email: document.getElementById('edit-email').value.trim(),
+      tax_id: document.getElementById('edit-taxId').value.trim(),
+      invoice_title: document.getElementById('edit-invoiceTitle').value.trim(),
+      payment_term: document.getElementById('edit-paymentTerm').value,
+      credit_limit: parseInt(document.getElementById('edit-creditLimit').value) || 0,
+      tax_type: document.getElementById('edit-taxType').value,
+      status: document.getElementById('edit-status').value,
+      price_group: document.getElementById('edit-priceGroup').value,
+      note: document.getElementById('edit-note').value.trim()
+    };
+    
+    await fetch(`${SUPABASE_URL}/rest/v1/customers?id=eq.${customerId}`, {
+      method: 'PATCH', headers: H, body: JSON.stringify(updateData)
+    });
+    
+    showToast('success', '儲存成功！', `客戶「${name}」的資料已更新`, true);
+    searchCustomer(); // 更新列表顯示的名稱
+    
+  } catch (err) {
+    showToast('error', '儲存失敗', err.message);
+  } finally {
+    btn.innerHTML = '💾 儲存修改';
+    btn.disabled = false;
+  }
+}
+
+// ==================== 刪除客戶 ====================
+async function deleteCustomer() {
+  const customerId = document.getElementById('edit-id').value;
+  const customerName = document.getElementById('edit-name').value;
+  
+  if (!confirm(`確定要刪除客戶「${customerName}」嗎？\n\n⚠️ 如果此客戶有歷史銷貨紀錄，可能會因為關聯性造成無法刪除。建議將狀態改為「停用」即可。`)) {
+    return;
+  }
+  
+  const btn = document.getElementById('deleteBtn');
+  btn.innerText = '⏳ 刪除中...';
+  btn.disabled = true;
+  
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/customers?id=eq.${customerId}`, {
+      method: 'DELETE', headers: H
+    });
+    
+    if (!res.ok) throw new Error("可能有銷貨單綁定此客戶，系統拒絕刪除以保護資料完整性。請改用「停用」功能。");
+    
+    showToast('success', '刪除成功！', `客戶「${customerName}」已被刪除`, true);
+    backToSearch();
+    searchCustomer(); // 重新整理列表
+    
+  } catch (err) {
+    showToast('error', '刪除失敗', err.message);
+  } finally {
+    btn.innerHTML = '🗑️ 刪除客戶';
+    btn.disabled = false;
+  }
+}
+</script>
+</body>
+</html>

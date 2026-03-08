@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:"Microsoft JhengHei",Arial,sans-serif; font-size:15px; padding:20px; background:#f5f5f5; }
+    .container { background:white; padding:25px; border-radius:10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); max-width: 800px; margin: 0 auto; }
+    
+    h2 { color:#FF6F00; font-size:22px; margin-bottom:20px; border-bottom:3px solid #FF6F00; padding-bottom:10px; }
+    
+    /* 輸入與按鈕區 */
+    .control-group { display: flex; gap: 10px; margin-bottom: 20px; }
+    input[type="month"] { flex: 1; padding: 12px; font-size: 16px; border: 2px solid #ddd; border-radius: 6px; }
+    .btn { padding: 12px 25px; font-size: 16px; font-weight:bold; border:none; border-radius:6px; cursor:pointer; background:#FF6F00; color:white; transition: 0.3s; }
+    .btn:hover { background:#E65100; }
+    
+    /* 統計區塊 */
+    .summary { background:#fff3e0; padding:20px; border-radius:8px; margin-bottom: 25px; border: 1px solid #ffe0b2; }
+    .row { display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px dashed #FFCC80; font-size:16px; color: #555; }
+    .row:last-child { border-bottom: none; }
+    .total { font-size:20px; font-weight:bold; color:#E65100; padding-top:15px; border-top:2px solid #FF9800; margin-top: 5px; }
+    
+    /* 明細表格 */
+    .detail-section { display: none; }
+    h3 { color: #555; font-size: 18px; margin-bottom: 10px; border-left: 5px solid #FF6F00; padding-left: 10px; }
+    
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px; }
+    th { background: #FF9800; color: white; padding: 10px; text-align: left; }
+    td { padding: 10px; border-bottom: 1px solid #eee; color: #333; }
+    tr:nth-child(even) { background: #fff8e1; }
+    tr:hover { background: #ffe0b2; }
+    
+    .loading { text-align: center; color: #999; margin: 20px 0; display: none; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h2>📊 收支統計報表</h2>
+  
+  <div class="control-group">
+    <input type="month" id="month" />
+    <button class="btn" onclick="generate()">查詢</button>
+  </div>
+
+  <div id="loading" class="loading">⏳ 正在計算數據中...</div>
+
+  <div id="report" class="summary" style="display:none;">
+    </div>
+
+  <div id="detailSection" class="detail-section">
+    <h3>📋 現金支出明細</h3>
+    <table>
+      <thead>
+        <tr>
+          <th width="15%">日期</th>
+          <th width="15%">類別</th>
+          <th width="25%">項目</th>
+          <th width="15%">金額</th>
+          <th width="15%">對象</th>
+          <th width="15%">支付</th>
+        </tr>
+      </thead>
+      <tbody id="detailTableBody">
+        </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+  // 預設帶入當前月份
+  document.getElementById('month').value = new Date().toISOString().substr(0,7);
+
+  function generate() {
+    document.getElementById('loading').style.display = 'block';
+    document.getElementById('report').style.display = 'none';
+    document.getElementById('detailSection').style.display = 'none';
+
+    // 呼叫後端新的函式 getCashFlowReport
+    google.script.run
+      .withSuccessHandler(display)
+      .withFailureHandler(function(e){ alert('錯誤:'+e); })
+      .getCashFlowReport(document.getElementById('month').value);
+  }
+
+  function display(data) {
+    document.getElementById('loading').style.display = 'none';
+    
+    if (!data.success) {
+      alert("讀取失敗：" + (data.error || "未知錯誤"));
+      return;
+    }
+
+    // 1. 顯示統計摘要
+    document.getElementById('report').style.display = 'block';
+    document.getElementById('report').innerHTML = `
+      <div class="row"><span>💰 銷售收入</span><span>$${fmt(data.salesRevenue)}</span></div>
+      <div class="row"><span>💵 現金支出</span><span>$${fmt(data.cashExpense)}</span></div>
+      <div class="row"><span>💸 進貨支出</span><span>$${fmt(data.supplierPayment)}</span></div>
+      <div class="row total"><span>💎 本月淨利</span><span>$${fmt(data.balance)}</span></div>
+    `;
+
+    // 2. 顯示明細列表 (迴圈處理)
+    var expenses = data.expenses || [];
+    var tbody = document.getElementById('detailTableBody');
+    tbody.innerHTML = ''; // 清空舊資料
+
+    if (expenses.length > 0) {
+      document.getElementById('detailSection').style.display = 'block';
+      
+      // ⭐ 關鍵：這就是列出明細的迴圈
+      expenses.forEach(function(item) {
+        var tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${item.date.substring(5)}</td> <td>${item.category}</td>
+          <td>${item.item}</td>
+          <td style="font-weight:bold; color:#d32f2f;">$${fmt(item.amount)}</td>
+          <td>${item.payee}</td>
+          <td>${item.paymentMethod}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    } else {
+      document.getElementById('detailSection').style.display = 'block';
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:20px;">無支出紀錄</td></tr>';
+    }
+  }
+
+  function fmt(num) {
+    return (num || 0).toLocaleString();
+  }
+</script>
+
+</body>
+</html>

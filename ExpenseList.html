@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>龍潭央廚 - 支出明細</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+:root {
+  --bg:#fffbf0;
+  --surface:#ffffff;
+  --surface2:#fdf5d8;
+  --surface-sidebar:#fef9ec;
+  --border:#f5e0a0;
+  --text:#3d2a00;
+  --text2:#92660a;
+  --accent:#b45309;
+  --accent2:#d97706;
+  --danger:#c53030;
+  --success:#276749;
+  --warning:#b7791f;
+  --orange:#c05621;
+  --purple:#553c9a;
+  --pink:#b83280;
+  --teal:#0e7490;
+  --surface-dark:#f5c842;
+  --text-on-dark:#5a3a00;
+  --accent-light:#fef3c7;
+  --shadow:rgba(180,83,9,0.07);
+}
+body { font-family:'Noto Sans TC',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; display:flex; flex-direction:column; overflow-y:auto; }
+
+/* 導覽列 */
+.navbar { background:var(--surface); border-bottom:1px solid var(--border); padding:0 20px; height:52px; display:flex; align-items:center; justify-content:space-between; flex-shrink:0; }
+.navbar-brand { font-size:15px; font-weight:700; color:var(--accent); }
+.navbar-brand span { color:var(--text2); font-weight:400; font-size:13px; margin-left:10px; }
+.nav-links { display:flex; gap:4px; flex-wrap:wrap; }
+.nav-btn { padding:6px 14px; border-radius:6px; border:none; background:transparent; color:var(--text2); font-size:13px; cursor:pointer; font-family:inherit; transition:all 0.15s; }
+.nav-btn:hover { background:var(--surface2); color:var(--text); }
+.nav-btn.active { background:var(--accent); color:white; }
+
+/* 主要容器 */
+.main { flex: 1; padding: 20px; display: flex; justify-content: center; }
+.container { width: 100%; max-width: 600px; display: flex; flex-direction: column; gap: 20px; }
+
+/* 標題與控制列 */
+.header-card { background: var(--surface); padding: 24px; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+h2 { margin: 0 0 20px 0; color: var(--orange); font-size: 20px; border-bottom: 2px solid var(--border); padding-bottom: 15px; display: flex; align-items: center; gap: 8px; }
+
+.control-group { display: flex; gap: 12px; }
+input[type="month"] { flex: 1; padding: 12px 16px; font-size: 15px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; color: var(--text); outline: none; transition: border-color 0.2s; color-scheme: dark; }
+input[type="month"]:focus { border-color: var(--orange); }
+
+.btn-search { padding: 0 24px; background: var(--orange); color: #000; border: none; border-radius: 8px; font-size: 15px; font-weight: 700; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
+.btn-search:hover { background: #ffb74d; transform: translateY(-1px); }
+
+/* 明細列表區 */
+#list { display: flex; flex-direction: column; gap: 12px; }
+
+/* 卡片設計 */
+.item { background: var(--surface2); border: 1px solid var(--border); border-left: 4px solid var(--orange); padding: 16px; border-radius: 8px; transition: transform 0.2s; }
+.item:hover { transform: translateY(-2px); border-color: var(--orange); }
+
+.item-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.item-title { font-size: 15px; font-weight: 600; color: var(--text); display: flex; align-items: center; gap: 8px; }
+.item-date { font-size: 12px; color: var(--text2); background: var(--bg); padding: 2px 8px; border-radius: 12px; }
+.item-amount { font-size: 18px; font-weight: 700; color: var(--orange); }
+
+.item-desc { font-size: 13px; color: var(--text2); margin-bottom: 12px; line-height: 1.5; }
+.item-desc strong { color: var(--text); font-weight: 500; }
+
+.item-footer { display: flex; justify-content: space-between; align-items: center; border-top: 1px dashed var(--border); padding-top: 12px; }
+.item-id { font-size: 12px; color: var(--text2); font-family: monospace; }
+
+/* 補錄發票按鈕 (紫色) */
+.btn-invoice { padding: 8px 16px; background: rgba(171, 71, 188, 0.15); color: var(--purple); border: 1px solid var(--purple); border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px; }
+.btn-invoice:hover { background: var(--purple); color: white; }
+.btn-invoice:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.loading { text-align: center; padding: 40px; color: var(--text2); display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.spinner { width: 32px; height: 32px; border: 3px solid var(--border); border-top-color: var(--orange); border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="navbar-brand">🐟 龍潭央廚<span>進銷存系統</span></div>
+  <div class="nav-links">
+    <button class="nav-btn" onclick="location.href='SearchSales.html'">📋 銷貨查詢</button>
+    <button class="nav-btn" onclick="location.href='AddExpense.html'">📝 新增支出</button>
+    <button class="nav-btn" onclick="location.href='MealRecord.html'">🍱 記錄餐費</button>
+    <button class="nav-btn active">📋 支出明細</button>
+    <button class="nav-btn" onclick="location.href='月結報表.html'">📊 報表</button>
+  </div>
+</nav>
+
+<div class="main">
+  <div class="container">
+    
+    <div class="header-card">
+      <h2>📋 支出明細查詢</h2>
+      <div class="control-group">
+        <input type="month" id="month" />
+        <button class="btn-search" onclick="load()">🔍 查詢</button>
+      </div>
+    </div>
+
+    <div id="list">
+      </div>
+
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://xuykenpvonfqwsgbuvvj.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh1eWtlbnB2b25mcXdzZ2J1dnZqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwMDY3MzgsImV4cCI6MjA4NzU4MjczOH0.HmIktEbkPc0e7eTdqJdMWVxMzYIh4YkZ4LewZfC4Qr4';
+const H = { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json' };
+
+async function api(table, params='') {
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${params}`, { headers: H });
+  if (!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+
+window.onload = function() {
+  document.getElementById('month').value = new Date().toISOString().substring(0, 7);
+  load(); // 自動載入當月資料
+};
+
+async function load() {
+  const monthVal = document.getElementById('month').value;
+  if (!monthVal) return;
+
+  const listDiv = document.getElementById('list');
+  listDiv.innerHTML = '<div class="loading"><div class="spinner"></div>資料載入中...</div>';
+
+  try {
+    // 算出該月的第一天與最後一天
+    const [year, month] = monthVal.split('-');
+    const firstDay = `${monthVal}-01`;
+    const lastDay = new Date(year, month, 0).toISOString().split('T')[0];
+
+    // 從 Supabase 的 expenses 資料表抓取該月資料，依日期與編號反序排列
+    const data = await api('expenses', `date=gte.${firstDay}&date=lte.${lastDay}&order=date.desc,id.desc`);
+    display(data);
+
+  } catch (err) {
+    listDiv.innerHTML = `<div style="text-align:center; padding:30px; color:var(--danger);">❌ 載入失敗：${err.message}</div>`;
+  }
+}
+
+function display(data) {
+  const listDiv = document.getElementById('list');
+  
+  if (!data || data.length === 0) {
+    listDiv.innerHTML = `
+      <div style="background:var(--surface); padding:40px; text-align:center; border-radius:12px; border:1px dashed var(--border); color:var(--text2);">
+        <div style="font-size:32px; margin-bottom:10px;">🍃</div>
+        本月尚無支出資料
+      </div>`;
+    return;
+  }
+
+  const html = data.map(item => `
+    <div class="item">
+      <div class="item-top">
+        <div class="item-title">
+          <span class="item-date">${item.date.substring(5)}</span>
+          ${item.category}
+        </div>
+        <div class="item-amount">NT$ ${Number(item.amount || 0).toLocaleString()}</div>
+      </div>
+      
+      <div class="item-desc">
+        <strong>項目：</strong>${item.item} <br>
+        <strong>方式：</strong>${item.payment_method || '未設定'} 
+        ${item.recipient ? ` <span style="margin:0 6px;color:var(--border)">|</span> <strong>對象：</strong>${item.recipient}` : ''}
+      </div>
+      
+      <div class="item-footer">
+        <span class="item-id">編號：${item.id}</span>
+        <button class="btn-invoice" onclick="linkToInvoice(this, '${item.id}')">
+          🧾 補錄發票
+        </button>
+      </div>
+    </div>
+  `).join('');
+  
+  listDiv.innerHTML = html;
+}
+
+// 點擊補錄發票按鈕的邏輯
+function linkToInvoice(btnElement, expId) {
+  // 按鈕顯示載入中
+  const originalText = btnElement.innerHTML;
+  btnElement.disabled = true;
+  btnElement.innerHTML = '⏳ 跳轉中...';
+
+  // 將要補錄的單號存在 sessionStorage (或是直接用網址參數帶過去)
+  // 這裡我們採用網址參數跳轉的方式，請確認您有一個「補錄發票.html」或「進項發票.html」
+  setTimeout(() => {
+    // 假設您未來的發票登錄頁面叫做「進項發票.html」
+    location.href = `進項發票.html?expId=${expId}`;
+    
+    // 恢復按鈕狀態 (以防使用者按上一頁回來)
+    btnElement.disabled = false;
+    btnElement.innerHTML = originalText;
+  }, 500);
+}
+</script>
+</body>
+</html>

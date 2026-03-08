@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <style>
+    body { font-family: "Microsoft JhengHei", sans-serif; padding: 20px; background: #f4f7f6; }
+    .search-box { display: flex; gap: 10px; margin-bottom: 20px; }
+    input { flex: 1; padding: 12px; border: 2px solid #ddd; border-radius: 8px; font-size: 16px; }
+    button { padding: 12px 20px; background: #2196F3; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
+    button:hover { background: #1976D2; }
+    .list-container { background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); max-height: 350px; overflow-y: auto; }
+    .item { display: flex; justify-content: space-between; align-items: center; padding: 15px; border-bottom: 1px solid #eee; }
+    .item:last-child { border-bottom: none; }
+    .info { display: flex; flex-direction: column; }
+    .name { font-weight: bold; font-size: 16px; color: #333; }
+    .meta { font-size: 13px; color: #888; margin-top: 4px; }
+    .restore-btn { background: #4CAF50; padding: 8px 16px; font-size: 14px; }
+    .restore-btn:hover { background: #388E3C; }
+    .loading { text-align: center; color: #666; padding: 20px; display: none; }
+    .empty { text-align: center; color: #999; padding: 20px; }
+  </style>
+</head>
+<body>
+
+  <div class="search-box">
+    <input type="text" id="keyword" placeholder="🔍 輸入商品名稱或編號 (歷史庫)..." onkeyup="if(event.key==='Enter') search()">
+    <button onclick="search()">搜尋</button>
+  </div>
+
+  <div id="loading" class="loading">⏳ 正在歷史倉庫翻找中...</div>
+  
+  <div id="resultList" class="list-container">
+    <div class="empty">請輸入關鍵字開始搜尋</div>
+  </div>
+
+  <script>
+    function search() {
+      var key = document.getElementById('keyword').value.trim();
+      if (!key) return;
+
+      document.getElementById('loading').style.display = 'block';
+      document.getElementById('resultList').innerHTML = '';
+
+      google.script.run.withSuccessHandler(showResults).searchArchiveServerSide(key);
+    }
+
+    function showResults(data) {
+      document.getElementById('loading').style.display = 'none';
+      var container = document.getElementById('resultList');
+      
+      if (data.length === 0) {
+        container.innerHTML = '<div class="empty">❌ 在歷史庫中找不到相關商品</div>';
+        return;
+      }
+
+      var html = '';
+      data.forEach(function(p) {
+        html += '<div class="item" id="row-'+p.id+'">' +
+                  '<div class="info">' +
+                    '<span class="name">' + p.name + '</span>' +
+                    '<span class="meta">' + p.id + ' | ' + p.spec + ' | $' + p.price + '</span>' +
+                  '</div>' +
+                  '<button class="restore-btn" onclick="restore(\'' + p.id + '\')">♻️ 還原啟用</button>' +
+                '</div>';
+      });
+      container.innerHTML = html;
+    }
+
+    function restore(id) {
+      var btn = document.querySelector('#row-' + id + ' button');
+      btn.innerText = '處理中...';
+      btn.disabled = true;
+      btn.style.background = '#ccc';
+
+      google.script.run.withSuccessHandler(function(res) {
+        if (res.success) {
+          document.getElementById('row-' + id).style.backgroundColor = '#e8f5e9';
+          document.getElementById('row-' + id).innerHTML = '<div style="color:green;font-weight:bold;padding:10px;text-align:center;width:100%;">✅ 已還原並啟用：' + res.name + '</div>';
+          
+          // 可以在這裡提示使用者
+          // alert('成功！商品已回到主檔，您現在可以去開單了。');
+        } else {
+          alert('還原失敗：' + res.error);
+          btn.innerText = '♻️ 還原啟用';
+          btn.disabled = false;
+          btn.style.background = '#4CAF50';
+        }
+      }).restoreProductFromArchive(id);
+    }
+  </script>
+</body>
+</html>

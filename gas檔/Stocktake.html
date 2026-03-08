@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: "Microsoft JhengHei", Arial, sans-serif; font-size: 16px; padding: 20px; background: #f5f5f5; }
+    .container { background: white; padding: 25px; border-radius: 10px; }
+    h2 { color: #26A69A; font-size: 24px; margin-bottom: 20px; border-bottom: 3px solid #26A69A; padding-bottom: 10px; }
+    .form-group { margin-bottom: 20px; }
+    label { display: block; font-weight: bold; font-size: 16px; margin-bottom: 8px; }
+    input, select { width: 100%; padding: 15px 18px; font-size: 17px; border: 2px solid #ddd; border-radius: 6px; min-height: 48px; }
+    .btn { padding: 14px 28px; font-size: 18px; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; margin: 5px; width: 100%; }
+    .btn-primary { background: #26A69A; color: white; }
+    .btn-primary:hover { background: #00897B; }
+    .btn-secondary { background: #757575; color: white; }
+    .diff-display { background: #fff3e0; padding: 15px; border-radius: 8px; margin: 15px 0; text-align: center; }
+    .diff-value { font-size: 24px; font-weight: bold; }
+    .diff-positive { color: #4CAF50; }
+    .diff-negative { color: #F44336; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>✅ 庫存盤點</h2>
+    <form id="stocktakeForm">
+      <div class="form-group">
+        <label for="product">📦 選擇商品 *</label>
+        <select id="product" required onchange="loadCurrentStock()">
+          <option value="">-- 請選擇商品 --</option>
+        </select>
+      </div>
+      
+      <div class="form-group">
+        <label>📊 帳面數量</label>
+        <input type="number" id="bookQty" readonly style="background: #f5f5f5; font-size: 20px; font-weight: bold; text-align: right;">
+      </div>
+      
+      <div class="form-group">
+        <label for="actualQty">✅ 實際數量 *</label>
+        <input type="number" id="actualQty" min="0" required onchange="calculateDiff()" 
+               style="font-size: 20px; font-weight: bold; text-align: right;">
+      </div>
+      
+      <div class="diff-display" id="diffBox" style="display:none;">
+        <div>差異數量</div>
+        <div class="diff-value" id="diffValue">0</div>
+      </div>
+      
+      <div class="form-group">
+        <label for="note">📝 備註</label>
+        <input type="text" id="note" placeholder="選填...">
+      </div>
+      
+      <button type="submit" class="btn btn-primary">✅ 儲存盤點結果</button>
+      <button type="button" class="btn btn-secondary" onclick="resetForm()">🔄 清除</button>
+    </form>
+  </div>
+  <script>
+    let products = [];
+    window.onload = function() {
+      google.script.run.withSuccessHandler(function(data) {
+        products = data;
+        const select = document.getElementById('product');
+        data.forEach(p => {
+          select.innerHTML += `<option value="${p.id}" data-stock="${p.currentStock}" data-unit="${p.unit}">${p.displayName}</option>`;
+        });
+      }).getProducts();
+    };
+    
+    function loadCurrentStock() {
+      const select = document.getElementById('product');
+      const option = select.options[select.selectedIndex];
+      if (option.value) {
+        document.getElementById('bookQty').value = option.dataset.stock || 0;
+        document.getElementById('actualQty').value = '';
+        document.getElementById('diffBox').style.display = 'none';
+      }
+    }
+    
+    function calculateDiff() {
+      const book = parseFloat(document.getElementById('bookQty').value) || 0;
+      const actual = parseFloat(document.getElementById('actualQty').value) || 0;
+      const diff = actual - book;
+      
+      const diffEl = document.getElementById('diffValue');
+      diffEl.textContent = (diff >= 0 ? '+' : '') + diff;
+      diffEl.className = 'diff-value ' + (diff >= 0 ? 'diff-positive' : 'diff-negative');
+      document.getElementById('diffBox').style.display = 'block';
+    }
+    
+    document.getElementById('stocktakeForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      
+      const select = document.getElementById('product');
+      const option = select.options[select.selectedIndex];
+      
+      const data = {
+        productId: select.value,
+        productName: option.text.split('|')[1]?.trim() || option.text,
+        bookQty: parseFloat(document.getElementById('bookQty').value),
+        actualQty: parseFloat(document.getElementById('actualQty').value),
+        note: document.getElementById('note').value
+      };
+      
+      google.script.run
+        .withSuccessHandler(function(result) {
+          if (result.success) {
+            alert('✅ 盤點結果已儲存!');
+            resetForm();
+          } else {
+            alert('儲存失敗: ' + result.error);
+          }
+        })
+        .saveStocktake(data);
+    });
+    
+    function resetForm() {
+      document.getElementById('stocktakeForm').reset();
+      document.getElementById('diffBox').style.display = 'none';
+    }
+  </script>
+</body>
+</html>

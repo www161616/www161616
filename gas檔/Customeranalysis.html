@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html><head><base target="_top"><meta charset="UTF-8">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:"Microsoft JhengHei",Arial,sans-serif; font-size:16px; padding:20px; background:#f5f5f5; }
+.container { background:white; padding:25px; border-radius:10px; }
+h2 { color:#00897B; font-size:24px; margin-bottom:20px; border-bottom:3px solid #00897B; padding-bottom:10px; }
+input { width:100%; padding:15px; font-size:17px; border:2px solid #ddd; border-radius:6px; margin-bottom:20px; }
+.btn { padding:14px 28px; font-size:18px; font-weight:bold; border:none; border-radius:8px; cursor:pointer; background:#00897B; color:white; width:100%; }
+.item { background:#e0f2f1; border:2px solid #80CBC4; padding:15px; margin-bottom:10px; border-radius:8px; }
+.rank { font-size:24px; font-weight:bold; color:#00897B; margin-right:10px; }
+</style></head><body>
+<div class="container">
+<h2>👥 客戶分析</h2>
+<input type="month" id="month" />
+<button class="btn" onclick="analyze()">📊 分析</button>
+<div id="resultList"></div>
+</div>
+<script>
+document.getElementById('month').value = new Date().toISOString().substr(0,7);
+function analyze() {
+  google.script.run.withSuccessHandler(display).analyzeCustomers(document.getElementById('month').value);
+}
+function display(data) {
+  const html = data.map((item, i) => `
+    <div class="item">
+      <span class="rank">#${i+1}</span>
+      <strong>${item.customerName}</strong><br>
+      <small>銷售: $${item.revenue.toLocaleString()} | 毛利: $${item.profit.toLocaleString()} (${item.profitRate}%) | 交易: ${item.orderCount}次</small>
+    </div>
+  `).join('');
+  document.getElementById('resultList').innerHTML = html || '<p style="text-align:center;color:#999;">查無資料</p>';
+}
+</script>
+</body></html>

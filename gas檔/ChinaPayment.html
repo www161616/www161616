@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Microsoft JhengHei', sans-serif; background: #f5f5f5; padding: 15px; }
+    
+    .header { 
+      background: linear-gradient(135deg, #e53935, #c62828); 
+      color: white; 
+      padding: 15px 20px; 
+      border-radius: 10px; 
+      margin-bottom: 15px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .header h2 { font-size: 20px; }
+    .balance-box {
+      background: rgba(255,255,255,0.2);
+      padding: 8px 15px;
+      border-radius: 8px;
+      text-align: right;
+    }
+    .balance-box .label { font-size: 12px; opacity: 0.9; }
+    .balance-box .amount { font-size: 22px; font-weight: bold; }
+    .balance-box .amount.negative { color: #ffcdd2; }
+    .balance-box .amount.positive { color: #c8e6c9; }
+    
+    .tabs {
+      display: flex;
+      gap: 5px;
+      margin-bottom: 15px;
+    }
+    .tab {
+      flex: 1;
+      padding: 12px;
+      text-align: center;
+      background: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: bold;
+      color: #666;
+      transition: all 0.2s;
+    }
+    .tab:hover { background: #f0f0f0; }
+    .tab.active { background: #e53935; color: white; }
+    
+    .panel { display: none; }
+    .panel.active { display: block; }
+    
+    .card {
+      background: white;
+      border-radius: 10px;
+      padding: 20px;
+      margin-bottom: 15px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .card h3 {
+      font-size: 16px;
+      color: #333;
+      margin-bottom: 15px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid #e53935;
+    }
+    
+    .form-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 15px;
+      margin-bottom: 15px;
+    }
+    .form-group { display: flex; flex-direction: column; gap: 5px; }
+    .form-group label { font-size: 13px; color: #666; font-weight: bold; }
+    .form-group input, .form-group select {
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+    .form-group input:focus { border-color: #e53935; outline: none; }
+    
+    .btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: bold;
+      transition: all 0.2s;
+    }
+    .btn-primary { background: #e53935; color: white; }
+    .btn-primary:hover { background: #c62828; }
+    .btn-secondary { background: #757575; color: white; }
+    .btn-secondary:hover { background: #616161; }
+    .btn-success { background: #43a047; color: white; }
+    .btn-success:hover { background: #388e3c; }
+    
+    .calc-result {
+      background: #fff3e0;
+      padding: 15px;
+      border-radius: 8px;
+      text-align: center;
+      margin-top: 10px;
+    }
+    .calc-result .twd { font-size: 24px; font-weight: bold; color: #e65100; }
+    
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    .data-table th {
+      background: #f5f5f5;
+      padding: 10px;
+      text-align: left;
+      border-bottom: 2px solid #ddd;
+    }
+    .data-table td {
+      padding: 10px;
+      border-bottom: 1px solid #eee;
+    }
+    .data-table tr:hover { background: #fafafa; }
+    
+    .amount-positive { color: #43a047; font-weight: bold; }
+    .amount-negative { color: #e53935; font-weight: bold; }
+    
+    .summary-box {
+      background: linear-gradient(135deg, #fafafa, #f0f0f0);
+      border-radius: 10px;
+      padding: 20px;
+      margin-bottom: 15px;
+    }
+    .summary-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px dashed #ddd;
+    }
+    .summary-row:last-child { border-bottom: none; }
+    .summary-row.total {
+      font-size: 18px;
+      font-weight: bold;
+      border-top: 2px solid #333;
+      margin-top: 10px;
+      padding-top: 15px;
+    }
+    
+    .month-selector {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+    .month-selector input {
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+    
+    .empty-state {
+      text-align: center;
+      padding: 40px;
+      color: #999;
+    }
+    .empty-state .icon { font-size: 48px; margin-bottom: 10px; }
+    
+    .delete-btn {
+      background: none;
+      border: none;
+      color: #e53935;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    .delete-btn:hover { color: #b71c1c; }
+    
+    .loading {
+      text-align: center;
+      padding: 20px;
+      color: #666;
+    }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <h2>🇨🇳 大陸貨款管理</h2>
+  <div class="balance-box">
+    <div class="label">目前結餘</div>
+    <div class="amount" id="currentBalance">載入中...</div>
+  </div>
+</div>
+
+<div class="tabs">
+  <button class="tab active" onclick="showPanel('deposit')">💰 入帳記錄</button>
+  <button class="tab" onclick="showPanel('monthly')">📊 月結報表</button>
+  <button class="tab" onclick="showPanel('history')">📋 歷史記錄</button>
+</div>
+
+<!-- 入帳記錄面板 -->
+<div id="panel-deposit" class="panel active">
+  <div class="card">
+    <h3>➕ 新增老闆入帳</h3>
+    <div class="form-row">
+      <div class="form-group">
+        <label>日期</label>
+        <input type="date" id="depositDate">
+      </div>
+      <div class="form-group">
+        <label>人民幣金額</label>
+        <input type="number" id="depositRmb" placeholder="例：56000" oninput="calcTwd()">
+      </div>
+      <div class="form-group">
+        <label>匯率</label>
+        <input type="number" id="depositRate" step="0.01" placeholder="例：4.35" oninput="calcTwd()">
+      </div>
+      <div class="form-group">
+        <label>備註</label>
+        <input type="text" id="depositNote" placeholder="選填">
+      </div>
+    </div>
+    <div class="calc-result">
+      換算台幣：<span class="twd" id="calcTwd">NT$ 0</span>
+    </div>
+    <div style="margin-top: 15px; text-align: right;">
+      <button class="btn btn-primary" onclick="saveDeposit()">💾 儲存入帳</button>
+    </div>
+  </div>
+  
+  <div class="card">
+    <h3>📋 入帳記錄</h3>
+    <div id="depositList">
+      <div class="loading">載入中...</div>
+    </div>
+  </div>
+</div>
+
+<!-- 月結報表面板 -->
+<div id="panel-monthly" class="panel">
+  <div class="card">
+    <h3>📊 月結計算</h3>
+    <div class="month-selector">
+      <label>選擇月份：</label>
+      <input type="month" id="reportMonth">
+      <button class="btn btn-primary" onclick="generateReport()">📊 產生報表</button>
+    </div>
+    
+    <div id="reportResult" style="display: none;">
+      <div class="summary-box">
+        <div class="summary-row">
+          <span>上月結轉</span>
+          <span id="rptCarryOver">NT$ 0</span>
+        </div>
+        <div class="summary-row">
+          <span>➕ 本月入帳 (<span id="rptDepositCount">0</span> 筆)</span>
+          <span class="amount-positive" id="rptDeposit">NT$ 0</span>
+        </div>
+        <div class="summary-row">
+          <span>➖ 本月貨款 (<span id="rptPurchaseCount">0</span> 筆)</span>
+          <span class="amount-negative" id="rptPurchase">NT$ 0</span>
+        </div>
+        <div class="summary-row total">
+          <span>本月結餘</span>
+          <span id="rptBalance">NT$ 0</span>
+        </div>
+      </div>
+      
+      <div style="text-align: right; margin-bottom: 15px;">
+        <button class="btn btn-success" onclick="saveMonthlyRecord()">✅ 確認結算</button>
+      </div>
+      
+      <h4 style="margin: 15px 0 10px;">📦 本月貨款明細</h4>
+      <div id="purchaseDetail"></div>
+    </div>
+  </div>
+</div>
+
+<!-- 歷史記錄面板 -->
+<div id="panel-history" class="panel">
+  <div class="card">
+    <h3>📋 月結歷史</h3>
+    <div id="historyList">
+      <div class="loading">載入中...</div>
+    </div>
+  </div>
+</div>
+
+<script>
+  var currentData = null;
+  var reportData = null;
+  
+  // 初始化
+  document.addEventListener('DOMContentLoaded', function() {
+    // 設定預設日期
+    var today = new Date();
+    document.getElementById('depositDate').value = today.toISOString().split('T')[0];
+    document.getElementById('reportMonth').value = today.toISOString().substring(0, 7);
+    
+    loadData();
+  });
+  
+  // 載入資料
+  function loadData() {
+    google.script.run
+      .withSuccessHandler(function(result) {
+        if (result.success) {
+          currentData = result;
+          updateBalanceDisplay(result.lastBalance);
+          renderDepositList(result.deposits);
+          loadHistory();
+        } else {
+          alert('載入失敗：' + result.error);
+        }
+      })
+      .withFailureHandler(function(err) {
+        alert('載入失敗：' + err);
+      })
+      .getChinaPaymentData();
+  }
+  
+  // 更新結餘顯示
+  function updateBalanceDisplay(balance) {
+    var el = document.getElementById('currentBalance');
+    var formatted = 'NT$ ' + Math.abs(balance).toLocaleString();
+    if (balance < 0) {
+      el.textContent = '-' + formatted;
+      el.className = 'amount negative';
+    } else {
+      el.textContent = formatted;
+      el.className = 'amount positive';
+    }
+  }
+  
+  // 切換面板
+  function showPanel(name) {
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('panel-' + name).classList.add('active');
+    event.target.classList.add('active');
+  }
+  
+  // 計算台幣
+  function calcTwd() {
+    var rmb = parseFloat(document.getElementById('depositRmb').value) || 0;
+    var rate = parseFloat(document.getElementById('depositRate').value) || 0;
+    var twd = Math.round(rmb * rate);
+    document.getElementById('calcTwd').textContent = 'NT$ ' + twd.toLocaleString();
+  }
+  
+  // 儲存入帳
+  function saveDeposit() {
+    var data = {
+      date: document.getElementById('depositDate').value,
+      rmbAmount: document.getElementById('depositRmb').value,
+      rate: document.getElementById('depositRate').value,
+      note: document.getElementById('depositNote').value
+    };
+    
+    if (!data.date || !data.rmbAmount || !data.rate) {
+      alert('請填寫日期、金額和匯率');
+      return;
+    }
+    
+    google.script.run
+      .withSuccessHandler(function(result) {
+        if (result.success) {
+          alert('入帳成功！\n換算台幣：NT$ ' + result.twdAmount.toLocaleString());
+          // 清空表單
+          document.getElementById('depositRmb').value = '';
+          document.getElementById('depositRate').value = '';
+          document.getElementById('depositNote').value = '';
+          document.getElementById('calcTwd').textContent = 'NT$ 0';
+          loadData();
+        } else {
+          alert('儲存失敗：' + result.error);
+        }
+      })
+      .withFailureHandler(function(err) {
+        alert('儲存失敗：' + err);
+      })
+      .addChinaDeposit(data);
+  }
+  
+  // 渲染入帳列表
+  function renderDepositList(deposits) {
+    var container = document.getElementById('depositList');
+    
+    if (!deposits || deposits.length === 0) {
+      container.innerHTML = '<div class="empty-state"><div class="icon">📭</div>尚無入帳記錄</div>';
+      return;
+    }
+    
+    var html = '<table class="data-table">' +
+      '<tr><th>日期</th><th>人民幣</th><th>匯率</th><th>台幣</th><th>備註</th><th></th></tr>';
+    
+    deposits.forEach(function(d) {
+      html += '<tr>' +
+        '<td>' + d.date + '</td>' +
+        '<td>¥ ' + d.rmbAmount.toLocaleString() + '</td>' +
+        '<td>' + d.rate + '</td>' +
+        '<td class="amount-positive">NT$ ' + d.twdAmount.toLocaleString() + '</td>' +
+        '<td>' + d.note + '</td>' +
+        '<td><button class="delete-btn" onclick="deleteDeposit(\'' + d.id + '\')">🗑️</button></td>' +
+        '</tr>';
+    });
+    
+    html += '</table>';
+    container.innerHTML = html;
+  }
+  
+  // 刪除入帳
+  function deleteDeposit(id) {
+    if (!confirm('確定要刪除這筆入帳記錄嗎？')) return;
+    
+    google.script.run
+      .withSuccessHandler(function(result) {
+        if (result.success) {
+          loadData();
+        } else {
+          alert('刪除失敗：' + result.error);
+        }
+      })
+      .deleteChinaDeposit(id);
+  }
+  
+  // 產生月結報表
+  function generateReport() {
+    var month = document.getElementById('reportMonth').value;
+    if (!month) {
+      alert('請選擇月份');
+      return;
+    }
+    
+    document.getElementById('reportResult').style.display = 'none';
+    
+    google.script.run
+      .withSuccessHandler(function(result) {
+        if (result.success) {
+          reportData = result;
+          displayReport(result);
+        } else {
+          alert('產生報表失敗：' + result.error);
+        }
+      })
+      .withFailureHandler(function(err) {
+        alert('產生報表失敗：' + err);
+      })
+      .generateChinaMonthlyReport(month);
+  }
+  
+  // 顯示報表
+  function displayReport(data) {
+    document.getElementById('rptCarryOver').textContent = 'NT$ ' + data.carryOver.toLocaleString();
+    document.getElementById('rptDepositCount').textContent = data.depositCount;
+    document.getElementById('rptDeposit').textContent = 'NT$ ' + data.totalDeposit.toLocaleString();
+    document.getElementById('rptPurchaseCount').textContent = data.purchaseCount;
+    document.getElementById('rptPurchase').textContent = 'NT$ ' + data.totalPurchase.toLocaleString();
+    
+    var balanceEl = document.getElementById('rptBalance');
+    if (data.balance < 0) {
+      balanceEl.textContent = '-NT$ ' + Math.abs(data.balance).toLocaleString();
+      balanceEl.style.color = '#e53935';
+    } else {
+      balanceEl.textContent = 'NT$ ' + data.balance.toLocaleString();
+      balanceEl.style.color = '#43a047';
+    }
+    
+    // 顯示貨款明細
+    var detailHtml = '';
+    if (data.purchaseItems && data.purchaseItems.length > 0) {
+  detailHtml = '<table class="data-table">' +
+    '<tr><th>日期</th><th>訂單號</th><th>商品</th><th>台幣</th></tr>';
+  
+  data.purchaseItems.forEach(function(item) {
+    detailHtml += '<tr>' +
+      '<td>' + item.date + '</td>' +
+      '<td>' + item.orderNo + '</td>' +
+      '<td>' + item.productName + '</td>' +
+      '<td>NT$ ' + item.twdAmount.toLocaleString() + '</td>' +
+      '</tr>';
+  });
+  
+  detailHtml += '</table>';
+}
+    } else {
+      detailHtml = '<div class="empty-state">本月無貨款記錄</div>';
+    }
+    
+    document.getElementById('purchaseDetail').innerHTML = detailHtml;
+    document.getElementById('reportResult').style.display = 'block';
+  }
+  
+  // 儲存月結記錄
+  function saveMonthlyRecord() {
+    if (!reportData) {
+      alert('請先產生報表');
+      return;
+    }
+    
+    if (!confirm('確定要結算 ' + reportData.month + ' 的帳目嗎？\n結餘將結轉至下月。')) {
+      return;
+    }
+    
+    google.script.run
+      .withSuccessHandler(function(result) {
+        if (result.success) {
+          alert('結算成功！');
+          loadData();
+          loadHistory();
+        } else {
+          alert('結算失敗：' + result.error);
+        }
+      })
+      .saveChinaMonthlyRecord(reportData);
+  }
+  
+  // 載入歷史記錄
+  function loadHistory() {
+    google.script.run
+      .withSuccessHandler(function(result) {
+        if (result.success) {
+          renderHistory(result.records);
+        }
+      })
+      .getChinaMonthlyHistory();
+  }
+  
+  // 渲染歷史記錄
+  function renderHistory(records) {
+    var container = document.getElementById('historyList');
+    
+    if (!records || records.length === 0) {
+      container.innerHTML = '<div class="empty-state"><div class="icon">📭</div>尚無結算記錄</div>';
+      return;
+    }
+    
+    var html = '<table class="data-table">' +
+      '<tr><th>月份</th><th>上月結轉</th><th>入帳</th><th>貨款</th><th>結餘</th><th>結算日</th></tr>';
+    
+    records.forEach(function(r) {
+      var balanceClass = r.balance < 0 ? 'amount-negative' : 'amount-positive';
+      html += '<tr>' +
+        '<td><strong>' + r.month + '</strong></td>' +
+        '<td>NT$ ' + r.carryOver.toLocaleString() + '</td>' +
+        '<td class="amount-positive">NT$ ' + r.totalDeposit.toLocaleString() + '</td>' +
+        '<td class="amount-negative">NT$ ' + r.totalPurchase.toLocaleString() + '</td>' +
+        '<td class="' + balanceClass + '">NT$ ' + r.balance.toLocaleString() + '</td>' +
+        '<td>' + r.settleDate + '</td>' +
+        '</tr>';
+    });
+    
+    html += '</table>';
+    container.innerHTML = html;
+  }
+</script>
+
+</body>
+</html>
