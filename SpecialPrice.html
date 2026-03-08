@@ -416,6 +416,21 @@ async function onCustomerChange() {
   }
   hideLoading();
 
+  // 自動將已設定的特價商品載入到已選清單
+  const pg = customer?.price_group || '一般';
+  selectedItems = currentSpecialPrices.map((sp, i) => {
+    const prod = allProducts.find(p => p.id === sp.product_id);
+    const basePrice = prod ? getBasePrice(prod, pg) : (sp.original_price || 0);
+    return {
+      product_id: sp.product_id,
+      product_name: sp.product_name,
+      sort_order: sp.sort_order || (i + 1),
+      price: sp.price,
+      orig_price: basePrice,
+      existing_id: sp.id
+    };
+  });
+
   document.getElementById('productsArea').style.display = 'flex';
   document.getElementById('noCustomerHint').style.display = 'none';
   currentCategory = '';
@@ -467,9 +482,17 @@ function filterProducts() {
   const customer = allCustomers.find(c => c.id === cid);
   const pg = customer?.price_group || '一般';
 
-  let list = allProducts;
+  let list = [...allProducts];
   if (currentCategory) list = list.filter(p => p.category === currentCategory);
   if (kw) list = list.filter(p => p.name.toLowerCase().includes(kw) || p.id.toLowerCase().includes(kw));
+
+  // 已設定特價的商品排在最前面
+  list.sort((a, b) => {
+    const aHas = currentSpecialPrices.some(s => s.product_id === a.id) ? 0 : 1;
+    const bHas = currentSpecialPrices.some(s => s.product_id === b.id) ? 0 : 1;
+    if (aHas !== bHas) return aHas - bHas;
+    return (a.name || '').localeCompare(b.name || '');
+  });
 
   const div = document.getElementById('prodList');
   if (!list.length) {
