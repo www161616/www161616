@@ -417,7 +417,6 @@ async function onCustomerChange() {
   hideLoading();
 
   // 自動將已設定的特價商品載入到已選清單
-  const pg = customer?.price_group || '一般';
   selectedItems = currentSpecialPrices.map((sp, i) => {
     const prod = allProducts.find(p => p.id === sp.product_id);
     const basePrice = prod ? getBasePrice(prod, pg) : (sp.original_price || 0);
