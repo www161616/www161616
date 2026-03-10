@@ -953,7 +953,7 @@ async function saveNewProduct() {
       status: '啟用', created_at: new Date().toISOString().split('T')[0]
     };
     await fetch(`${SUPABASE_URL}/rest/v1/products`, { method:'POST', headers:{...H,'Prefer':'return=minimal'}, body:JSON.stringify(prod) });
-    allProducts.push(prod);
+    allProducts.unshift(prod);
     buildCategoryFilter();
     filterProducts();
     closeAddProductModal();
