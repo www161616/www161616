@@ -289,15 +289,15 @@ document.getElementById('expenseForm').addEventListener('submit', async function
       payment_method: document.getElementById('paymentMethod').value,
       recipient: document.getElementById('recipient').value,
       invoice_no: document.getElementById('invoiceNo').value,
-      note: document.getElementById('note').value,
-      created_at: new Date().toISOString()
+      note: document.getElementById('note').value
     };
 
-    await fetch(`${SUPABASE_URL}/rest/v1/expenses`, {
+    const postRes = await fetch(`${SUPABASE_URL}/rest/v1/expenses`, {
       method: 'POST',
       headers: H,
       body: JSON.stringify(formData)
     });
+    if (!postRes.ok) throw new Error(await postRes.text());
 
     alert('✅ 儲存成功！');
     
