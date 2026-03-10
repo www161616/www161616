@@ -77,7 +77,7 @@ body { font-family:'Noto Sans TC',sans-serif; background:var(--bg); color:var(--
     <div class="cat-grid">
       <button class="cat-btn" onclick="pickCat(this,'進貨成本')"><span class="cat-icon">📦</span>進貨</button>
       <button class="cat-btn" onclick="pickCat(this,'運費')"><span class="cat-icon">🚛</span>運費</button>
-      <button class="cat-btn" onclick="pickCat(this,'員工餐費')"><span class="cat-icon">🍱</span>餐費</button>
+      <button class="cat-btn" onclick="pickCat(this,'餐費')"><span class="cat-icon">🍱</span>餐費</button>
       <button class="cat-btn" onclick="pickCat(this,'薪資')"><span class="cat-icon">💰</span>薪資</button>
       <button class="cat-btn" onclick="pickCat(this,'水電瓦斯')"><span class="cat-icon">💡</span>水電</button>
       <button class="cat-btn" onclick="pickCat(this,'租金')"><span class="cat-icon">🏠</span>租金</button>
@@ -180,7 +180,7 @@ function pickCat(btn, cat) {
 const catKeywords = {
   '進貨': '進貨成本', '進貨成本': '進貨成本',
   '運費': '運費', '快遞': '運費', '物流': '運費',
-  '餐費': '員工餐費', '員工餐費': '員工餐費', '吃飯': '員工餐費', '便當': '員工餐費',
+  '餐費': '餐費', '員工餐費': '餐費', '吃飯': '餐費', '便當': '餐費',
   '薪資': '薪資', '薪水': '薪資', '工資': '薪資',
   '水電': '水電瓦斯', '電費': '水電瓦斯', '水費': '水電瓦斯', '瓦斯': '水電瓦斯',
   '租金': '租金', '房租': '租金',

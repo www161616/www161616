@@ -183,7 +183,7 @@ h4 { font-size: 14px; margin: 15px 0 10px 0; color: var(--accent2); font-weight:
           <div class="card-sub">筆數: <span id="expCount">0</span> 筆</div>
         </div>
         <div class="card c-meal">
-          <div class="card-title">員工餐費</div>
+          <div class="card-title">餐費</div>
           <div class="card-value" id="totMeals">$0</div>
           <div class="card-sub">筆數: <span id="mealCount">0</span> 筆</div>
         </div>
@@ -232,7 +232,7 @@ h4 { font-size: 14px; margin: 15px 0 10px 0; color: var(--accent2); font-weight:
 
       <div class="section">
         <div class="section-header">
-          <div class="section-title">🍱 員工餐費明細</div>
+          <div class="section-title">🍱 餐費明細</div>
         </div>
         <table>
           <thead>
@@ -381,7 +381,7 @@ async function loadReport() {
 
     expenses.forEach(e => {
       const amt = Number(e.amount || 0);
-      if (e.category === '伙食費' || e.category === '員工餐費') {
+      if (e.category === '伙食費' || e.category === '餐費') {
         mealList.push(e);
         tMeals += amt;
       } else {
@@ -532,7 +532,7 @@ function exportToExcel() {
   csv += `總銷貨收入,${t.sales}\n`;
   csv += `總進貨成本,${t.purchase}\n`;
   csv += `總現金支出,${t.expense}\n`;
-  csv += `員工餐費,${t.meals}\n`;
+  csv += `餐費,${t.meals}\n`;
   csv += `本月預估損益,${t.net}\n\n`;
   
   csv += `【銷貨收入】\n客戶名稱,銷貨總額,已收款,未收款\n`;
@@ -543,7 +543,7 @@ function exportToExcel() {
   d.supplierList.forEach(s => csv += `"${s.name}",${s.total},${s.paid},${s.unpaid}\n`);
   csv += `"總計",${t.purchase},${t.purchasePaid},${t.purchaseUnpaid}\n\n`;
 
-  csv += `【員工餐費】\n日期,項目說明,付款方式,金額,備註\n`;
+  csv += `【餐費】\n日期,項目說明,付款方式,金額,備註\n`;
   d.mealList.forEach(m => csv += `"${m.date}","${m.item}","${m.payment_method}",${m.amount},"${m.note || ''}"\n`);
   csv += `,,,${t.meals},\n\n`;
 

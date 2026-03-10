@@ -242,6 +242,8 @@ select.form-control { cursor:pointer; }
         <div class="footer-right">
           <div class="total-row"><span>小計</span><span id="subtotalTxt">NT$ 0</span></div>
           <div class="total-row"><span id="taxLabel">稅金（免稅）</span><span id="taxTxt">NT$ 0</span></div>
+          <div class="total-row" id="shipRow" style="display:none"><span>運費</span><span id="shipTxt">NT$ 0</span></div>
+          <div class="total-row" id="dedRow" style="display:none"><span>扣款</span><span id="dedTxt">-NT$ 0</span></div>
           <div class="grand-total" id="grandTotalTxt">NT$ 0</div>
           <div class="action-row">
             <button class="btn btn-secondary" onclick="resetOrder()">🔄 重置</button>
@@ -667,6 +669,10 @@ function calcTotal() {
   const grand = sub + tax + ship - ded;
   document.getElementById('subtotalTxt').textContent = 'NT$ ' + sub.toLocaleString();
   document.getElementById('taxTxt').textContent = 'NT$ ' + tax.toLocaleString();
+  document.getElementById('shipRow').style.display = ship ? '' : 'none';
+  document.getElementById('shipTxt').textContent = 'NT$ ' + ship.toLocaleString();
+  document.getElementById('dedRow').style.display = ded ? '' : 'none';
+  document.getElementById('dedTxt').textContent = '-NT$ ' + ded.toLocaleString();
   document.getElementById('grandTotalTxt').textContent = 'NT$ ' + grand.toLocaleString();
 }
 
