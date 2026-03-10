@@ -317,6 +317,7 @@ function renderList(orders){
         <div><div class="card-cust">${o.customer_name}</div>${statusBadge(o.payment_status)}</div>
         <span class="card-amt">${fmt(o.grand_total)}</span>
       </div>
+      ${o.note?`<div style="font-size:11px;color:var(--text2);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">📝 ${o.note}</div>`:''}
     </div>`).join('');
 }
 
