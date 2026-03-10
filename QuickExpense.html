@@ -123,7 +123,28 @@ body { font-family:'Noto Sans TC',sans-serif; background:var(--bg); color:var(--
       </div>
     </div>
 
-    <button class="btn-save" id="saveBtn" onclick="saveExpense()">💾 儲存</button>
+    <div class="input-row" style="gap:8px;">
+      <button class="btn-save" id="saveBtn" onclick="saveExpense()" style="flex:3;">💾 儲存</button>
+      <button class="btn-save" id="voiceBtn" onclick="startVoice()" style="flex:1; background:#7c3aed;">🎤</button>
+    </div>
+  </div>
+
+  <!-- 語音辨識結果 -->
+  <div class="card" id="voiceCard" style="display:none; border-color:#7c3aed;">
+    <div class="card-title" style="color:#7c3aed;">🎤 語音辨識</div>
+    <div id="voiceStatus" style="text-align:center; padding:10px; font-size:14px; color:#94a3b8;">準備中...</div>
+    <div id="voiceText" style="background:#f5f0ff; border-radius:8px; padding:10px; font-size:14px; min-height:40px; margin-top:8px; color:#3d2a00; display:none;"></div>
+    <div id="voiceParsed" style="margin-top:8px; font-size:13px; display:none;">
+      <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:8px;">
+        <span id="vCat" style="background:#7c3aed; color:white; padding:2px 10px; border-radius:4px; font-size:12px;"></span>
+        <span id="vItem" style="background:var(--accent); color:white; padding:2px 10px; border-radius:4px; font-size:12px;"></span>
+        <span id="vAmt" style="background:var(--orange); color:white; padding:2px 10px; border-radius:4px; font-size:12px;"></span>
+      </div>
+      <div style="display:flex; gap:8px;">
+        <button onclick="confirmVoice()" style="flex:1; padding:10px; background:#22c55e; color:white; border:none; border-radius:8px; font-size:14px; font-weight:600; cursor:pointer;">✅ 確認儲存</button>
+        <button onclick="cancelVoice()" style="flex:1; padding:10px; background:#64748b; color:white; border:none; border-radius:8px; font-size:14px; cursor:pointer;">✕ 取消</button>
+      </div>
+    </div>
   </div>
 
   <!-- 最近紀錄 -->
@@ -153,6 +174,195 @@ function pickCat(btn, cat) {
   selectedCat = cat;
   // 自動 focus 到金額
   document.getElementById('amount').focus();
+}
+
+// ========== 語音辨識 ==========
+const catKeywords = {
+  '進貨': '進貨成本', '進貨成本': '進貨成本',
+  '運費': '運費', '快遞': '運費', '物流': '運費',
+  '餐費': '員工餐費', '員工餐費': '員工餐費', '吃飯': '員工餐費', '便當': '員工餐費',
+  '薪資': '薪資', '薪水': '薪資', '工資': '薪資',
+  '水電': '水電瓦斯', '電費': '水電瓦斯', '水費': '水電瓦斯', '瓦斯': '水電瓦斯',
+  '租金': '租金', '房租': '租金',
+  '雜支': '雜支', '雜費': '雜支',
+  '股東': '股東往來', '股東往來': '股東往來',
+  '借支': '老闆借支', '老闆借支': '老闆借支',
+  '伙食': '伙食費', '伙食費': '伙食費',
+  '交通': '交通費', '交通費': '交通費', '油錢': '交通費', '加油': '交通費',
+  '維修': '維修費', '修理': '維修費', '維修費': '維修費',
+};
+
+// 中文數字轉阿拉伯數字
+function chineseToNum(str) {
+  if (!str) return 0;
+  // 先處理純數字
+  const pureNum = str.replace(/[,，\s]/g, '');
+  if (/^\d+$/.test(pureNum)) return parseInt(pureNum);
+
+  const digitMap = {'零':0,'一':1,'二':2,'兩':2,'三':3,'四':4,'五':5,'六':6,'七':7,'八':8,'九':9,'十':10};
+  let result = 0, current = 0;
+
+  for (let i = 0; i < str.length; i++) {
+    const ch = str[i];
+    if (digitMap[ch] !== undefined) {
+      if (ch === '十') {
+        current = current === 0 ? 10 : current * 10;
+      } else {
+        current = digitMap[ch];
+      }
+    } else if (ch === '百') {
+      current = current === 0 ? 100 : current * 100;
+    } else if (ch === '千') {
+      result += (current === 0 ? 1 : current) * 1000;
+      current = 0;
+    } else if (ch === '萬') {
+      result = (result + (current === 0 ? 1 : current)) * 10000;
+      current = 0;
+    }
+  }
+  result += current;
+  return result || 0;
+}
+
+// 解析語音文字
+function parseVoiceText(text) {
+  let cat = '', item = '', amount = 0;
+
+  // 找類別
+  for (const [kw, catVal] of Object.entries(catKeywords)) {
+    if (text.includes(kw)) {
+      cat = catVal;
+      text = text.replace(kw, '').trim();
+      break;
+    }
+  }
+
+  // 找金額：阿拉伯數字
+  const numMatch = text.match(/(\d[\d,，]*)/);
+  if (numMatch) {
+    amount = parseInt(numMatch[1].replace(/[,，]/g, ''));
+    text = text.replace(numMatch[0], '').trim();
+  } else {
+    // 中文數字
+    const cnMatch = text.match(/([零一二兩三四五六七八九十百千萬]+)/);
+    if (cnMatch) {
+      amount = chineseToNum(cnMatch[1]);
+      text = text.replace(cnMatch[0], '').trim();
+    }
+  }
+
+  // 剩下的就是項目
+  item = text.replace(/[，,。、\s]+/g, ' ').trim();
+
+  return { cat, item, amount };
+}
+
+let voiceParsedData = null;
+
+function startVoice() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    toast('此瀏覽器不支援語音辨識，請用 Chrome 或 Edge', true);
+    return;
+  }
+
+  const recognition = new SpeechRecognition();
+  recognition.lang = 'zh-TW';
+  recognition.interimResults = true;
+  recognition.continuous = false;
+
+  const card = document.getElementById('voiceCard');
+  const status = document.getElementById('voiceStatus');
+  const textEl = document.getElementById('voiceText');
+  const parsed = document.getElementById('voiceParsed');
+  const btn = document.getElementById('voiceBtn');
+
+  card.style.display = 'block';
+  status.textContent = '🔴 聆聽中...請說話';
+  status.style.color = '#f87171';
+  textEl.style.display = 'none';
+  parsed.style.display = 'none';
+  btn.style.background = '#dc2626';
+  btn.textContent = '⏹';
+
+  recognition.onresult = function(e) {
+    let transcript = '';
+    for (let i = 0; i < e.results.length; i++) {
+      transcript += e.results[i][0].transcript;
+    }
+    textEl.textContent = transcript;
+    textEl.style.display = 'block';
+  };
+
+  recognition.onend = function() {
+    btn.style.background = '#7c3aed';
+    btn.textContent = '🎤';
+    status.textContent = '辨識完成';
+    status.style.color = '#22c55e';
+
+    const text = textEl.textContent.trim();
+    if (!text) {
+      status.textContent = '沒有聽到聲音，請再試一次';
+      status.style.color = '#94a3b8';
+      return;
+    }
+
+    // 解析
+    const result = parseVoiceText(text);
+    voiceParsedData = result;
+
+    document.getElementById('vCat').textContent = result.cat || '未辨識類別';
+    document.getElementById('vItem').textContent = result.item || '未辨識項目';
+    document.getElementById('vAmt').textContent = result.amount ? '$' + result.amount.toLocaleString() : '未辨識金額';
+    parsed.style.display = 'block';
+  };
+
+  recognition.onerror = function(e) {
+    btn.style.background = '#7c3aed';
+    btn.textContent = '🎤';
+    if (e.error === 'not-allowed') {
+      status.textContent = '請允許麥克風權限';
+    } else {
+      status.textContent = '辨識失敗：' + e.error;
+    }
+    status.style.color = '#f87171';
+  };
+
+  recognition.start();
+}
+
+function confirmVoice() {
+  if (!voiceParsedData) return;
+  const { cat, item, amount } = voiceParsedData;
+
+  // 填入表單
+  if (cat) {
+    selectedCat = cat;
+    document.querySelectorAll('.cat-btn').forEach(b => {
+      b.classList.toggle('selected', b.textContent.includes(cat.replace('成本','').replace('費','').replace('瓦斯','')) || b.onclick.toString().includes(cat));
+    });
+    // 精確選中按鈕
+    document.querySelectorAll('.cat-btn').forEach(b => {
+      const btnCat = b.getAttribute('onclick').match(/'([^']+)'/);
+      if (btnCat && btnCat[1] === cat) {
+        document.querySelectorAll('.cat-btn').forEach(x => x.classList.remove('selected'));
+        b.classList.add('selected');
+      }
+    });
+  }
+  if (item) document.getElementById('item').value = item;
+  if (amount) document.getElementById('amount').value = amount;
+
+  document.getElementById('voiceCard').style.display = 'none';
+  voiceParsedData = null;
+
+  // 直接儲存
+  saveExpense();
+}
+
+function cancelVoice() {
+  document.getElementById('voiceCard').style.display = 'none';
+  voiceParsedData = null;
 }
 
 // Toast
