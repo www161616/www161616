@@ -313,6 +313,7 @@ function applySearch() {
   const kw = (document.getElementById('searchKw').value || '').trim().toLowerCase();
   if (kw) {
     filteredData = allData.filter(r =>
+      (r.id||'').toLowerCase().includes(kw) ||
       (r.item||'').toLowerCase().includes(kw) ||
       (r.category||'').toLowerCase().includes(kw) ||
       (r.recipient||'').toLowerCase().includes(kw) ||
@@ -374,7 +375,7 @@ function renderTable() {
   const pageData = filteredData.slice(startIdx, startIdx + PAGE_SIZE);
 
   let html = `<table class="data-table">
-    <thead><tr><th>日期</th><th>類別</th><th>項目</th><th>對象</th><th style="text-align:right">金額</th><th>方式</th><th>收據</th><th style="text-align:center">操作</th></tr></thead>
+    <thead><tr><th>編號</th><th>日期</th><th>類別</th><th>項目</th><th>對象</th><th style="text-align:right">金額</th><th>方式</th><th>收據</th><th style="text-align:center">操作</th></tr></thead>
     <tbody>`;
 
   pageData.forEach(row => {
@@ -383,6 +384,7 @@ function renderTable() {
     const safeRecipient = (row.recipient||'').replace(/'/g,"\\'");
     html += `
       <tr>
+        <td style="font-size:11px;color:var(--text2);white-space:nowrap;">${row.id||''}</td>
         <td class="date-col">${(row.date||'').substring(5)}</td>
         <td style="font-size:12px;">${row.category||''}</td>
         <td style="font-weight:600;">${row.item||''}</td>
@@ -465,7 +467,7 @@ document.getElementById('expenseForm').addEventListener('submit', async function
       });
     }
 
-    alert(editingId ? '✅ 更新成功！' : '✅ 儲存成功！');
+    alert(editingId ? '✅ 更新成功！' : `✅ 儲存成功！\n編號：${expId}`);
     editingId = null;
 
     // 重置表單但保留目前選擇的日期
