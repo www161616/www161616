@@ -635,12 +635,10 @@ function renderProducts(list) {
     if (spIds.includes(p.id)) badge = '<span class="badge badge-special">特</span>';
     else if ((grp.includes('總倉') && p.price_branch > 0) || (grp.includes('店家') && p.price_store > 0) || (grp.includes('餐廳') && p.price_rest > 0)) badge = '<span class="badge badge-group">群</span>';
     const sel = cartIds.includes(p.id) ? 'selected' : '';
-    const stock = inventoryMap[p.id] ?? '-';
-    const stockColor = stock !== '-' && stock <= 0 ? 'var(--danger)' : 'var(--text2)';
     return `<div class="product-item ${sel}" id="pi-${p.id}" onclick="addToCart('${p.id}')">
       <div class="prod-info">
         <div class="prod-name">${p.name}${badge}</div>
-        <div class="prod-id">${p.id}${p.spec ? ' · '+p.spec : ''} · <span style="color:${stockColor}">庫存 ${stock}</span></div>
+        <div class="prod-id">${p.id}</div>
       </div>
       <div class="prod-price">$${price.toLocaleString()}</div>
       <button class="btn-add" onclick="event.stopPropagation();addToCart('${p.id}')">加入</button>
