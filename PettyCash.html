@@ -108,6 +108,16 @@ tr:hover td{background:var(--surface2);}
 .amount-out{color:var(--danger);font-weight:600;}
 .balance-val{color:var(--text2);font-weight:500;}
 .rmb-text{color:var(--china);font-size:11px;}
+.del-btn{background:none;border:none;color:var(--danger);cursor:pointer;font-size:14px;padding:4px;border-radius:4px;transition:all .2s;}
+.del-btn:hover{background:#fee2e2;}
+.confirm-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;z-index:9999;}
+.confirm-box{background:white;border-radius:12px;padding:24px;max-width:360px;width:90%;box-shadow:0 8px 30px rgba(0,0,0,0.2);}
+.confirm-box h3{font-size:16px;margin-bottom:12px;color:var(--text);}
+.confirm-box p{font-size:13px;color:var(--text2);margin-bottom:20px;line-height:1.6;}
+.confirm-btns{display:flex;gap:10px;justify-content:flex-end;}
+.confirm-btns button{padding:8px 20px;border-radius:7px;border:none;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;}
+.confirm-btns .btn-cancel{background:var(--surface2);color:var(--text2);}
+.confirm-btns .btn-danger{background:var(--danger);color:white;}
 .empty-row td{text-align:center;color:var(--text2);padding:40px;}
 
 ::-webkit-scrollbar{width:6px;}
@@ -242,10 +252,11 @@ tr:hover td{background:var(--surface2);}
             <th style="text-align:right">金額</th>
             <th style="text-align:right">結餘</th>
             <th>備註</th>
+            <th></th>
           </tr>
         </thead>
         <tbody id="recordBody">
-          <tr class="empty-row"><td colspan="7">載入中...</td></tr>
+          <tr class="empty-row"><td colspan="8">載入中...</td></tr>
         </tbody>
       </table>
     </div>
@@ -376,7 +387,7 @@ function renderTable(records){
   if(currentFilter!=='all') filtered=records.filter(r=>(r.account||'零用金')===currentFilter);
 
   if(!filtered.length){
-    tbody.innerHTML='<tr class="empty-row"><td colspan="7">尚無交易記錄</td></tr>';
+    tbody.innerHTML='<tr class="empty-row"><td colspan="8">尚無交易記錄</td></tr>';
     return;
   }
   tbody.innerHTML=filtered.map(r=>{
@@ -393,6 +404,7 @@ function renderTable(records){
       <td style="text-align:right" class="${isIn?'amount-in':'amount-out'}">${amtText}</td>
       <td style="text-align:right" class="balance-val">${fmt(r.balance)}</td>
       <td style="color:var(--text2);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.note||'-'}</td>
+      <td><button class="del-btn" onclick="confirmDelete('${r.id}','${(r.summary||'').replace(/'/g,"\\'")}',${r.amount},'${acct}')" title="刪除">🗑️</button></td>
     </tr>`;
   }).join('');
 }
@@ -482,6 +494,50 @@ async function addChinaTx(){
     showToast(`${typeLabel}成功，陸貨專戶餘額 ${fmt(newBal)}`);
   }catch(e){showToast('操作失敗：'+e.message,'error');}
   hideLoading();
+}
+
+// ===== 確認刪除 =====
+function confirmDelete(id, summary, amount, acct){
+  const overlay=document.createElement('div');
+  overlay.className='confirm-overlay';
+  overlay.innerHTML=`<div class="confirm-box">
+    <h3>確定要刪除？</h3>
+    <p>帳戶：${acct}<br>摘要：${summary}<br>金額：${fmt(amount)}<br><br>刪除後該帳戶的結餘會自動重算。</p>
+    <div class="confirm-btns">
+      <button class="btn-cancel" onclick="this.closest('.confirm-overlay').remove()">取消</button>
+      <button class="btn-danger" onclick="doDelete('${id}','${acct}');this.closest('.confirm-overlay').remove()">確認刪除</button>
+    </div>
+  </div>`;
+  document.body.appendChild(overlay);
+}
+
+async function doDelete(id, acct){
+  showLoading('刪除並重算結餘...');
+  try{
+    // 刪除該筆
+    const r=await fetch(`${SUPABASE_URL}/rest/v1/petty_cash?id=eq.${id}`,{method:'DELETE',headers:H});
+    if(!r.ok) throw new Error(await r.text());
+
+    // 重算該帳戶所有結餘
+    await recalcBalance(acct);
+    await loadRecords();
+    showToast('已刪除並重算結餘');
+  }catch(e){showToast('刪除失敗：'+e.message,'error');}
+  hideLoading();
+}
+
+async function recalcBalance(acct){
+  // 取該帳戶全部記錄，依日期+ID排序
+  const rows=await api('petty_cash',`account=eq.${encodeURIComponent(acct)}&order=date.asc,id.asc`);
+  let bal=0;
+  const patchH={...H,'Prefer':'return=minimal'};
+  for(const row of rows){
+    if(row.type==='入金') bal+=Number(row.amount);
+    else bal-=Number(row.amount);
+    if(Number(row.balance)!==bal){
+      await fetch(`${SUPABASE_URL}/rest/v1/petty_cash?id=eq.${row.id}`,{method:'PATCH',headers:patchH,body:JSON.stringify({balance:bal})});
+    }
+  }
 }
 
 init();
