@@ -282,7 +282,7 @@ function hideLoading(){document.getElementById('loading').style.display='none';}
 window.onload=async function(){
   // 不預設日期，查全部
   try{
-    const custs=await api('customers','select=id,name&status=eq.啟用&order=name');
+    const custs=await api('customers','select=id,name&status=eq.啟用&order=id');
     custs.forEach(c=>document.getElementById('custFilter').innerHTML+=`<option value="${c.id}">${c.name}</option>`);
   }catch(e){}
   doSearch();

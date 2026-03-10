@@ -496,7 +496,7 @@ async function init() {
   // 載入客戶清單
   try {
     showLoading();
-    allCustomers = await api('customers', 'select=id,name,tax_id,invoice_title&order=name.asc');
+    allCustomers = await api('customers', 'select=id,name,tax_id,invoice_title&order=id');
   } catch (e) {
     showToast('載入客戶清單失敗：' + e.message, 'error');
   } finally {

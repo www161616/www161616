@@ -545,7 +545,7 @@ let receivables = [];
 async function loadCustomers() {
   try {
     showLoading('載入客戶資料...');
-    const custs = await api('customers', 'status=eq.啟用&select=id,name&order=name');
+    const custs = await api('customers', 'status=eq.啟用&select=id,name&order=id');
     const sel = document.getElementById('customerSelect');
     sel.innerHTML = '<option value="">-- 請選擇客戶 --</option>';
     custs.forEach(c => {

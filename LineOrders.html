@@ -203,7 +203,7 @@ window.onload = async function() {
   renderGroupTags();
   try {
     const [supps, prods, mats] = await Promise.all([
-      api('customers', 'select=*&order=name'),
+      api('customers', 'select=*&order=id'),
       api('products', 'select=*&order=name'),
       api('materials', 'select=*&order=name')
     ]);

@@ -226,7 +226,7 @@ function initDates(){
 
 async function loadCustomers(){
   try{
-    const custs=await api('customers','select=id,name&status=eq.啟用&order=name');
+    const custs=await api('customers','select=id,name&status=eq.啟用&order=id');
     const sel=document.getElementById('custFilter');
     custs.forEach(c=>{
       customerMap[c.id]=c.name;

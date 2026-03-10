@@ -865,7 +865,7 @@ document.getElementById('epOverlay').addEventListener('click',function(e){if(e.t
 initDates();
 (async()=>{
   try{
-    const custs=await api('customers','select=id,name&status=eq.啟用&order=name');
+    const custs=await api('customers','select=id,name&status=eq.啟用&order=id');
     const sel=document.getElementById('custFilter');
     custs.forEach(c=>sel.innerHTML+=`<option value="${c.id}">${c.name}</option>`);
   }catch(e){}
