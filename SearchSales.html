@@ -552,7 +552,8 @@ function printCSS(){
 function printStandard(o,details,c){
   c=c||{};
   const sub=Number(o.subtotal||0);
-  const rows=details.map((d,i)=>`<tr><td class="c">${i+1}</td><td>${d.product_id||''}</td><td>${d.product_name}</td><td class="c">${d.unit||''}</td><td class="r">${Number(d.qty||0)}</td><td class="r">${Number(d.price||0).toLocaleString()}</td><td class="r">${Number(d.subtotal||0).toLocaleString()}</td></tr>`).join('');
+  const totalQty=details.reduce((s,d)=>s+Number(d.qty||0),0);
+  const rows=details.map((d,i)=>`<tr><td class="c">${i+1}</td><td>${d.product_id||''}</td><td>${d.product_name}</td><td class="c">${d.unit||''}</td><td class="r">${Number(d.qty||0)}</td><td class="r">${Number(d.price||0).toLocaleString()}</td><td class="r">${Number(d.subtotal||0).toLocaleString()}</td><td>${d.note||''}</td></tr>`).join('');
   const w=window.open('','_blank','width=900,height=750');
   w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>銷貨單 ${o.id}</title>
   <style>${printCSS()}</style></head><body>
@@ -561,17 +562,20 @@ function printStandard(o,details,c){
   <div class="info-box"><table>
     <tr><td><span class="lbl">單號：</span>${o.id}</td><td class="val-r"><span class="lbl">日期：</span>${o.date}</td></tr>
     <tr><td><span class="lbl">客戶名稱：</span>${c.name||o.customer_name}</td><td class="val-r"><span class="lbl">電話：</span>${c.phone||c.mobile||''}</td></tr>
+    ${c.invoice_title?`<tr><td><span class="lbl">抬頭：</span>${c.invoice_title}</td><td class="val-r"><span class="lbl">統編：</span>${c.tax_id||''}</td></tr>`:(c.tax_id?`<tr><td><span class="lbl">統編：</span>${c.tax_id}</td><td></td></tr>`:'')}
     <tr><td><span class="lbl">地址：</span>${c.address||''}</td><td class="val-r"><span class="lbl">稅制：</span>${o.tax_type||'免稅'}</td></tr>
   </table></div>
-  <table class="data"><thead><tr><th width="5%">序</th><th width="13%">商品編號</th><th>品名/規格</th><th width="7%">單位</th><th width="7%">數量</th><th width="10%">單價</th><th width="10%">金額</th></tr></thead>
+  <table class="data"><thead><tr><th width="4%">序</th><th width="11%">商品編號</th><th>品名/規格</th><th width="6%">單位</th><th width="6%">數量</th><th width="9%">單價</th><th width="9%">金額</th><th width="12%">備註</th></tr></thead>
   <tbody>${rows}</tbody></table>
   <div class="sum-area">
+    數量合計：${totalQty}<br>
     小計：NT$ ${sub.toLocaleString()}<br>
     ${Number(o.tax_amount)>0?`稅金：NT$ ${Number(o.tax_amount).toLocaleString()}<br>`:''}
     ${Number(o.shipping)>0?`運費：NT$ ${Number(o.shipping).toLocaleString()}<br>`:''}
     ${Number(o.deduction)>0?`扣款：-NT$ ${Number(o.deduction).toLocaleString()}<br>`:''}
     <div class="grand">總計：NT$ ${Number(o.grand_total).toLocaleString()}</div>
   </div>
+  ${o.note?`<div style="margin-top:6px;font-size:11px;">備註：${o.note}</div>`:''}
   <button class="no-print" onclick="window.print()">列印</button>
   </body></html>`);w.document.close();
 }

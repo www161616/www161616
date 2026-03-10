@@ -423,7 +423,7 @@ const SUPABASE_URL = 'https://xuykenpvonfqwsgbuvvj.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh1eWtlbnB2b25mcXdzZ2J1dnZqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwMDY3MzgsImV4cCI6MjA4NzU4MjczOH0.HmIktEbkPc0e7eTdqJdMWVxMzYIh4YkZ4LewZfC4Qr4';
 const H = { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' };
 
-let allProducts = [], allCustomers = [], specialPrices = [], cart = [], currentTaxType = '免稅';
+let allProducts = [], allCustomers = [], specialPrices = [], cart = [], currentTaxType = '免稅', inventoryMap = {};
 
 async function api(table, params='', method='GET', body=null) {
   const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${params}`, { method, headers: H, body: body ? JSON.stringify(body) : null });
@@ -436,12 +436,14 @@ async function api(table, params='', method='GET', body=null) {
 window.onload = async function() {
   document.getElementById('orderDate').value = new Date().toISOString().split('T')[0];
   try {
-    const [prods, custs, specials] = await Promise.all([
+    const [prods, custs, specials, invData] = await Promise.all([
       api('products', 'select=*&status=eq.啟用&order=category,name'),
       api('customers', 'select=*&status=eq.啟用&order=id'),
-      api('special_prices', 'select=*')
+      api('special_prices', 'select=*'),
+      api('inventory', 'select=product_id,current_stock')
     ]);
     allProducts = prods;
+    invData.forEach(r => inventoryMap[r.product_id] = Number(r.current_stock || 0));
     allCustomers = custs;
     specialPrices = specials;
     renderCustomers(custs);
@@ -633,10 +635,12 @@ function renderProducts(list) {
     if (spIds.includes(p.id)) badge = '<span class="badge badge-special">特</span>';
     else if ((grp.includes('總倉') && p.price_branch > 0) || (grp.includes('店家') && p.price_store > 0) || (grp.includes('餐廳') && p.price_rest > 0)) badge = '<span class="badge badge-group">群</span>';
     const sel = cartIds.includes(p.id) ? 'selected' : '';
+    const stock = inventoryMap[p.id] ?? '-';
+    const stockColor = stock !== '-' && stock <= 0 ? 'var(--danger)' : 'var(--text2)';
     return `<div class="product-item ${sel}" id="pi-${p.id}" onclick="addToCart('${p.id}')">
       <div class="prod-info">
         <div class="prod-name">${p.name}${badge}</div>
-        <div class="prod-id">${p.id}${p.spec ? ' · '+p.spec : ''}</div>
+        <div class="prod-id">${p.id}${p.spec ? ' · '+p.spec : ''} · <span style="color:${stockColor}">庫存 ${stock}</span></div>
       </div>
       <div class="prod-price">$${price.toLocaleString()}</div>
       <button class="btn-add" onclick="event.stopPropagation();addToCart('${p.id}')">加入</button>
@@ -925,7 +929,7 @@ function printOrder(orderId, c, date, total, printCart, taxType, ship, ded) {
   const tax = taxType.includes('外加') ? Math.round(sub * 0.05) : 0;
   const note = document.getElementById('orderNote')?.value || '';
   const totalQty = printCart.reduce((s,i) => s + i.qty, 0);
-  const rows = printCart.map((it,i) => `<tr><td class="c">${i+1}</td><td>${it.id}</td><td>${it.name}</td><td class="c">${it.unit}</td><td class="r">${it.qty}</td><td class="r">${it.price.toLocaleString()}</td><td class="r">${(it.qty*it.price).toLocaleString()}</td></tr>`).join('');
+  const rows = printCart.map((it,i) => `<tr><td class="c">${i+1}</td><td>${it.id}</td><td>${it.name}</td><td class="c">${it.unit}</td><td class="r">${it.qty}</td><td class="r">${it.price.toLocaleString()}</td><td class="r">${(it.qty*it.price).toLocaleString()}</td><td>${it.note||''}</td></tr>`).join('');
   const win = window.open('', '_blank', 'width=900,height=700');
   win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>銷貨單 ${orderId}</title>
   <style>${printCSS()}</style></head><body>
@@ -934,17 +938,20 @@ function printOrder(orderId, c, date, total, printCart, taxType, ship, ded) {
   <div class="info-box"><table>
     <tr><td><span class="lbl">單號：</span>${orderId}</td><td class="val-r"><span class="lbl">日期：</span>${date}</td></tr>
     <tr><td><span class="lbl">客戶名稱：</span>${c.name||''}</td><td class="val-r"><span class="lbl">電話：</span>${c.phone||c.mobile||''}</td></tr>
+    ${c.invoice_title?`<tr><td><span class="lbl">抬頭：</span>${c.invoice_title}</td><td class="val-r"><span class="lbl">統編：</span>${c.tax_id||''}</td></tr>`:(c.tax_id?`<tr><td><span class="lbl">統編：</span>${c.tax_id}</td><td></td></tr>`:'')}
     <tr><td><span class="lbl">地址：</span>${c.address||''}</td><td class="val-r"><span class="lbl">稅制：</span>${taxType}</td></tr>
   </table></div>
-  <table class="data"><thead><tr><th width="5%">序</th><th width="13%">商品編號</th><th>品名/規格</th><th width="7%">單位</th><th width="7%">數量</th><th width="10%">單價</th><th width="10%">金額</th></tr></thead>
+  <table class="data"><thead><tr><th width="4%">序</th><th width="11%">商品編號</th><th>品名/規格</th><th width="6%">單位</th><th width="6%">數量</th><th width="9%">單價</th><th width="9%">金額</th><th width="12%">備註</th></tr></thead>
   <tbody>${rows}</tbody></table>
   <div class="sum-area">
+    數量合計：${totalQty}<br>
     小計：NT$ ${sub.toLocaleString()}<br>
     ${tax>0?`稅金：NT$ ${tax.toLocaleString()}<br>`:''}
     ${ship>0?`運費：NT$ ${ship.toLocaleString()}<br>`:''}
     ${ded>0?`扣款：-NT$ ${ded.toLocaleString()}<br>`:''}
     <div class="grand">總計：NT$ ${total.toLocaleString()}</div>
   </div>
+  ${note?`<div style="margin-top:6px;font-size:11px;">備註：${note}</div>`:''}
   <button class="no-print" onclick="window.print()">列印</button>
   </body></html>`);
   win.document.close();
