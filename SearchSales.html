@@ -165,12 +165,19 @@ select.form-control { cursor:pointer; }
         <div><label class="form-label">開始日期</label><input type="date" class="form-control" id="dateFrom"></div>
         <div><label class="form-label">結束日期</label><input type="date" class="form-control" id="dateTo"></div>
       </div>
-      <select class="form-control" id="statusFilter" style="margin-bottom:8px;" onchange="doSearch()">
-        <option value="">全部狀態</option>
-        <option value="未收款">未收款</option>
-        <option value="部分收款">部分收款</option>
-        <option value="已收款">已收款</option>
-      </select>
+      <div style="display:flex;gap:8px;margin-bottom:8px;">
+        <select class="form-control" id="statusFilter" onchange="doSearch()">
+          <option value="">全部收款</option>
+          <option value="未收款">未收款</option>
+          <option value="部分收款">部分收款</option>
+          <option value="已收款">已收款</option>
+        </select>
+        <select class="form-control" id="shipFilter" onchange="doSearch()">
+          <option value="">全部出貨</option>
+          <option value="備貨中">備貨中</option>
+          <option value="已出貨">已出貨</option>
+        </select>
+      </div>
       <button class="btn-search" onclick="doSearch()">🔍 查詢</button>
       <button class="btn-export" onclick="exportCSV()">📥 匯出 CSV</button>
     </div>
@@ -275,6 +282,10 @@ function statusBadge(s){
   if(s==='未收款')return`<span class="badge badge-danger">${s}</span>`;
   return`<span class="badge badge-warning">${s||'未設定'}</span>`;
 }
+function shipBadge(s){
+  if(s==='已出貨')return`<span class="badge badge-success">🚚 已出貨</span>`;
+  return`<span class="badge" style="background:#e0e7ff;color:#3730a3;">📦 ${s||'備貨中'}</span>`;
+}
 function closeModal(id){document.getElementById(id).classList.remove('show');}
 function showLoading(msg='處理中...'){document.getElementById('loading').style.display='flex';document.getElementById('loadingMsg').textContent=msg;}
 function hideLoading(){document.getElementById('loading').style.display='none';}
@@ -301,6 +312,8 @@ async function doSearch(){
     if(dt)params+=`&date=lte.${dt}`;
     if(custId)params+=`&customer_id=eq.${custId}`;
     if(st)params+=`&payment_status=eq.${encodeURIComponent(st)}`;
+    const sf=document.getElementById('shipFilter').value;
+    if(sf)params+=`&ship_status=eq.${encodeURIComponent(sf)}`;
     let orders=await api('sales_orders',params);
     if(kw){const k=kw.toLowerCase();orders=orders.filter(o=>o.id.toLowerCase().includes(k)||(o.customer_name||'').toLowerCase().includes(k));}
     currentOrders=orders;
@@ -314,7 +327,7 @@ function renderList(orders){
     <div class="order-card ${o.id===currentOrderId?'active':''}" id="card-${o.id}" onclick="selectOrder('${o.id}')">
       <div class="card-top"><span class="card-id">${o.id}</span><span class="card-date">${o.date}</span></div>
       <div class="card-mid">
-        <div><div class="card-cust">${o.customer_name}</div>${statusBadge(o.payment_status)}</div>
+        <div><div class="card-cust">${o.customer_name}</div>${statusBadge(o.payment_status)} ${shipBadge(o.ship_status)}</div>
         <span class="card-amt">${fmt(o.grand_total)}</span>
       </div>
       ${o.note?`<div style="font-size:11px;color:var(--text2);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">📝 ${o.note}</div>`:''}
@@ -353,6 +366,7 @@ function renderDetail(o,details){
             <span>📅 ${o.date}</span>
             <span>🧾 ${o.tax_type||'免稅'}</span>
             ${statusBadge(o.payment_status)}
+            ${shipBadge(o.ship_status)}
           </div>
         </div>
         <div class="detail-cust">${o.customer_name}</div>
@@ -377,6 +391,7 @@ function renderDetail(o,details){
           <span class="big-total">${fmt(o.grand_total)}</span>
         </div>
         <div class="action-row">
+          ${(!o.ship_status||o.ship_status==='備貨中')?`<button class="btn" style="background:#e0e7ff;color:#3730a3;border:1px solid #3730a3;" onclick="shipOrder('${o.id}')">🚚 出貨</button>`:''}
           <button class="btn btn-print" onclick="openPrintModal('${o.id}')">🖨️ 列印</button>
           <button class="btn btn-pay" onclick="openPayModal('${o.id}','${o.grand_total}','${o.customer_id}')">💰 收款</button>
           <button class="btn btn-copy" onclick="copyOrder('${o.id}')">📋 複製</button>
@@ -430,6 +445,26 @@ async function confirmPay(){
   hideLoading();
 }
 
+/* ===== 出貨（備貨中→已出貨，扣庫存）===== */
+async function shipOrder(orderId){
+  if(!confirm(`確定要將 ${orderId} 標記為已出貨嗎？\n庫存將會扣減。`))return;
+  showLoading('出貨處理中...');
+  try{
+    const now=new Date().toISOString().split('T')[0];
+    const details=await api('sales_details',`order_id=eq.${orderId}&select=product_id,qty`);
+    for(const d of details){
+      const inv=await api('inventory',`product_id=eq.${d.product_id}&select=current_stock`);
+      const cur=inv.length>0?Number(inv[0].current_stock):0;
+      await apiWrite(`${SUPABASE_URL}/rest/v1/inventory?product_id=eq.${d.product_id}`,'PATCH',{current_stock:cur-Number(d.qty),updated_at:now});
+    }
+    await apiWrite(`${SUPABASE_URL}/rest/v1/sales_orders?id=eq.${orderId}`,'PATCH',{ship_status:'已出貨'});
+    showToast(`✅ ${orderId} 已出貨，庫存已扣減`,'success');
+    doSearch();
+    selectOrder(orderId);
+  }catch(e){showToast('出貨失敗：'+e.message,'error');}
+  hideLoading();
+}
+
 /* ===== 複製 ===== */
 async function copyOrder(orderId){
   if(!confirm(`確定要複製銷貨單 ${orderId} 嗎？`))return;
@@ -465,14 +500,18 @@ function editOrder(orderId){
 
 /* ===== 刪除 ===== */
 async function deleteOrder(orderId){
-  if(!confirm(`⚠️ 確定要刪除銷貨單 ${orderId} 嗎？\n同時會移除應收帳款並回補庫存。`))return;
+  if(!confirm(`⚠️ 確定要刪除銷貨單 ${orderId} 嗎？\n同時會移除應收帳款。`))return;
   showLoading('刪除中...');
   try{
+    const orders=await api('sales_orders',`id=eq.${orderId}&select=ship_status`);
+    const wasShipped=orders.length>0&&orders[0].ship_status==='已出貨';
     const details=await api('sales_details',`order_id=eq.${orderId}&select=*`);
     const now=new Date().toISOString().split('T')[0];
-    for(const d of details){
-      const inv=await api('inventory',`product_id=eq.${d.product_id}&select=current_stock`);
-      if(inv.length>0)await apiWrite(`${SUPABASE_URL}/rest/v1/inventory?product_id=eq.${d.product_id}`,'PATCH',{current_stock:Number(inv[0].current_stock)+Number(d.qty),updated_at:now});
+    if(wasShipped){
+      for(const d of details){
+        const inv=await api('inventory',`product_id=eq.${d.product_id}&select=current_stock`);
+        if(inv.length>0)await apiWrite(`${SUPABASE_URL}/rest/v1/inventory?product_id=eq.${d.product_id}`,'PATCH',{current_stock:Number(inv[0].current_stock)+Number(d.qty),updated_at:now});
+      }
     }
     await apiWrite(`${SUPABASE_URL}/rest/v1/sales_details?order_id=eq.${orderId}`,'DELETE',{});
     await apiWrite(`${SUPABASE_URL}/rest/v1/receivables?order_id=eq.${orderId}`,'DELETE',{});

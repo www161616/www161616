@@ -685,8 +685,11 @@ function removeItem(i) { cart.splice(i, 1); renderCart(); filterProducts(); }
 function qtyEnter(e, i) { if (e.key === 'Enter') { updateQty(i, e.target.value); const next = document.querySelector(`#cartArea tbody tr:nth-child(${i+2}) .qty-input`); if(next) { next.focus(); next.select(); } } }
 
 function calcTotal() {
-  const sub = cart.reduce((s,i) => s + i.qty * i.price, 0);
-  const tax = currentTaxType.includes('外加') ? Math.round(sub * 0.05) : 0;
+  const raw = cart.reduce((s,i) => s + i.qty * i.price, 0);
+  let sub, tax;
+  if (currentTaxType.includes('外加')) { sub = raw; tax = Math.round(raw * 0.05); }
+  else if (currentTaxType.includes('內含')) { sub = Math.round(raw / 1.05); tax = raw - sub; }
+  else { sub = raw; tax = 0; }
   const ship = Number(document.getElementById('shipping').value) || 0;
   const ded = Number(document.getElementById('deduction').value) || 0;
   const grand = sub + tax + ship - ded;
@@ -803,8 +806,11 @@ async function saveOrder(autoPrint = false) {
   if (cart.length === 0) { showToast('購物車是空的', 'error'); return; }
 
   const c = allCustomers.find(x => x.id === cId);
-  const sub = cart.reduce((s,i) => s + i.qty * i.price, 0);
-  const tax = currentTaxType.includes('外加') ? Math.round(sub * 0.05) : 0;
+  const raw = cart.reduce((s,i) => s + i.qty * i.price, 0);
+  let sub, tax;
+  if (currentTaxType.includes('外加')) { sub = raw; tax = Math.round(raw * 0.05); }
+  else if (currentTaxType.includes('內含')) { sub = Math.round(raw / 1.05); tax = raw - sub; }
+  else { sub = raw; tax = 0; }
   const ship = Number(document.getElementById('shipping').value) || 0;
   const ded = Number(document.getElementById('deduction').value) || 0;
   const grand = sub + tax + ship - ded;
@@ -827,15 +833,19 @@ async function saveOrder(autoPrint = false) {
       });
       if (!orderRes.ok) throw new Error(await orderRes.text());
       
-      // 回補舊明細的庫存
-      const oldDetails = await api('sales_details', `order_id=eq.${orderId}&select=product_id,qty`);
-      for (const od of oldDetails) {
-        const inv = await api('inventory', `product_id=eq.${od.product_id}&select=current_stock`);
-        const cur = inv.length > 0 ? Number(inv[0].current_stock) : 0;
-        await fetch(`${SUPABASE_URL}/rest/v1/inventory?product_id=eq.${od.product_id}`, {
-          method: 'PATCH', headers: {...H, 'Prefer': 'return=minimal'},
-          body: JSON.stringify({ current_stock: cur + Number(od.qty), updated_at: now })
-        });
+      // 回補舊明細的庫存（僅已出貨的單才需要回補）
+      const oldShipCheck = await api('sales_orders', `id=eq.${orderId}&select=ship_status`);
+      const wasShipped = oldShipCheck.length > 0 && oldShipCheck[0].ship_status === '已出貨';
+      if (wasShipped) {
+        const oldDetails = await api('sales_details', `order_id=eq.${orderId}&select=product_id,qty`);
+        for (const od of oldDetails) {
+          const inv = await api('inventory', `product_id=eq.${od.product_id}&select=current_stock`);
+          const cur = inv.length > 0 ? Number(inv[0].current_stock) : 0;
+          await fetch(`${SUPABASE_URL}/rest/v1/inventory?product_id=eq.${od.product_id}`, {
+            method: 'PATCH', headers: {...H, 'Prefer': 'return=minimal'},
+            body: JSON.stringify({ current_stock: cur + Number(od.qty), updated_at: now })
+          });
+        }
       }
       // 刪除舊的明細
       await fetch(`${SUPABASE_URL}/rest/v1/sales_details?order_id=eq.${orderId}`, { method: 'DELETE', headers: H });
@@ -863,7 +873,7 @@ async function saveOrder(autoPrint = false) {
       // 存主檔
       const orderRes = await fetch(`${SUPABASE_URL}/rest/v1/sales_orders`, {
         method: 'POST', headers: {...H, 'Prefer': 'return=minimal'},
-        body: JSON.stringify({ id:orderId, date, customer_id:cId, customer_name:c.name, subtotal:sub, shipping:ship, deduction:ded, tax_amount:tax, grand_total:grand, tax_type:currentTaxType, payment_status:'未收款', created_at:now, note })
+        body: JSON.stringify({ id:orderId, date, customer_id:cId, customer_name:c.name, subtotal:sub, shipping:ship, deduction:ded, tax_amount:tax, grand_total:grand, tax_type:currentTaxType, payment_status:'未收款', ship_status:'備貨中', created_at:now, note })
       });
       if (!orderRes.ok) throw new Error(await orderRes.text());
       
@@ -890,14 +900,19 @@ async function saveOrder(autoPrint = false) {
     });
     if (!detailRes.ok) throw new Error(await detailRes.text());
 
-    // --- 不管是新單還是舊單，都更新庫存 ---
-    for (const it of cart) {
-      const inv = await api('inventory', `product_id=eq.${it.id}&select=current_stock`);
-      const cur = inv.length > 0 ? Number(inv[0].current_stock) : 0;
-      await fetch(`${SUPABASE_URL}/rest/v1/inventory?product_id=eq.${it.id}`, {
-        method: 'PATCH', headers: {...H, 'Prefer': 'return=minimal'},
-        body: JSON.stringify({ current_stock: cur - it.qty, updated_at: now })
-      });
+    // --- 庫存扣減：只有修改已出貨的單才扣（新單=備貨中，不扣庫存）---
+    if (window.editingOrderId) {
+      const chkShip = await api('sales_orders', `id=eq.${orderId}&select=ship_status`);
+      if (chkShip.length > 0 && chkShip[0].ship_status === '已出貨') {
+        for (const it of cart) {
+          const inv = await api('inventory', `product_id=eq.${it.id}&select=current_stock`);
+          const cur = inv.length > 0 ? Number(inv[0].current_stock) : 0;
+          await fetch(`${SUPABASE_URL}/rest/v1/inventory?product_id=eq.${it.id}`, {
+            method: 'PATCH', headers: {...H, 'Prefer': 'return=minimal'},
+            body: JSON.stringify({ current_stock: cur - it.qty, updated_at: now })
+          });
+        }
+      }
     }
 
     document.getElementById('loading').style.display = 'none';
@@ -923,8 +938,11 @@ async function saveOrder(autoPrint = false) {
 function saveAndPrint() { saveOrder(true); }
 
 function printOrder(orderId, c, date, total, printCart, taxType, ship, ded) {
-  const sub = printCart.reduce((s,i) => s + i.qty * i.price, 0);
-  const tax = taxType.includes('外加') ? Math.round(sub * 0.05) : 0;
+  const raw = printCart.reduce((s,i) => s + i.qty * i.price, 0);
+  let sub, tax;
+  if (taxType.includes('外加')) { sub = raw; tax = Math.round(raw * 0.05); }
+  else if (taxType.includes('內含')) { sub = Math.round(raw / 1.05); tax = raw - sub; }
+  else { sub = raw; tax = 0; }
   const note = document.getElementById('orderNote')?.value || '';
   const totalQty = printCart.reduce((s,i) => s + i.qty, 0);
   const rows = printCart.map((it,i) => `<tr><td class="c">${i+1}</td><td>${it.id}</td><td>${it.name}</td><td class="c">${it.unit}</td><td class="r">${it.qty}</td><td class="r">${it.price.toLocaleString()}</td><td class="r">${(it.qty*it.price).toLocaleString()}</td><td>${it.note||''}</td></tr>`).join('');

@@ -200,8 +200,9 @@ select.form-control { cursor:pointer; }
           <div class="form-group">
             <label class="form-label">稅別</label>
             <select class="form-control" id="taxType" onchange="calcTotal()">
-              <option value="0">免稅</option>
-              <option value="0.05">外加 5%</option>
+              <option value="免稅">免稅</option>
+              <option value="外加">外加 5%</option>
+              <option value="內含">內含 5%</option>
             </select>
           </div>
           <div class="form-group">
@@ -376,7 +377,9 @@ function onSupplierChange() {
   const opt = document.getElementById('suppSelect').options[document.getElementById('suppSelect').selectedIndex];
   if (opt && opt.dataset.tax) {
     const tax = opt.dataset.tax;
-    document.getElementById('taxType').value = (tax.includes('外加') || tax.includes('應稅')) ? '0.05' : '0';
+    if (tax.includes('外加')) document.getElementById('taxType').value = '外加';
+    else if (tax.includes('內含') || tax.includes('應稅')) document.getElementById('taxType').value = '內含';
+    else document.getElementById('taxType').value = '免稅';
     calcTotal();
   }
 }
@@ -461,8 +464,12 @@ function qtyEnter(e,i) { if(e.key==='Enter'){ updateQty(i,e.target.value); const
 function costEnter(e,i) { if(e.key==='Enter'){ updateCost(i,e.target.value); const n=document.querySelectorAll('.cost-input')[i+1]; if(n){n.focus();n.select();} } }
 
 function calcTotal() {
-  const sub = cart.reduce((s,i)=>s+i.qty*i.cost,0);
-  const tax = Math.round(sub * Number(document.getElementById('taxType').value));
+  const raw = cart.reduce((s,i)=>s+i.qty*i.cost,0);
+  const tt = document.getElementById('taxType').value;
+  let sub, tax;
+  if (tt === '外加') { sub = raw; tax = Math.round(raw * 0.05); }
+  else if (tt === '內含') { sub = Math.round(raw / 1.05); tax = raw - sub; }
+  else { sub = raw; tax = 0; }
   document.getElementById('subtotalTxt').textContent = 'NT$ '+sub.toLocaleString();
   document.getElementById('taxTxt').textContent = 'NT$ '+tax.toLocaleString();
   document.getElementById('grandTotalTxt').textContent = 'NT$ '+(sub+tax).toLocaleString();
@@ -473,9 +480,12 @@ async function saveOrder() {
   if (!sId) { showToast('請先選擇供應商','error'); return; }
   if (cart.length===0) { showToast('購物車是空的','error'); return; }
   const s = allSuppliers.find(x=>x.id===sId);
-  const sub = cart.reduce((a,i)=>a+i.qty*i.cost,0);
-  const tax = Math.round(sub * Number(document.getElementById('taxType').value));
-  const grand = sub + tax;
+  const raw = cart.reduce((a,i)=>a+i.qty*i.cost,0);
+  const tt = document.getElementById('taxType').value;
+  let sub, tax, grand;
+  if (tt === '外加') { sub = raw; tax = Math.round(raw * 0.05); grand = sub + tax; }
+  else if (tt === '內含') { sub = Math.round(raw / 1.05); tax = raw - sub; grand = raw; }
+  else { sub = raw; tax = 0; grand = raw; }
   const date = document.getElementById('orderDate').value;
   const now = new Date().toISOString().split('T')[0];
   const payStatus = document.querySelector('input[name="payStatus"]:checked').value;
@@ -533,7 +543,7 @@ function resetOrder() {
   document.getElementById('suppSearch').value='';
   document.getElementById('orderNote').value='';
   document.getElementById('orderDate').value=new Date().toISOString().split('T')[0];
-  document.getElementById('taxType').value='0';
+  document.getElementById('taxType').value='免稅';
   document.querySelector('input[name="payStatus"][value="未付款"]').checked=true;
   renderCart(); filterProducts();
 }
@@ -547,15 +557,13 @@ async function saveNewProduct() {
   if(!name||!unit){showToast('名稱與單位必填','error');return;}
   document.getElementById('loading').style.display='flex';
   try {
-    const table = currentSource==='PRODUCT' ? 'products' : 'materials';
-    const lastList = await api(table,'select=id&order=id.desc&limit=1');
+    const lastList = await api('products','select=id&order=id.desc&limit=1');
     const lastNum = lastList.length>0 ? parseInt(lastList[0].id.replace(/[^0-9]/g,''),10) : 0;
-    const prefix = currentSource==='PRODUCT' ? 'Z' : 'M';
-    const id = document.getElementById('np_id').value.trim() || prefix+String(lastNum+1).padStart(6,'0');
+    const id = document.getElementById('np_id').value.trim() || 'Z'+String(lastNum+1).padStart(6,'0');
     const item = { id, name, category:document.getElementById('np_cat').value||'未分類', spec:document.getElementById('np_spec').value, unit, cost:Number(document.getElementById('np_cost').value)||0, safety_stock:Number(document.getElementById('np_safety').value)||10, status:'啟用', created_at:new Date().toISOString().split('T')[0] };
     if(currentSource==='PRODUCT') { item.price=Number(document.getElementById('np_price').value)||0; item.price_branch=Number(document.getElementById('np_priceBranch').value)||0; item.price_store=Number(document.getElementById('np_priceStore').value)||0; item.price_rest=Number(document.getElementById('np_priceRest').value)||0; }
-    await fetch(`${SUPABASE_URL}/rest/v1/${table}`,{method:'POST',headers:H,body:JSON.stringify(item)});
-    if(currentSource==='PRODUCT') allProducts.push(item); else allMaterials.push(item);
+    await fetch(`${SUPABASE_URL}/rest/v1/products`,{method:'POST',headers:H,body:JSON.stringify(item)});
+    allProducts.unshift(item);
     buildCategoryFilter(); filterProducts();
     closeAddProductModal();
     showToast(`✅ ${name} 新增成功`,'success');

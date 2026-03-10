@@ -90,6 +90,26 @@ textarea.form-control { resize: vertical; }
 .spinner { width: 28px; height: 28px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
+/* Toast 通知 */
+.toast { position:fixed; top:70px; right:20px; background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:14px 22px; font-size:14px; z-index:5000; animation:toastIn 0.3s ease; box-shadow:0 6px 24px rgba(0,0,0,0.12); max-width:360px; display:flex; align-items:center; gap:10px; }
+.toast.success { border-color:var(--success); color:var(--success); }
+.toast.error { border-color:var(--danger); color:var(--danger); }
+@keyframes toastIn { from{transform:translateX(100%);opacity:0} to{transform:translateX(0);opacity:1} }
+
+/* 確認對話框 */
+.confirm-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:4000; align-items:center; justify-content:center; }
+.confirm-overlay.show { display:flex; }
+.confirm-box { background:var(--surface); border:1px solid var(--border); border-radius:14px; width:380px; max-width:90vw; box-shadow:0 12px 40px rgba(0,0,0,0.15); overflow:hidden; animation:confirmIn 0.2s ease; }
+@keyframes confirmIn { from{transform:scale(0.9);opacity:0} to{transform:scale(1);opacity:1} }
+.confirm-icon { text-align:center; padding:24px 20px 8px; font-size:40px; }
+.confirm-msg { text-align:center; padding:8px 24px 20px; font-size:15px; color:var(--text); line-height:1.6; }
+.confirm-actions { display:flex; border-top:1px solid var(--border); }
+.confirm-actions button { flex:1; padding:14px; border:none; font-size:14px; font-weight:600; cursor:pointer; font-family:inherit; transition:all 0.15s; }
+.confirm-actions .cancel-btn { background:var(--surface); color:var(--text2); }
+.confirm-actions .cancel-btn:hover { background:var(--surface2); }
+.confirm-actions .ok-btn { background:var(--danger); color:white; }
+.confirm-actions .ok-btn:hover { opacity:0.9; }
+
 /* RWD */
 @media (max-width: 800px) {
   .main-layout { grid-template-columns: 1fr; display: flex; flex-direction: column; overflow-y: auto; }
@@ -214,7 +234,45 @@ textarea.form-control { resize: vertical; }
 
 </div>
 
+<!-- 確認對話框 -->
+<div class="confirm-overlay" id="confirmOverlay">
+  <div class="confirm-box">
+    <div class="confirm-icon" id="confirmIcon">⚠️</div>
+    <div class="confirm-msg" id="confirmMsg"></div>
+    <div class="confirm-actions">
+      <button class="cancel-btn" id="confirmCancel">取消</button>
+      <button class="ok-btn" id="confirmOk">確定刪除</button>
+    </div>
+  </div>
+</div>
+
 <script>
+// Toast 通知
+function showToast(msg, type='success') {
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => { t.style.transition='all 0.3s'; t.style.opacity='0'; t.style.transform='translateX(60px)'; setTimeout(()=>t.remove(),300); }, 2500);
+}
+
+// 美化確認框（回傳 Promise）
+function showConfirm(msg, okText='確定', icon='⚠️') {
+  return new Promise(resolve => {
+    document.getElementById('confirmIcon').textContent = icon;
+    document.getElementById('confirmMsg').innerHTML = msg;
+    document.getElementById('confirmOk').textContent = okText;
+    const overlay = document.getElementById('confirmOverlay');
+    overlay.classList.add('show');
+    const ok = document.getElementById('confirmOk');
+    const cancel = document.getElementById('confirmCancel');
+    function cleanup(result) { overlay.classList.remove('show'); ok.onclick = null; cancel.onclick = null; resolve(result); }
+    ok.onclick = () => cleanup(true);
+    cancel.onclick = () => cleanup(false);
+    overlay.onclick = e => { if(e.target===overlay) cleanup(false); };
+  });
+}
+
 const SUPABASE_URL = 'https://xuykenpvonfqwsgbuvvj.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh1eWtlbnB2b25mcXdzZ2J1dnZqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwMDY3MzgsImV4cCI6MjA4NzU4MjczOH0.HmIktEbkPc0e7eTdqJdMWVxMzYIh4YkZ4LewZfC4Qr4';
 const H = { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' };
@@ -467,7 +525,7 @@ document.getElementById('expenseForm').addEventListener('submit', async function
       });
     }
 
-    alert(editingId ? '✅ 更新成功！' : `✅ 儲存成功！\n編號：${expId}`);
+    showToast(editingId ? '更新成功！' : `儲存成功！編號：${expId}`, 'success');
     editingId = null;
 
     // 重置表單但保留目前選擇的日期
@@ -482,7 +540,7 @@ document.getElementById('expenseForm').addEventListener('submit', async function
     loadList();
 
   } catch (err) {
-    alert('❌ 儲存失敗：' + err.message);
+    showToast('儲存失敗：' + err.message, 'error');
   } finally {
     btn.disabled = false;
     btn.innerText = originalText;
@@ -506,7 +564,8 @@ function editItem(id, date, category, item, amount, method, recipient) {
 
 // 刪除功能
 async function deleteItem(expId, itemName) {
-  if (!confirm(`⚠️ 確定要刪除「${itemName}」這筆支出嗎？`)) return;
+  const ok = await showConfirm(`確定要刪除<br><strong>「${itemName}」</strong><br>這筆支出嗎？`, '確定刪除', '🗑️');
+  if (!ok) return;
 
   const listDiv = document.getElementById('listArea');
   listDiv.innerHTML = '<div class="loading-overlay"><div class="spinner"></div>刪除中...</div>';
@@ -516,12 +575,12 @@ async function deleteItem(expId, itemName) {
       method: 'DELETE',
       headers: H
     });
-    alert('✅ 已刪除');
+    showToast('已刪除', 'success');
   } catch (err) {
-    alert('❌ 刪除失敗：' + err.message);
+    showToast('刪除失敗：' + err.message, 'error');
   }
-  
-  loadList(); // 不管成功或失敗都重新讀取列表
+
+  loadList();
 }
 </script>
 
