@@ -69,7 +69,7 @@ textarea.form-control { resize: vertical; }
 .list-scroll { flex: 1; overflow-y: auto; padding: 0; }
 .data-table { width: 100%; border-collapse: collapse; }
 .data-table th { position: sticky; top: 0; background: var(--surface2); color: var(--text2); padding: 10px 14px; text-align: left; font-size: 12px; border-bottom: 1px solid var(--border); font-weight: 500; z-index: 10; }
-.data-table td { padding: 12px 14px; border-bottom: 1px solid var(--border); font-size: 13px; vertical-align: middle; }
+.data-table td { padding: 6px 10px; border-bottom: 1px solid var(--border); font-size: 13px; vertical-align: middle; }
 .data-table tr:hover { background: rgba(255,255,255,0.02); }
 .data-table tr:last-child td { border-bottom: none; }
 
@@ -296,7 +296,7 @@ function renderTable(data) {
 
   let total = 0;
   let html = `<table class="data-table">
-    <thead><tr><th>日期</th><th>類別/項目</th><th style="text-align:right">金額</th><th>方式</th><th>收據</th><th style="text-align:center">操作</th></tr></thead>
+    <thead><tr><th>日期</th><th>類別</th><th>項目</th><th>對象</th><th style="text-align:right">金額</th><th>方式</th><th>收據</th><th style="text-align:center">操作</th></tr></thead>
     <tbody>`;
 
   data.forEach(row => {
@@ -307,10 +307,9 @@ function renderTable(data) {
     html += `
       <tr>
         <td class="date-col">${(row.date||'').substring(5)}</td>
-        <td>
-          <div style="font-weight:600; color:var(--text); margin-bottom:3px;">${row.item}</div>
-          <div style="font-size:11px; color:var(--text2);">${row.category} ${row.recipient ? ' | 對象: '+row.recipient : ''}</div>
-        </td>
+        <td style="font-size:12px;">${row.category||''}</td>
+        <td style="font-weight:600;">${row.item||''}</td>
+        <td style="font-size:12px; color:var(--text2);">${row.recipient||''}</td>
         <td class="amount-col">$${Number(row.amount).toLocaleString()}</td>
         <td style="font-size:12px; color:var(--text2);">${row.payment_method||''}</td>
         <td style="text-align:center;">${row.receipt_url ? '<img class="receipt-thumb" src="'+row.receipt_url+'" onclick="viewReceipt(\''+row.receipt_url+'\')">' : '<span style="color:var(--text2);font-size:11px;">-</span>'}</td>
