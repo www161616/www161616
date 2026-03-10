@@ -78,6 +78,10 @@ textarea.form-control { resize: vertical; }
 
 .btn-delete { background: rgba(255,107,107,0.15); color: var(--danger); border: 1px solid var(--danger); padding: 5px 10px; border-radius: 6px; cursor: pointer; font-size: 12px; transition: all 0.15s; }
 .btn-delete:hover { background: var(--danger); color: white; }
+.page-btn { display:inline-block; min-width:28px; padding:3px 6px; margin:0 2px; border:1px solid var(--border); border-radius:4px; background:var(--surface); color:var(--text2); font-size:12px; cursor:pointer; text-align:center; }
+.page-btn:hover { border-color:var(--accent); color:var(--accent); }
+.page-btn.active { background:var(--accent); color:white; border-color:var(--accent); }
+.page-btn:disabled { opacity:0.4; cursor:default; }
 .receipt-thumb { width:24px; height:24px; border-radius:4px; cursor:pointer; vertical-align:middle; object-fit:cover; border:1px solid var(--border); }
 .receipt-overlay { position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.8); display:flex; align-items:center; justify-content:center; z-index:9999; cursor:pointer; }
 .receipt-overlay img { max-width:90%; max-height:90%; border-radius:8px; }
@@ -186,15 +190,20 @@ textarea.form-control { resize: vertical; }
     </div>
     
     <div class="list-filter">
-      <span style="font-size:12px; color:var(--text2);">月份篩選：</span>
-      <input type="month" id="filterMonth" class="form-control" style="width:140px; margin-bottom:0;" onchange="loadList()">
-      <button type="button" class="btn-refresh" onclick="document.getElementById('filterMonth').value='';loadList()">全部</button>
-      <button type="button" class="btn-refresh" onclick="loadList()">🔄 刷新</button>
+      <span style="font-size:12px; color:var(--text2);">篩選：</span>
+      <input type="month" id="filterMonth" class="form-control" style="width:130px; margin-bottom:0;" onchange="loadList()">
+      <input type="text" id="searchKw" class="form-control" style="width:140px; margin-bottom:0;" placeholder="搜尋關鍵字..." onkeydown="if(event.key==='Enter')loadList()">
+      <button type="button" class="btn-refresh" onclick="loadList()">🔍</button>
+      <button type="button" class="btn-refresh" onclick="document.getElementById('filterMonth').value='';document.getElementById('searchKw').value='';loadList()">清除</button>
     </div>
+
+    <div id="paginationTop" style="padding:6px 14px; text-align:center; border-bottom:1px solid var(--border); display:none;"></div>
 
     <div class="list-scroll" id="listArea">
       <div class="loading-overlay"><div class="spinner"></div>載入中...</div>
     </div>
+
+    <div id="paginationBottom" style="padding:6px 14px; text-align:center; border-top:1px solid var(--border); display:none;"></div>
   </div>
 
 </div>
@@ -265,10 +274,17 @@ window.onload = function() {
   loadList();
 };
 
+const PAGE_SIZE = 100;
+let allData = [];
+let filteredData = [];
+let currentPage = 1;
+
 async function loadList() {
   const monthVal = document.getElementById('filterMonth').value;
   const listDiv = document.getElementById('listArea');
   listDiv.innerHTML = '<div class="loading-overlay"><div class="spinner"></div>資料撈取中...</div>';
+  document.getElementById('paginationTop').style.display = 'none';
+  document.getElementById('paginationBottom').style.display = 'none';
 
   try {
     let params = 'order=date.desc,id.desc';
@@ -279,28 +295,83 @@ async function loadList() {
       const lastDay = `${year}-${month}-${String(lastDayDate.getDate()).padStart(2,'0')}`;
       params = `date=gte.${firstDay}&date=lte.${lastDay}&${params}`;
     }
-    const data = await api('expenses', params);
-    renderTable(data);
+    allData = await api('expenses', params);
+    currentPage = 1;
+    applySearch();
   } catch(e) {
     listDiv.innerHTML = `<div style="text-align:center; padding:30px; color:var(--danger);">❌ 讀取失敗: ${e.message}</div>`;
   }
 }
 
-function renderTable(data) {
+function applySearch() {
+  const kw = (document.getElementById('searchKw').value || '').trim().toLowerCase();
+  if (kw) {
+    filteredData = allData.filter(r =>
+      (r.item||'').toLowerCase().includes(kw) ||
+      (r.category||'').toLowerCase().includes(kw) ||
+      (r.recipient||'').toLowerCase().includes(kw) ||
+      (r.payment_method||'').toLowerCase().includes(kw) ||
+      (r.date||'').includes(kw) ||
+      String(r.amount||'').includes(kw)
+    );
+  } else {
+    filteredData = allData;
+  }
+  renderTable();
+}
+
+function goPage(p) {
+  const totalPages = Math.ceil(filteredData.length / PAGE_SIZE) || 1;
+  if (p < 1) p = 1;
+  if (p > totalPages) p = totalPages;
+  currentPage = p;
+  renderTable();
+}
+
+function buildPagination(totalPages) {
+  if (totalPages <= 1) return '';
+  let html = '';
+  html += `<button class="page-btn" onclick="goPage(1)" ${currentPage===1?'disabled':''}>«</button>`;
+  html += `<button class="page-btn" onclick="goPage(${currentPage-1})" ${currentPage===1?'disabled':''}>‹</button>`;
+  let start = Math.max(1, currentPage - 2);
+  let end = Math.min(totalPages, start + 4);
+  if (end - start < 4) start = Math.max(1, end - 4);
+  for (let i = start; i <= end; i++) {
+    html += `<button class="page-btn${i===currentPage?' active':''}" onclick="goPage(${i})">${i}</button>`;
+  }
+  html += `<button class="page-btn" onclick="goPage(${currentPage+1})" ${currentPage===totalPages?'disabled':''}>›</button>`;
+  html += `<button class="page-btn" onclick="goPage(${totalPages})" ${currentPage===totalPages?'disabled':''}>»</button>`;
+  html += `<span style="font-size:11px;color:var(--text2);margin-left:8px;">${filteredData.length} 筆 / 第 ${currentPage}/${totalPages} 頁</span>`;
+  return html;
+}
+
+function renderTable() {
   const listDiv = document.getElementById('listArea');
-  if (!data || data.length === 0) {
-    listDiv.innerHTML = '<div style="text-align:center; padding:40px; color:var(--text2);">本月尚無支出紀錄 🍃</div>';
+  const pgTop = document.getElementById('paginationTop');
+  const pgBottom = document.getElementById('paginationBottom');
+
+  if (!filteredData || filteredData.length === 0) {
+    listDiv.innerHTML = '<div style="text-align:center; padding:40px; color:var(--text2);">無支出紀錄 🍃</div>';
     document.getElementById('totalDisplay').innerText = '總計: NT$ 0';
+    pgTop.style.display = 'none';
+    pgBottom.style.display = 'none';
     return;
   }
 
-  let total = 0;
+  // 總計（全部篩選結果）
+  let total = filteredData.reduce((s, r) => s + Number(r.amount || 0), 0);
+  document.getElementById('totalDisplay').innerText = '總計: NT$ ' + total.toLocaleString();
+
+  // 分頁
+  const totalPages = Math.ceil(filteredData.length / PAGE_SIZE);
+  const startIdx = (currentPage - 1) * PAGE_SIZE;
+  const pageData = filteredData.slice(startIdx, startIdx + PAGE_SIZE);
+
   let html = `<table class="data-table">
     <thead><tr><th>日期</th><th>類別</th><th>項目</th><th>對象</th><th style="text-align:right">金額</th><th>方式</th><th>收據</th><th style="text-align:center">操作</th></tr></thead>
     <tbody>`;
 
-  data.forEach(row => {
-    total += Number(row.amount);
+  pageData.forEach(row => {
     const safeItem = (row.item||'').replace(/'/g,"\\'");
     const safeCategory = (row.category||'').replace(/'/g,"\\'");
     const safeRecipient = (row.recipient||'').replace(/'/g,"\\'");
@@ -323,7 +394,12 @@ function renderTable(data) {
 
   html += '</tbody></table>';
   listDiv.innerHTML = html;
-  document.getElementById('totalDisplay').innerText = '總計: NT$ ' + total.toLocaleString();
+
+  const pgHtml = buildPagination(totalPages);
+  pgTop.innerHTML = pgHtml;
+  pgBottom.innerHTML = pgHtml;
+  pgTop.style.display = totalPages > 1 ? 'block' : 'none';
+  pgBottom.style.display = totalPages > 1 ? 'block' : 'none';
 }
 
 // 送出表單 (新增支出)
