@@ -214,18 +214,18 @@ document.getElementById('mealForm').addEventListener('submit', async function(e)
     const insertData = {
       id: expId,
       date: document.getElementById('date').value,
-      category: '員工餐費', // 固定分類
-      item: `${headcount} 人用餐`, // 將人數塞入項目名稱
+      category: '員工餐費',
+      item: `${headcount} 人用餐`,
       amount: Number(document.getElementById('amount').value),
       payment_method: document.getElementById('paymentMethod').value,
       recipient: '',
-      note: document.getElementById('note').value.trim(),
-      created_at: new Date().toISOString()
+      note: document.getElementById('note').value.trim()
     };
-    
-    await fetch(`${SUPABASE_URL}/rest/v1/expenses`, {
+
+    const postRes = await fetch(`${SUPABASE_URL}/rest/v1/expenses`, {
       method: 'POST', headers: H, body: JSON.stringify(insertData)
     });
+    if (!postRes.ok) throw new Error(await postRes.text());
     
     showToast('success', '記錄成功！', `已成功儲存 ${headcount} 人份的餐費，金額：NT$ ${insertData.amount}`);
     resetForm();

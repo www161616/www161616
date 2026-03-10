@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>龍潭央廚 - 快速記帳</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+:root {
+  --bg:#fffbf0; --surface:#ffffff; --surface2:#fdf5d8; --border:#f5e0a0;
+  --text:#3d2a00; --text2:#92660a; --accent:#b45309; --accent2:#d97706;
+  --danger:#c53030; --success:#276749; --orange:#c05621;
+}
+body { font-family:'Noto Sans TC',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+
+.navbar { background:var(--surface); border-bottom:1px solid var(--border); padding:0 20px; height:52px; display:flex; align-items:center; justify-content:space-between; }
+.navbar-brand { font-size:15px; font-weight:700; color:var(--accent); }
+.navbar-brand span { color:var(--text2); font-weight:400; font-size:13px; margin-left:10px; }
+.nav-links { display:flex; gap:4px; flex-wrap:wrap; }
+.nav-btn { padding:6px 14px; border-radius:6px; border:none; background:transparent; color:var(--text2); font-size:13px; cursor:pointer; font-family:inherit; }
+.nav-btn:hover { background:var(--surface2); }
+.nav-btn.active { background:var(--accent); color:white; }
+
+.main { max-width:460px; margin:20px auto; padding:0 16px; }
+.card { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:20px; margin-bottom:16px; }
+.card-title { font-size:14px; font-weight:600; color:var(--accent2); margin-bottom:12px; }
+
+/* 類別快速按鈕 */
+.cat-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:16px; }
+.cat-btn { padding:10px 4px; border:2px solid var(--border); border-radius:8px; background:var(--surface); cursor:pointer; text-align:center; font-family:inherit; font-size:12px; color:var(--text); transition:all 0.15s; }
+.cat-btn:hover { border-color:var(--accent); }
+.cat-btn.selected { border-color:var(--accent); background:var(--accent); color:white; }
+.cat-btn .cat-icon { font-size:20px; display:block; margin-bottom:2px; }
+
+/* 輸入區 */
+.input-row { display:flex; gap:10px; margin-bottom:12px; }
+.input-row .field { flex:1; }
+.field label { display:block; font-size:11px; color:var(--text2); margin-bottom:4px; }
+.field input, .field select { width:100%; padding:10px; border:1px solid var(--border); border-radius:8px; font-size:14px; font-family:inherit; background:var(--bg); color:var(--text); outline:none; }
+.field input:focus, .field select:focus { border-color:var(--accent); }
+
+.btn-save { width:100%; padding:14px; background:var(--accent); color:white; border:none; border-radius:10px; font-size:16px; font-weight:700; cursor:pointer; font-family:inherit; transition:all 0.15s; }
+.btn-save:hover { background:#9a4408; }
+.btn-save:disabled { opacity:0.5; cursor:not-allowed; }
+
+/* 最近紀錄 */
+.recent-item { display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--border); font-size:13px; }
+.recent-item:last-child { border-bottom:none; }
+.recent-left { display:flex; gap:8px; align-items:center; }
+.recent-cat { font-size:11px; background:var(--surface2); padding:2px 8px; border-radius:4px; color:var(--text2); }
+.recent-amount { font-weight:700; color:var(--orange); }
+.recent-date { font-size:11px; color:var(--text2); }
+
+/* Toast */
+.toast { position:fixed; top:20px; left:50%; transform:translateX(-50%) translateY(-100px); background:var(--success); color:white; padding:12px 24px; border-radius:8px; font-size:14px; font-weight:600; z-index:9999; transition:transform 0.3s; }
+.toast.show { transform:translateX(-50%) translateY(0); }
+.toast.error { background:var(--danger); }
+</style>
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="navbar-brand">🐟 龍潭央廚<span>進銷存系統</span></div>
+  <div class="nav-links">
+    <button class="nav-btn" onclick="location.href='AddExpense.html'">📝 完整支出</button>
+    <button class="nav-btn active">⚡ 快速記帳</button>
+    <button class="nav-btn" onclick="location.href='MonthlyReport.html'">📊 月結報表</button>
+  </div>
+</nav>
+
+<div class="main">
+
+  <!-- 類別選擇 -->
+  <div class="card">
+    <div class="card-title">📂 選擇類別</div>
+    <div class="cat-grid">
+      <button class="cat-btn" onclick="pickCat(this,'進貨成本')"><span class="cat-icon">📦</span>進貨</button>
+      <button class="cat-btn" onclick="pickCat(this,'運費')"><span class="cat-icon">🚛</span>運費</button>
+      <button class="cat-btn" onclick="pickCat(this,'員工餐費')"><span class="cat-icon">🍱</span>餐費</button>
+      <button class="cat-btn" onclick="pickCat(this,'薪資')"><span class="cat-icon">💰</span>薪資</button>
+      <button class="cat-btn" onclick="pickCat(this,'水電瓦斯')"><span class="cat-icon">💡</span>水電</button>
+      <button class="cat-btn" onclick="pickCat(this,'租金')"><span class="cat-icon">🏠</span>租金</button>
+      <button class="cat-btn" onclick="pickCat(this,'雜支')"><span class="cat-icon">🧾</span>雜支</button>
+      <button class="cat-btn" onclick="pickCat(this,'股東往來')"><span class="cat-icon">🤝</span>股東</button>
+      <button class="cat-btn" onclick="pickCat(this,'老闆借支')"><span class="cat-icon">👔</span>借支</button>
+      <button class="cat-btn" onclick="pickCat(this,'伙食費')"><span class="cat-icon">🍲</span>伙食</button>
+      <button class="cat-btn" onclick="pickCat(this,'交通費')"><span class="cat-icon">🚗</span>交通</button>
+      <button class="cat-btn" onclick="pickCat(this,'維修費')"><span class="cat-icon">🔧</span>維修</button>
+    </div>
+  </div>
+
+  <!-- 金額與項目 -->
+  <div class="card">
+    <div class="input-row">
+      <div class="field" style="flex:1.2;">
+        <label>💵 金額</label>
+        <input type="number" id="amount" placeholder="0" min="0" inputmode="numeric" autofocus>
+      </div>
+      <div class="field" style="flex:2;">
+        <label>📝 項目</label>
+        <input type="text" id="item" placeholder="例：大成雞肉">
+      </div>
+    </div>
+    <div class="input-row">
+      <div class="field">
+        <label>📅 日期</label>
+        <input type="date" id="date">
+      </div>
+      <div class="field">
+        <label>💳 付款</label>
+        <select id="payMethod">
+          <option value="零用金">零用金</option>
+          <option value="現金">公司現金</option>
+          <option value="轉帳">轉帳</option>
+        </select>
+      </div>
+    </div>
+    <div class="input-row">
+      <div class="field">
+        <label>👤 對象 (選填)</label>
+        <input type="text" id="recipient" placeholder="廠商或收款人">
+      </div>
+    </div>
+
+    <button class="btn-save" id="saveBtn" onclick="saveExpense()">💾 儲存</button>
+  </div>
+
+  <!-- 最近紀錄 -->
+  <div class="card">
+    <div class="card-title">🕐 最近紀錄</div>
+    <div id="recentList"><div style="text-align:center;color:var(--text2);padding:10px;">載入中...</div></div>
+  </div>
+
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+const SB_URL = 'https://xuykenpvonfqwsgbuvvj.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh1eWtlbnB2b25mcXdzZ2J1dnZqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwMDY3MzgsImV4cCI6MjA4NzU4MjczOH0.HmIktEbkPc0e7eTdqJdMWVxMzYIh4YkZ4LewZfC4Qr4';
+const H = { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' };
+
+let selectedCat = '';
+
+// 日期預設今天
+document.getElementById('date').value = new Date().toISOString().split('T')[0];
+
+// 選類別
+function pickCat(btn, cat) {
+  document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  selectedCat = cat;
+  // 自動 focus 到金額
+  document.getElementById('amount').focus();
+}
+
+// Toast
+function toast(msg, isError) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast show' + (isError ? ' error' : '');
+  setTimeout(() => el.className = 'toast', 2500);
+}
+
+// 儲存
+async function saveExpense() {
+  const amount = Number(document.getElementById('amount').value);
+  const item = document.getElementById('item').value.trim();
+  if (!selectedCat) { toast('請先選擇類別', true); return; }
+  if (!amount) { toast('請輸入金額', true); return; }
+  if (!item) { toast('請輸入項目', true); return; }
+
+  const btn = document.getElementById('saveBtn');
+  btn.disabled = true;
+  btn.textContent = '儲存中...';
+
+  try {
+    // 取得新 ID
+    const idRes = await fetch(`${SB_URL}/rest/v1/expenses?select=id&order=id.desc&limit=1`, { headers: { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY } });
+    const idData = await idRes.json();
+    let newNum = 1;
+    if (idData.length > 0) newNum = parseInt(idData[0].id.replace(/[^0-9]/g, ''), 10) + 1;
+    const expId = 'EXP' + String(newNum).padStart(5, '0');
+
+    const data = {
+      id: expId,
+      date: document.getElementById('date').value,
+      category: selectedCat,
+      item: item,
+      amount: amount,
+      payment_method: document.getElementById('payMethod').value,
+      recipient: document.getElementById('recipient').value.trim()
+    };
+
+    const res = await fetch(`${SB_URL}/rest/v1/expenses`, { method: 'POST', headers: H, body: JSON.stringify(data) });
+    if (!res.ok) throw new Error(await res.text());
+
+    toast(`✅ 已儲存 ${expId}：${item} $${amount.toLocaleString()}`);
+
+    // 清空（保留日期和付款方式）
+    document.getElementById('amount').value = '';
+    document.getElementById('item').value = '';
+    document.getElementById('recipient').value = '';
+    document.getElementById('amount').focus();
+
+    loadRecent();
+  } catch (err) {
+    toast('❌ ' + err.message, true);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '💾 儲存';
+  }
+}
+
+// 載入最近 10 筆
+async function loadRecent() {
+  try {
+    const res = await fetch(`${SB_URL}/rest/v1/expenses?select=id,date,category,item,amount&order=id.desc&limit=10`, {
+      headers: { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY }
+    });
+    const data = await res.json();
+    const el = document.getElementById('recentList');
+    if (!data || data.length === 0) {
+      el.innerHTML = '<div style="text-align:center;color:var(--text2);padding:10px;">尚無紀錄</div>';
+      return;
+    }
+    el.innerHTML = data.map(r => `
+      <div class="recent-item">
+        <div class="recent-left">
+          <span class="recent-cat">${r.category||''}</span>
+          <span>${r.item||''}</span>
+        </div>
+        <div style="text-align:right;">
+          <div class="recent-amount">$${Number(r.amount||0).toLocaleString()}</div>
+          <div class="recent-date">${(r.date||'').substring(5)}</div>
+        </div>
+      </div>
+    `).join('');
+  } catch (e) {
+    document.getElementById('recentList').innerHTML = '<div style="color:var(--danger);text-align:center;">載入失敗</div>';
+  }
+}
+
+// Enter 鍵快速儲存
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter' && e.target.tagName !== 'BUTTON') {
+    e.preventDefault();
+    saveExpense();
+  }
+});
+
+loadRecent();
+</script>
+</body>
+</html>

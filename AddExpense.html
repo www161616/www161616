@@ -109,6 +109,7 @@ textarea.form-control { resize: vertical; }
     <button class="nav-btn" onclick="location.href='SearchSales.html'">📋 銷貨查詢</button>
     <button class="nav-btn" onclick="location.href='SalesOrder.html'">➕ 開銷貨單</button>
     <button class="nav-btn active">📝 新增支出</button>
+    <button class="nav-btn" onclick="location.href='QuickExpense.html'">⚡ 快速記帳</button>
     <button class="nav-btn" onclick="location.href='MonthlyReport.html'">📊 月結報表</button>
   </div>
 </nav>
@@ -159,24 +160,29 @@ textarea.form-control { resize: vertical; }
           <input type="text" id="recipient" class="form-control" placeholder="廠商或收款人">
         </div>
 
-        <div class="form-group">
-          <label>🧾 發票號碼 (選填)</label>
-          <input type="text" id="invoiceNo" class="form-control" placeholder="統一發票號碼">
-        </div>
+        <details style="margin-bottom:12px;">
+          <summary style="cursor:pointer; font-size:12px; color:var(--text2); padding:6px 0;">▸ 更多欄位（發票、備註、收據照片）</summary>
+          <div style="margin-top:8px;">
+            <div class="form-group">
+              <label>🧾 發票號碼</label>
+              <input type="text" id="invoiceNo" class="form-control" placeholder="統一發票號碼">
+            </div>
 
-        <div class="form-group">
-          <label>📒 備註</label>
-          <textarea id="note" class="form-control" rows="2" placeholder="補充說明..."></textarea>
-        </div>
+            <div class="form-group">
+              <label>📒 備註</label>
+              <textarea id="note" class="form-control" rows="2" placeholder="補充說明..."></textarea>
+            </div>
 
-        <div class="form-group">
-          <label>📷 收據照片 (選填)</label>
-          <input type="file" id="receiptFile" accept="image/*" capture="environment" class="form-control" style="padding:6px;" onchange="previewReceipt(this)">
-          <div id="receiptPreview" style="margin-top:8px; display:none;">
-            <img id="receiptImg" style="max-width:100%; max-height:200px; border-radius:8px; border:1px solid var(--border);">
-            <button type="button" onclick="clearReceipt()" style="margin-top:4px; font-size:11px; color:var(--danger); background:none; border:none; cursor:pointer;">✕ 移除圖片</button>
+            <div class="form-group">
+              <label>📷 收據照片</label>
+              <input type="file" id="receiptFile" accept="image/*" capture="environment" class="form-control" style="padding:6px;" onchange="previewReceipt(this)">
+              <div id="receiptPreview" style="margin-top:8px; display:none;">
+                <img id="receiptImg" style="max-width:100%; max-height:200px; border-radius:8px; border:1px solid var(--border);">
+                <button type="button" onclick="clearReceipt()" style="margin-top:4px; font-size:11px; color:var(--danger); background:none; border:none; cursor:pointer;">✕ 移除圖片</button>
+              </div>
+            </div>
           </div>
-        </div>
+        </details>
 
         <button type="submit" id="submitBtn" class="btn-submit">✅ 確認存檔</button>
       </form>
