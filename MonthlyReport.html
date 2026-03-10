@@ -324,7 +324,8 @@ async function loadReport() {
   try {
     const [year, month] = monthVal.split('-').map(Number);
     const firstDay = `${monthVal}-01`;
-    const lastDay = new Date(year, month, 0).toISOString().split('T')[0];
+    const lastDayDate = new Date(year, month, 0);
+    const lastDay = `${year}-${String(month).padStart(2,'0')}-${String(lastDayDate.getDate()).padStart(2,'0')}`;
 
     // 1. 抓取銷貨與應收帳款
     const salesOrders = await api('sales_orders', `date=gte.${firstDay}&date=lte.${lastDay}`);
@@ -337,8 +338,7 @@ async function loadReport() {
     let purchases = [];
     try {
       purchases = await api('purchase_orders', `date=gte.${firstDay}&date=lte.${lastDay}`);
-      console.log('進貨單筆數:', purchases.length, purchases);
-    } catch(e) { console.error("進貨單抓取失敗:", e.message); }
+    } catch(e) { console.warn("進貨單抓取失敗:", e.message); }
 
     // 4. 抓取實際收款紀錄（按付款方式分類）
     let payments = [];
