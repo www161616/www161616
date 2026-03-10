@@ -78,6 +78,9 @@ textarea.form-control { resize: vertical; }
 
 .btn-delete { background: rgba(255,107,107,0.15); color: var(--danger); border: 1px solid var(--danger); padding: 5px 10px; border-radius: 6px; cursor: pointer; font-size: 12px; transition: all 0.15s; }
 .btn-delete:hover { background: var(--danger); color: white; }
+.receipt-thumb { width:24px; height:24px; border-radius:4px; cursor:pointer; vertical-align:middle; object-fit:cover; border:1px solid var(--border); }
+.receipt-overlay { position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.8); display:flex; align-items:center; justify-content:center; z-index:9999; cursor:pointer; }
+.receipt-overlay img { max-width:90%; max-height:90%; border-radius:8px; }
 
 .loading-overlay { text-align: center; padding: 40px; color: var(--text2); font-size: 13px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
 .spinner { width: 28px; height: 28px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
@@ -162,6 +165,15 @@ textarea.form-control { resize: vertical; }
           <textarea id="note" class="form-control" rows="2" placeholder="補充說明..."></textarea>
         </div>
 
+        <div class="form-group">
+          <label>📷 收據照片 (選填)</label>
+          <input type="file" id="receiptFile" accept="image/*" capture="environment" class="form-control" style="padding:6px;" onchange="previewReceipt(this)">
+          <div id="receiptPreview" style="margin-top:8px; display:none;">
+            <img id="receiptImg" style="max-width:100%; max-height:200px; border-radius:8px; border:1px solid var(--border);">
+            <button type="button" onclick="clearReceipt()" style="margin-top:4px; font-size:11px; color:var(--danger); background:none; border:none; cursor:pointer;">✕ 移除圖片</button>
+          </div>
+        </div>
+
         <button type="submit" id="submitBtn" class="btn-submit">✅ 確認存檔</button>
       </form>
     </div>
@@ -191,6 +203,51 @@ textarea.form-control { resize: vertical; }
 const SUPABASE_URL = 'https://xuykenpvonfqwsgbuvvj.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh1eWtlbnB2b25mcXdzZ2J1dnZqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwMDY3MzgsImV4cCI6MjA4NzU4MjczOH0.HmIktEbkPc0e7eTdqJdMWVxMzYIh4YkZ4LewZfC4Qr4';
 const H = { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' };
+
+// 收據圖片預覽
+function previewReceipt(input) {
+  const preview = document.getElementById('receiptPreview');
+  const img = document.getElementById('receiptImg');
+  if (input.files && input.files[0]) {
+    const reader = new FileReader();
+    reader.onload = e => { img.src = e.target.result; preview.style.display = 'block'; };
+    reader.readAsDataURL(input.files[0]);
+  }
+}
+function clearReceipt() {
+  document.getElementById('receiptFile').value = '';
+  document.getElementById('receiptPreview').style.display = 'none';
+}
+
+// 上傳收據到 Supabase Storage
+async function uploadReceipt(file, expId) {
+  const ext = file.name.split('.').pop() || 'jpg';
+  const path = `${expId}.${ext}`;
+  const res = await fetch(`${SUPABASE_URL}/storage/v1/object/receipts/${path}`, {
+    method: 'POST',
+    headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': file.type },
+    body: file
+  });
+  if (!res.ok) {
+    // 如果已存在，用 PUT 覆蓋
+    const res2 = await fetch(`${SUPABASE_URL}/storage/v1/object/receipts/${path}`, {
+      method: 'PUT',
+      headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': file.type },
+      body: file
+    });
+    if (!res2.ok) throw new Error('圖片上傳失敗');
+  }
+  return `${SUPABASE_URL}/storage/v1/object/public/receipts/${path}`;
+}
+
+// 查看收據大圖
+function viewReceipt(url) {
+  const overlay = document.createElement('div');
+  overlay.className = 'receipt-overlay';
+  overlay.innerHTML = '<img src="' + url + '">';
+  overlay.onclick = () => overlay.remove();
+  document.body.appendChild(overlay);
+}
 
 async function api(table, params='', method='GET', body=null) {
   const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${params}`, { method, headers: H, body: body ? JSON.stringify(body) : null });
@@ -239,7 +296,7 @@ function renderTable(data) {
 
   let total = 0;
   let html = `<table class="data-table">
-    <thead><tr><th>日期</th><th>類別/項目</th><th style="text-align:right">金額</th><th>方式</th><th style="text-align:center">操作</th></tr></thead>
+    <thead><tr><th>日期</th><th>類別/項目</th><th style="text-align:right">金額</th><th>方式</th><th>收據</th><th style="text-align:center">操作</th></tr></thead>
     <tbody>`;
 
   data.forEach(row => {
@@ -256,6 +313,7 @@ function renderTable(data) {
         </td>
         <td class="amount-col">$${Number(row.amount).toLocaleString()}</td>
         <td style="font-size:12px; color:var(--text2);">${row.payment_method||''}</td>
+        <td style="text-align:center;">${row.receipt_url ? '<img class="receipt-thumb" src="'+row.receipt_url+'" onclick="viewReceipt(\''+row.receipt_url+'\')">' : '<span style="color:var(--text2);font-size:11px;">-</span>'}</td>
         <td style="text-align:center; white-space:nowrap;">
           <button class="btn-delete" style="background:rgba(26,115,232,0.1);color:#1a73e8;border-color:#1a73e8;" onclick="editItem('${row.id}','${row.date}','${safeCategory}','${safeItem}',${row.amount},'${row.payment_method||''}','${safeRecipient}')">✏️</button>
           <button class="btn-delete" onclick="deleteItem('${row.id}', '${safeItem}')">🗑️</button>
@@ -290,6 +348,7 @@ document.getElementById('expenseForm').addEventListener('submit', async function
       note: document.getElementById('note').value
     };
 
+    let expId = editingId;
     let res;
     if (editingId) {
       // 更新模式
@@ -303,7 +362,8 @@ document.getElementById('expenseForm').addEventListener('submit', async function
       const lastList = await api('expenses', 'select=id&order=id.desc&limit=1');
       let newNum = 1;
       if (lastList.length > 0) newNum = parseInt(lastList[0].id.replace(/[^0-9]/g,''), 10) + 1;
-      formData.id = 'EXP' + String(newNum).padStart(5, '0');
+      expId = 'EXP' + String(newNum).padStart(5, '0');
+      formData.id = expId;
       res = await fetch(`${SUPABASE_URL}/rest/v1/expenses`, {
         method: 'POST',
         headers: H,
@@ -311,6 +371,18 @@ document.getElementById('expenseForm').addEventListener('submit', async function
       });
     }
     if (!res.ok) throw new Error(await res.text());
+
+    // 上傳收據圖片
+    const fileInput = document.getElementById('receiptFile');
+    if (fileInput.files && fileInput.files[0]) {
+      btn.innerText = '📷 上傳圖片中...';
+      const imgUrl = await uploadReceipt(fileInput.files[0], expId);
+      await fetch(`${SUPABASE_URL}/rest/v1/expenses?id=eq.${expId}`, {
+        method: 'PATCH',
+        headers: H,
+        body: JSON.stringify({ receipt_url: imgUrl })
+      });
+    }
 
     alert(editingId ? '✅ 更新成功！' : '✅ 儲存成功！');
     editingId = null;
@@ -321,6 +393,7 @@ document.getElementById('expenseForm').addEventListener('submit', async function
     document.getElementById('date').value = curDate;
     document.getElementById('submitBtn').innerText = '✅ 確認存檔';
     document.getElementById('submitBtn').style.background = '';
+    clearReceipt();
 
     // 自動刷新列表
     loadList();
