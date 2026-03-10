@@ -169,13 +169,14 @@ textarea.form-control { resize: vertical; }
 
   <div class="panel">
     <div class="panel-header">
-      <span>📋 本月支出明細</span>
+      <span>📋 支出明細</span>
       <span id="totalDisplay" style="color:var(--orange); font-size:16px;">總計: NT$ 0</span>
     </div>
     
     <div class="list-filter">
       <span style="font-size:12px; color:var(--text2);">月份篩選：</span>
       <input type="month" id="filterMonth" class="form-control" style="width:140px; margin-bottom:0;" onchange="loadList()">
+      <button type="button" class="btn-refresh" onclick="document.getElementById('filterMonth').value='';loadList()">全部</button>
       <button type="button" class="btn-refresh" onclick="loadList()">🔄 刷新</button>
     </div>
 
@@ -201,27 +202,27 @@ window.onload = function() {
   const today = new Date();
   document.getElementById('date').value = today.toISOString().split('T')[0];
   
-  const yyyy = today.getFullYear();
-  const mm = String(today.getMonth() + 1).padStart(2, '0');
-  document.getElementById('filterMonth').value = `${yyyy}-${mm}`;
+  // 預設不選月份，顯示全部
+  document.getElementById('filterMonth').value = '';
 
   loadList();
 };
 
 async function loadList() {
-  const monthVal = document.getElementById('filterMonth').value; // e.g. 2026-02
+  const monthVal = document.getElementById('filterMonth').value;
   const listDiv = document.getElementById('listArea');
-  
-  if (!monthVal) return;
   listDiv.innerHTML = '<div class="loading-overlay"><div class="spinner"></div>資料撈取中...</div>';
 
   try {
-    // 計算該月的最後一天
-    const [year, month] = monthVal.split('-');
-    const firstDay = `${monthVal}-01`;
-    const lastDay = new Date(year, month, 0).toISOString().split('T')[0];
-
-    const data = await api('expenses', `date=gte.${firstDay}&date=lte.${lastDay}&order=date.desc,id.desc`);
+    let params = 'order=date.desc,id.desc';
+    if (monthVal) {
+      const [year, month] = monthVal.split('-');
+      const firstDay = `${monthVal}-01`;
+      const lastDayDate = new Date(Number(year), Number(month), 0);
+      const lastDay = `${year}-${month}-${String(lastDayDate.getDate()).padStart(2,'0')}`;
+      params = `date=gte.${firstDay}&date=lte.${lastDay}&${params}`;
+    }
+    const data = await api('expenses', params);
     renderTable(data);
   } catch(e) {
     listDiv.innerHTML = `<div style="text-align:center; padding:30px; color:var(--danger);">❌ 讀取失敗: ${e.message}</div>`;
@@ -243,17 +244,21 @@ function renderTable(data) {
 
   data.forEach(row => {
     total += Number(row.amount);
+    const safeItem = (row.item||'').replace(/'/g,"\\'");
+    const safeCategory = (row.category||'').replace(/'/g,"\\'");
+    const safeRecipient = (row.recipient||'').replace(/'/g,"\\'");
     html += `
       <tr>
-        <td class="date-col">${row.date.substring(5)}</td>
+        <td class="date-col">${(row.date||'').substring(5)}</td>
         <td>
           <div style="font-weight:600; color:var(--text); margin-bottom:3px;">${row.item}</div>
           <div style="font-size:11px; color:var(--text2);">${row.category} ${row.recipient ? ' | 對象: '+row.recipient : ''}</div>
         </td>
         <td class="amount-col">$${Number(row.amount).toLocaleString()}</td>
-        <td style="font-size:12px; color:var(--text2);">${row.payment_method}</td>
-        <td style="text-align:center;">
-          <button class="btn-delete" onclick="deleteItem('${row.id}', '${row.item}')">🗑️ 刪除</button>
+        <td style="font-size:12px; color:var(--text2);">${row.payment_method||''}</td>
+        <td style="text-align:center; white-space:nowrap;">
+          <button class="btn-delete" style="background:rgba(26,115,232,0.1);color:#1a73e8;border-color:#1a73e8;" onclick="editItem('${row.id}','${row.date}','${safeCategory}','${safeItem}',${row.amount},'${row.payment_method||''}','${safeRecipient}')">✏️</button>
+          <button class="btn-delete" onclick="deleteItem('${row.id}', '${safeItem}')">🗑️</button>
         </td>
       </tr>
     `;
@@ -274,14 +279,7 @@ document.getElementById('expenseForm').addEventListener('submit', async function
   btn.innerText = '⏳ 存檔中...';
 
   try {
-    // 產生新 ID (EXP + 5碼數字)
-    const lastList = await api('expenses', 'select=id&order=id.desc&limit=1');
-    let newNum = 1;
-    if (lastList.length > 0) newNum = parseInt(lastList[0].id.replace(/[^0-9]/g,''), 10) + 1;
-    const expId = 'EXP' + String(newNum).padStart(5, '0');
-
     const formData = {
-      id: expId,
       date: document.getElementById('date').value,
       category: document.getElementById('category').value,
       item: document.getElementById('item').value,
@@ -292,20 +290,38 @@ document.getElementById('expenseForm').addEventListener('submit', async function
       note: document.getElementById('note').value
     };
 
-    const postRes = await fetch(`${SUPABASE_URL}/rest/v1/expenses`, {
-      method: 'POST',
-      headers: H,
-      body: JSON.stringify(formData)
-    });
-    if (!postRes.ok) throw new Error(await postRes.text());
+    let res;
+    if (editingId) {
+      // 更新模式
+      res = await fetch(`${SUPABASE_URL}/rest/v1/expenses?id=eq.${editingId}`, {
+        method: 'PATCH',
+        headers: H,
+        body: JSON.stringify(formData)
+      });
+    } else {
+      // 新增模式：產生新 ID
+      const lastList = await api('expenses', 'select=id&order=id.desc&limit=1');
+      let newNum = 1;
+      if (lastList.length > 0) newNum = parseInt(lastList[0].id.replace(/[^0-9]/g,''), 10) + 1;
+      formData.id = 'EXP' + String(newNum).padStart(5, '0');
+      res = await fetch(`${SUPABASE_URL}/rest/v1/expenses`, {
+        method: 'POST',
+        headers: H,
+        body: JSON.stringify(formData)
+      });
+    }
+    if (!res.ok) throw new Error(await res.text());
 
-    alert('✅ 儲存成功！');
-    
+    alert(editingId ? '✅ 更新成功！' : '✅ 儲存成功！');
+    editingId = null;
+
     // 重置表單但保留目前選擇的日期
     const curDate = document.getElementById('date').value;
     document.getElementById('expenseForm').reset();
     document.getElementById('date').value = curDate;
-    
+    document.getElementById('submitBtn').innerText = '✅ 確認存檔';
+    document.getElementById('submitBtn').style.background = '';
+
     // 自動刷新列表
     loadList();
 
@@ -316,6 +332,21 @@ document.getElementById('expenseForm').addEventListener('submit', async function
     btn.innerText = originalText;
   }
 });
+
+// 修改功能：把資料填回表單
+let editingId = null;
+function editItem(id, date, category, item, amount, method, recipient) {
+  editingId = id;
+  document.getElementById('date').value = date;
+  document.getElementById('category').value = category;
+  document.getElementById('item').value = item;
+  document.getElementById('amount').value = amount;
+  document.getElementById('paymentMethod').value = method || '零用金';
+  document.getElementById('recipient').value = recipient || '';
+  document.getElementById('submitBtn').innerText = '💾 更新修改';
+  document.getElementById('submitBtn').style.background = '#1a73e8';
+  window.scrollTo({top:0, behavior:'smooth'});
+}
 
 // 刪除功能
 async function deleteItem(expId, itemName) {
