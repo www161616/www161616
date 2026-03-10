@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>📷 拍收據</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Segoe UI','Noto Sans TC',sans-serif; background:#1a1a2e; color:#eee; min-height:100vh; display:flex; flex-direction:column; }
+
+.header { padding:16px; text-align:center; background:#16213e; border-bottom:1px solid #334; }
+.header h2 { font-size:18px; color:#e2e8f0; }
+.header .sub { font-size:12px; color:#94a3b8; margin-top:4px; }
+
+.main { flex:1; padding:16px; display:flex; flex-direction:column; gap:14px; }
+
+/* 拍照區 */
+.snap-area { background:#0f3460; border:2px dashed #3b82f6; border-radius:16px; padding:30px 20px; text-align:center; cursor:pointer; transition:all 0.2s; }
+.snap-area:active { background:#1a4a7a; transform:scale(0.98); }
+.snap-area .icon { font-size:48px; }
+.snap-area .label { font-size:16px; font-weight:600; margin-top:8px; color:#93c5fd; }
+.snap-area .hint { font-size:12px; color:#64748b; margin-top:4px; }
+.snap-area.has-img { border-color:#22c55e; background:#0a2e1a; padding:10px; }
+.snap-area.has-img .icon, .snap-area.has-img .label, .snap-area.has-img .hint { display:none; }
+
+.preview { width:100%; max-height:250px; object-fit:contain; border-radius:10px; display:none; }
+.snap-area.has-img .preview { display:block; }
+
+.retake { display:none; margin-top:8px; font-size:13px; color:#f87171; background:none; border:none; cursor:pointer; text-decoration:underline; }
+.snap-area.has-img ~ .retake { display:inline-block; }
+
+/* 配對方式 */
+.mode-row { display:flex; gap:8px; }
+.mode-btn { flex:1; padding:12px 8px; border:2px solid #334; border-radius:10px; background:#16213e; color:#94a3b8; font-size:13px; text-align:center; cursor:pointer; font-family:inherit; transition:all 0.15s; }
+.mode-btn.active { border-color:#3b82f6; background:#1e3a5f; color:#93c5fd; }
+
+/* 指定編號輸入 */
+.exp-input { display:none; margin-top:8px; }
+.exp-input.show { display:block; }
+.exp-input input { width:100%; padding:12px; background:#16213e; border:1px solid #334; border-radius:8px; color:#eee; font-size:16px; font-family:inherit; text-align:center; letter-spacing:2px; }
+.exp-input input:focus { outline:none; border-color:#3b82f6; }
+
+/* 最近無收據清單 */
+.pending-list { max-height:200px; overflow-y:auto; }
+.pending-item { display:flex; justify-content:space-between; align-items:center; padding:10px 12px; background:#16213e; border:1px solid #334; border-radius:8px; margin-bottom:6px; cursor:pointer; transition:all 0.15s; }
+.pending-item:active { background:#1e3a5f; }
+.pending-item.selected { border-color:#3b82f6; background:#1e3a5f; }
+.pending-left { font-size:13px; }
+.pending-left .pid { color:#64748b; font-size:11px; }
+.pending-right { text-align:right; }
+.pending-right .amt { font-weight:700; color:#fb923c; font-size:14px; }
+.pending-right .date { font-size:11px; color:#64748b; }
+
+/* 上傳按鈕 */
+.btn-upload { width:100%; padding:16px; background:#3b82f6; color:white; border:none; border-radius:12px; font-size:18px; font-weight:700; cursor:pointer; font-family:inherit; transition:all 0.15s; }
+.btn-upload:active { background:#2563eb; transform:scale(0.98); }
+.btn-upload:disabled { opacity:0.4; cursor:not-allowed; }
+
+/* 結果 */
+.result { background:#0a2e1a; border:1px solid #22c55e; border-radius:10px; padding:16px; text-align:center; display:none; }
+.result.show { display:block; }
+.result .ok { font-size:36px; }
+.result .info { font-size:14px; color:#86efac; margin-top:8px; line-height:1.6; }
+
+.section-label { font-size:12px; color:#64748b; margin-bottom:6px; }
+
+input[type=file] { display:none; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h2>📷 拍收據上傳</h2>
+  <div class="sub">拍照 → 選支出 → 一鍵上傳</div>
+</div>
+
+<div class="main">
+
+  <!-- 步驟1：拍照 -->
+  <div>
+    <div class="section-label">① 拍照或選圖</div>
+    <div class="snap-area" id="snapArea" onclick="document.getElementById('fileInput').click()">
+      <div class="icon">📷</div>
+      <div class="label">點擊拍照</div>
+      <div class="hint">或從相簿選取</div>
+      <img class="preview" id="preview">
+    </div>
+    <button class="retake" id="retakeBtn" onclick="clearPhoto()">重新拍照</button>
+    <input type="file" id="fileInput" accept="image/*" capture="environment" onchange="onPhoto(this)">
+  </div>
+
+  <!-- 步驟2：配對 -->
+  <div>
+    <div class="section-label">② 選擇配對方式</div>
+    <div class="mode-row">
+      <button class="mode-btn active" id="modeAuto" onclick="setMode('auto')">🔄 最新一筆</button>
+      <button class="mode-btn" id="modePick" onclick="setMode('pick')">📋 從清單選</button>
+      <button class="mode-btn" id="modeManual" onclick="setMode('manual')">🔢 輸入編號</button>
+    </div>
+    <div class="exp-input" id="manualInput">
+      <input type="text" id="expIdInput" placeholder="EXP00025" oninput="this.value=this.value.toUpperCase()">
+    </div>
+    <div class="exp-input" id="pickList">
+      <div class="pending-list" id="pendingList"><div style="text-align:center;color:#64748b;padding:10px;">載入中...</div></div>
+    </div>
+  </div>
+
+  <!-- 步驟3：上傳 -->
+  <button class="btn-upload" id="uploadBtn" onclick="doUpload()">📤 上傳收據</button>
+
+  <!-- 結果 -->
+  <div class="result" id="resultBox">
+    <div class="ok">✅</div>
+    <div class="info" id="resultInfo"></div>
+  </div>
+
+</div>
+
+<script>
+const SB_URL = 'https://xuykenpvonfqwsgbuvvj.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh1eWtlbnB2b25mcXdzZ2J1dnZqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwMDY3MzgsImV4cCI6MjA4NzU4MjczOH0.HmIktEbkPc0e7eTdqJdMWVxMzYIh4YkZ4LewZfC4Qr4';
+const SB_H = { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY };
+
+let currentMode = 'auto';
+let selectedFile = null;
+let pickedExpId = null;
+
+function onPhoto(input) {
+  if (!input.files || !input.files[0]) return;
+  selectedFile = input.files[0];
+  const reader = new FileReader();
+  reader.onload = e => {
+    document.getElementById('preview').src = e.target.result;
+    document.getElementById('snapArea').classList.add('has-img');
+  };
+  reader.readAsDataURL(selectedFile);
+  document.getElementById('resultBox').className = 'result';
+}
+
+function clearPhoto() {
+  selectedFile = null;
+  document.getElementById('fileInput').value = '';
+  document.getElementById('snapArea').classList.remove('has-img');
+  document.getElementById('resultBox').className = 'result';
+}
+
+function setMode(mode) {
+  currentMode = mode;
+  pickedExpId = null;
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('mode' + mode.charAt(0).toUpperCase() + mode.slice(1)).classList.add('active');
+  document.getElementById('manualInput').className = 'exp-input' + (mode === 'manual' ? ' show' : '');
+  document.getElementById('pickList').className = 'exp-input' + (mode === 'pick' ? ' show' : '');
+  if (mode === 'pick') loadPending();
+}
+
+async function loadPending() {
+  const el = document.getElementById('pendingList');
+  try {
+    const res = await fetch(`${SB_URL}/rest/v1/expenses?receipt_url=is.null&order=date.desc,id.desc&limit=15&select=id,date,category,item,amount`, { headers: SB_H });
+    const data = await res.json();
+    if (!data || data.length === 0) {
+      el.innerHTML = '<div style="text-align:center;color:#64748b;padding:10px;">全部都有收據了 👍</div>';
+      return;
+    }
+    el.innerHTML = data.map(r => `
+      <div class="pending-item" data-id="${r.id}" onclick="pickItem(this,'${r.id}')">
+        <div class="pending-left">
+          <div>${r.item || ''}</div>
+          <div class="pid">${r.id} · ${r.category || ''}</div>
+        </div>
+        <div class="pending-right">
+          <div class="amt">$${Number(r.amount||0).toLocaleString()}</div>
+          <div class="date">${(r.date||'').substring(5)}</div>
+        </div>
+      </div>
+    `).join('');
+  } catch (e) {
+    el.innerHTML = '<div style="color:#f87171;text-align:center;">載入失敗</div>';
+  }
+}
+
+function pickItem(el, id) {
+  document.querySelectorAll('.pending-item').forEach(i => i.classList.remove('selected'));
+  el.classList.add('selected');
+  pickedExpId = id;
+}
+
+async function doUpload() {
+  if (!selectedFile) { alert('請先拍照或選圖'); return; }
+
+  const btn = document.getElementById('uploadBtn');
+  btn.disabled = true;
+  btn.textContent = '上傳中...';
+
+  try {
+    let targetId;
+
+    if (currentMode === 'manual') {
+      targetId = document.getElementById('expIdInput').value.trim();
+      if (!targetId) throw new Error('請輸入支出編號');
+    } else if (currentMode === 'pick') {
+      if (!pickedExpId) throw new Error('請從清單選擇一筆');
+      targetId = pickedExpId;
+    } else {
+      // auto：找最新無收據的
+      const res = await fetch(`${SB_URL}/rest/v1/expenses?receipt_url=is.null&order=date.desc,id.desc&limit=1&select=id,item,amount,date`, { headers: SB_H });
+      const rows = await res.json();
+      if (!rows || rows.length === 0) throw new Error('找不到尚未上傳收據的支出');
+      targetId = rows[0].id;
+    }
+
+    // 驗證該筆存在
+    const checkRes = await fetch(`${SB_URL}/rest/v1/expenses?id=eq.${targetId}&select=id,item,amount,date`, { headers: SB_H });
+    const checkData = await checkRes.json();
+    if (!checkData || checkData.length === 0) throw new Error(`找不到 ${targetId}`);
+    const exp = checkData[0];
+
+    // 上傳圖片
+    const filePath = `${targetId}.jpg`;
+    let upRes = await fetch(`${SB_URL}/storage/v1/object/receipts/${filePath}`, {
+      method: 'POST',
+      headers: { ...SB_H, 'Content-Type': selectedFile.type },
+      body: selectedFile
+    });
+    if (!upRes.ok) {
+      upRes = await fetch(`${SB_URL}/storage/v1/object/receipts/${filePath}`, {
+        method: 'PUT',
+        headers: { ...SB_H, 'Content-Type': selectedFile.type },
+        body: selectedFile
+      });
+      if (!upRes.ok) throw new Error('圖片上傳失敗');
+    }
+
+    const receiptUrl = `${SB_URL}/storage/v1/object/public/receipts/${filePath}`;
+
+    // 更新 receipt_url
+    const patchRes = await fetch(`${SB_URL}/rest/v1/expenses?id=eq.${targetId}`, {
+      method: 'PATCH',
+      headers: { ...SB_H, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ receipt_url: receiptUrl })
+    });
+    if (!patchRes.ok) throw new Error('更新失敗');
+
+    // 顯示結果
+    const resultBox = document.getElementById('resultBox');
+    document.getElementById('resultInfo').innerHTML =
+      `<b>${exp.id}</b><br>${exp.item} · $${Number(exp.amount||0).toLocaleString()}<br>${exp.date}<br><br>收據已上傳 ✓`;
+    resultBox.className = 'result show';
+
+    // 清空準備下一張
+    clearPhoto();
+    if (currentMode === 'pick') loadPending();
+
+  } catch (err) {
+    alert('❌ ' + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '📤 上傳收據';
+  }
+}
+</script>
+</body>
+</html>
