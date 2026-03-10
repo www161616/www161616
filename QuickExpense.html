@@ -406,6 +406,17 @@ async function saveExpense() {
     const res = await fetch(`${SB_URL}/rest/v1/expenses`, { method: 'POST', headers: H, body: JSON.stringify(data) });
     if (!res.ok) throw new Error(await res.text());
 
+    // 連動扣零用金
+    try {
+      const pcLastRes = await fetch(`${SB_URL}/rest/v1/petty_cash?select=id,balance&order=id.desc&limit=1`, { headers: { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY } });
+      const pcLast = await pcLastRes.json();
+      const curBal = pcLast.length > 0 ? Number(pcLast[0].balance) : 0;
+      const newBal = curBal - amount;
+      const pcNum = pcLast.length > 0 ? (parseInt(pcLast[0].id.replace(/\D/g,''), 10) || 0) + 1 : 1;
+      const pcId = 'PC' + String(pcNum).padStart(5, '0');
+      await fetch(`${SB_URL}/rest/v1/petty_cash`, { method: 'POST', headers: H, body: JSON.stringify({ id: pcId, date: data.date, type: '出金', amount: amount, summary: `${selectedCat}：${item}`, handler: '', note: expId, balance: newBal }) });
+    } catch (pcErr) { console.warn('零用金連動失敗:', pcErr.message); }
+
     toast(`✅ 已儲存 ${expId}：${item} $${amount.toLocaleString()}`);
 
     // 清空（保留日期和付款方式）

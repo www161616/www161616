@@ -525,6 +525,21 @@ document.getElementById('expenseForm').addEventListener('submit', async function
       });
     }
 
+    // 連動零用金：新增時扣款，更新不重複扣
+    if (!editingId) {
+      try {
+        const pcLast = await api('petty_cash', 'select=id,balance&order=id.desc&limit=1');
+        const curBal = pcLast.length > 0 ? Number(pcLast[0].balance) : 0;
+        const newBal = curBal - formData.amount;
+        const pcNum = pcLast.length > 0 ? (parseInt(pcLast[0].id.replace(/\D/g,''), 10) || 0) + 1 : 1;
+        const pcId = 'PC' + String(pcNum).padStart(5, '0');
+        await fetch(`${SUPABASE_URL}/rest/v1/petty_cash`, {
+          method: 'POST', headers: H,
+          body: JSON.stringify({ id: pcId, date: formData.date, type: '出金', amount: formData.amount, summary: `${formData.category}：${formData.item}`, handler: '', note: expId, balance: newBal })
+        });
+      } catch (pcErr) { console.warn('零用金連動失敗:', pcErr.message); }
+    }
+
     showToast(editingId ? '更新成功！' : `儲存成功！編號：${expId}`, 'success');
     editingId = null;
 
@@ -571,10 +586,25 @@ async function deleteItem(expId, itemName) {
   listDiv.innerHTML = '<div class="loading-overlay"><div class="spinner"></div>刪除中...</div>';
 
   try {
-    await fetch(`${SUPABASE_URL}/rest/v1/expenses?id=eq.${expId}`, {
-      method: 'DELETE',
-      headers: H
-    });
+    // 先查金額，用來回補零用金
+    const expData = await api('expenses', `id=eq.${expId}&select=amount`);
+    await fetch(`${SUPABASE_URL}/rest/v1/expenses?id=eq.${expId}`, { method: 'DELETE', headers: H });
+
+    // 回補零用金
+    if (expData.length > 0) {
+      try {
+        const amt = Number(expData[0].amount || 0);
+        const pcLast = await api('petty_cash', 'select=id,balance&order=id.desc&limit=1');
+        const curBal = pcLast.length > 0 ? Number(pcLast[0].balance) : 0;
+        const newBal = curBal + amt;
+        const pcNum = pcLast.length > 0 ? (parseInt(pcLast[0].id.replace(/\D/g,''), 10) || 0) + 1 : 1;
+        const pcId = 'PC' + String(pcNum).padStart(5, '0');
+        await fetch(`${SUPABASE_URL}/rest/v1/petty_cash`, {
+          method: 'POST', headers: H,
+          body: JSON.stringify({ id: pcId, date: new Date().toISOString().split('T')[0], type: '入金', amount: amt, summary: `刪除支出退回：${itemName}`, handler: '', note: expId, balance: newBal })
+        });
+      } catch (pcErr) { console.warn('零用金回補失敗:', pcErr.message); }
+    }
     showToast('已刪除', 'success');
   } catch (err) {
     showToast('刪除失敗：' + err.message, 'error');
