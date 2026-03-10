@@ -408,13 +408,15 @@ async function saveExpense() {
 
     // 連動扣零用金
     try {
-      const pcLastRes = await fetch(`${SB_URL}/rest/v1/petty_cash?select=id,balance&order=id.desc&limit=1`, { headers: { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY } });
-      const pcLast = await pcLastRes.json();
-      const curBal = pcLast.length > 0 ? Number(pcLast[0].balance) : 0;
+      const pcLastIdRes = await fetch(`${SB_URL}/rest/v1/petty_cash?select=id&order=id.desc&limit=1`, { headers: { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY } });
+      const pcLastId = await pcLastIdRes.json();
+      const pcLastBalRes = await fetch(`${SB_URL}/rest/v1/petty_cash?select=balance&account=eq.${encodeURIComponent('零用金')}&order=id.desc&limit=1`, { headers: { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY } });
+      const pcLastBal = await pcLastBalRes.json();
+      const curBal = pcLastBal.length > 0 ? Number(pcLastBal[0].balance) : 0;
       const newBal = curBal - amount;
-      const pcNum = pcLast.length > 0 ? (parseInt(pcLast[0].id.replace(/\D/g,''), 10) || 0) + 1 : 1;
+      const pcNum = pcLastId.length > 0 ? (parseInt(pcLastId[0].id.replace(/\D/g,''), 10) || 0) + 1 : 1;
       const pcId = 'PC' + String(pcNum).padStart(5, '0');
-      await fetch(`${SB_URL}/rest/v1/petty_cash`, { method: 'POST', headers: H, body: JSON.stringify({ id: pcId, date: data.date, type: '出金', amount: amount, summary: `${selectedCat}：${item}`, handler: '', note: expId, balance: newBal }) });
+      await fetch(`${SB_URL}/rest/v1/petty_cash`, { method: 'POST', headers: H, body: JSON.stringify({ id: pcId, date: data.date, type: '出金', amount: amount, summary: `${selectedCat}：${item}`, handler: '', note: expId, balance: newBal, account: '零用金' }) });
     } catch (pcErr) { console.warn('零用金連動失敗:', pcErr.message); }
 
     toast(`✅ 已儲存 ${expId}：${item} $${amount.toLocaleString()}`);

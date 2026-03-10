@@ -528,14 +528,15 @@ document.getElementById('expenseForm').addEventListener('submit', async function
     // 連動零用金：新增時扣款，更新不重複扣
     if (!editingId) {
       try {
-        const pcLast = await api('petty_cash', 'select=id,balance&order=id.desc&limit=1');
-        const curBal = pcLast.length > 0 ? Number(pcLast[0].balance) : 0;
+        const pcLastId = await api('petty_cash', 'select=id&order=id.desc&limit=1');
+        const pcLastBal = await api('petty_cash', `select=balance&account=eq.${encodeURIComponent('零用金')}&order=id.desc&limit=1`);
+        const curBal = pcLastBal.length > 0 ? Number(pcLastBal[0].balance) : 0;
         const newBal = curBal - formData.amount;
-        const pcNum = pcLast.length > 0 ? (parseInt(pcLast[0].id.replace(/\D/g,''), 10) || 0) + 1 : 1;
+        const pcNum = pcLastId.length > 0 ? (parseInt(pcLastId[0].id.replace(/\D/g,''), 10) || 0) + 1 : 1;
         const pcId = 'PC' + String(pcNum).padStart(5, '0');
         await fetch(`${SUPABASE_URL}/rest/v1/petty_cash`, {
           method: 'POST', headers: H,
-          body: JSON.stringify({ id: pcId, date: formData.date, type: '出金', amount: formData.amount, summary: `${formData.category}：${formData.item}`, handler: '', note: expId, balance: newBal })
+          body: JSON.stringify({ id: pcId, date: formData.date, type: '出金', amount: formData.amount, summary: `${formData.category}：${formData.item}`, handler: '', note: expId, balance: newBal, account: '零用金' })
         });
       } catch (pcErr) { console.warn('零用金連動失敗:', pcErr.message); }
     }
@@ -594,14 +595,15 @@ async function deleteItem(expId, itemName) {
     if (expData.length > 0) {
       try {
         const amt = Number(expData[0].amount || 0);
-        const pcLast = await api('petty_cash', 'select=id,balance&order=id.desc&limit=1');
-        const curBal = pcLast.length > 0 ? Number(pcLast[0].balance) : 0;
+        const pcLastId2 = await api('petty_cash', 'select=id&order=id.desc&limit=1');
+        const pcLastBal2 = await api('petty_cash', `select=balance&account=eq.${encodeURIComponent('零用金')}&order=id.desc&limit=1`);
+        const curBal = pcLastBal2.length > 0 ? Number(pcLastBal2[0].balance) : 0;
         const newBal = curBal + amt;
-        const pcNum = pcLast.length > 0 ? (parseInt(pcLast[0].id.replace(/\D/g,''), 10) || 0) + 1 : 1;
+        const pcNum = pcLastId2.length > 0 ? (parseInt(pcLastId2[0].id.replace(/\D/g,''), 10) || 0) + 1 : 1;
         const pcId = 'PC' + String(pcNum).padStart(5, '0');
         await fetch(`${SUPABASE_URL}/rest/v1/petty_cash`, {
           method: 'POST', headers: H,
-          body: JSON.stringify({ id: pcId, date: new Date().toISOString().split('T')[0], type: '入金', amount: amt, summary: `刪除支出退回：${itemName}`, handler: '', note: expId, balance: newBal })
+          body: JSON.stringify({ id: pcId, date: new Date().toISOString().split('T')[0], type: '入金', amount: amt, summary: `刪除支出退回：${itemName}`, handler: '', note: expId, balance: newBal, account: '零用金' })
         });
       } catch (pcErr) { console.warn('零用金回補失敗:', pcErr.message); }
     }

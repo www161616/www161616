@@ -75,6 +75,21 @@ input[type="month"]:focus { border-color:var(--accent); }
 .claim-input-row input:focus { border-color:var(--accent); }
 .claim-result { font-size:16px; font-weight:700; margin-left:auto; }
 
+/* 陸貨專戶區 */
+.china-section { background:linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border:2px solid #3b82f6; border-radius:14px; padding:24px; box-shadow:0 4px 15px rgba(30,64,175,0.1); }
+.china-title { font-size:18px; font-weight:700; color:#1e40af; margin-bottom:16px; display:flex; align-items:center; gap:8px; }
+.china-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; margin-bottom:16px; }
+.china-item { background:white; border-radius:10px; padding:14px 18px; border:1px solid #93c5fd; }
+.china-label { font-size:12px; color:#6b7280; margin-bottom:6px; }
+.china-value { font-size:20px; font-weight:700; color:#1e40af; }
+.china-value.income { color:#059669; }
+.china-value.expense { color:#dc2626; }
+.china-value.balance { color:#1e40af; }
+.china-detail-table { width:100%; border-collapse:collapse; font-size:12px; background:white; border-radius:8px; overflow:hidden; }
+.china-detail-table th { background:#eff6ff; color:#1e40af; padding:8px 10px; text-align:left; font-size:11px; border-bottom:1px solid #93c5fd; }
+.china-detail-table td { padding:7px 10px; border-bottom:1px solid #e5e7eb; }
+.china-detail-table tr:last-child td { border-bottom:none; }
+
 /* 分隔標題 */
 .divider-title { font-size:18px; font-weight:700; color:var(--text); padding:10px 0; border-bottom:3px solid var(--accent); display:flex; align-items:center; gap:10px; }
 
@@ -116,6 +131,12 @@ tr:last-child td { border-bottom:none; }
   th { background:white !important; color:#000 !important; border:1px solid #000 !important; padding:2px 5px !important; font-size:11px !important; }
   td { border:1px solid #000 !important; padding:2px 5px !important; color:#000 !important; font-size:11px !important; }
   .unpaid-text { color:#000 !important; font-weight:bold !important; }
+  .china-section { border:2px solid #000 !important; background:white !important; padding:12px !important; }
+  .china-item { border:1px solid #000 !important; }
+  .china-detail-table th { background:white !important; color:#000 !important; border:1px solid #000 !important; }
+  .china-detail-table td { border:1px solid #000 !important; color:#000 !important; }
+  .china-title { color:#000 !important; }
+  .china-value { color:#000 !important; }
   .divider-title { border-bottom-color:#000 !important; color:#000 !important; }
   .container::before { content:"丸十水產股份有限公司 - 月結報表"; display:block; font-size:14px; font-weight:bold; text-align:center; margin-bottom:10px; padding-bottom:6px; border-bottom:1px solid #000; }
 }
@@ -172,6 +193,34 @@ tr:last-child td { border-bottom:none; }
           <input type="number" id="bossAmount" placeholder="輸入金額" oninput="calcBalance()">
           <div class="claim-result">留存零用金：<span id="claimBalance" style="color:var(--accent);">NT$ 0</span></div>
         </div>
+      </div>
+
+      <!-- ========== 陸貨專戶結算 ========== -->
+      <div class="china-section">
+        <div class="china-title">📦 陸貨專戶結算</div>
+        <div class="china-grid">
+          <div class="china-item">
+            <div class="china-label">期初餘額</div>
+            <div class="china-value balance" id="chinaOpen">NT$ 0</div>
+          </div>
+          <div class="china-item">
+            <div class="china-label">本月老闆撥入</div>
+            <div class="china-value income" id="chinaIn">NT$ 0</div>
+          </div>
+          <div class="china-item">
+            <div class="china-label">本月支出（陸貨+關稅）</div>
+            <div class="china-value expense" id="chinaOut">NT$ 0</div>
+          </div>
+        </div>
+        <div style="background:white;border-radius:10px;padding:14px 18px;border:2px solid #3b82f6;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;">
+          <span style="font-size:14px;font-weight:700;color:#1e40af;">📌 期末餘額（陸貨專戶剩餘）</span>
+          <span style="font-size:22px;font-weight:700;color:#1e40af;" id="chinaClose">NT$ 0</span>
+        </div>
+        <div style="font-size:13px;font-weight:600;color:#1e40af;margin-bottom:8px;">本月陸貨明細</div>
+        <table class="china-detail-table">
+          <thead><tr><th>日期</th><th>類型</th><th>摘要</th><th style="text-align:right">人民幣</th><th style="text-align:right">匯率</th><th style="text-align:right">台幣金額</th></tr></thead>
+          <tbody id="chinaDetailBody"><tr><td colspan="6" style="text-align:center;color:#9ca3af;padding:16px;">無陸貨交易</td></tr></tbody>
+        </table>
       </div>
 
       <!-- ========== 第二段：公司營收報表 ========== -->
@@ -279,13 +328,15 @@ async function loadReport() {
     const ld = new Date(year, month, 0);
     const lastDay = `${year}-${String(month).padStart(2,'0')}-${String(ld.getDate()).padStart(2,'0')}`;
 
-    const [salesOrders, receivables, expenses, purchases, payments, customers] = await Promise.all([
+    const [salesOrders, receivables, expenses, purchases, payments, customers, chinaTx, chinaOpenArr] = await Promise.all([
       api('sales_orders', `date=gte.${firstDay}&date=lte.${lastDay}`),
       api('receivables', `order_date=gte.${firstDay}&order_date=lte.${lastDay}`),
       api('expenses', `date=gte.${firstDay}&date=lte.${lastDay}&order=date.asc`),
       api('purchase_orders', `date=gte.${firstDay}&date=lte.${lastDay}`).catch(() => []),
       api('payment_received', `date=gte.${firstDay}&date=lte.${lastDay}&order=date.asc`).catch(() => []),
-      api('customers', 'select=id,name').catch(() => [])
+      api('customers', 'select=id,name').catch(() => []),
+      api('petty_cash', `account=eq.${encodeURIComponent('陸貨專戶')}&date=gte.${firstDay}&date=lte.${lastDay}&order=date.asc,id.asc`).catch(() => []),
+      api('petty_cash', `account=eq.${encodeURIComponent('陸貨專戶')}&date=lt.${firstDay}&select=balance&order=id.desc&limit=1`).catch(() => [])
     ]);
     const custMap = {};
     customers.forEach(c => custMap[c.id] = c.name);
@@ -341,12 +392,22 @@ async function loadReport() {
 
     const netProfit = tSales - tPur - tExp - tMeals;
 
+    // -- 陸貨專戶 --
+    const chinaOpen = chinaOpenArr.length > 0 ? Number(chinaOpenArr[0].balance) : 0;
+    let chinaInTotal = 0, chinaOutTotal = 0;
+    chinaTx.forEach(r => {
+      if (r.type === '入金') chinaInTotal += Number(r.amount || 0);
+      else chinaOutTotal += Number(r.amount || 0);
+    });
+    const chinaClose = chinaOpen + chinaInTotal - chinaOutTotal;
+
     reportData = {
       month: monthVal,
       totals: { sales: tSales, salesPaid: tSalesPaid, salesUnpaid: tSalesUnpaid, purchase: tPur, purchasePaid: tPurPaid, purchaseUnpaid: tPurUnpaid, expense: tExp, meals: tMeals, netProfit, payCash: tPayCash, payTransfer: tPayTransfer },
       customerList: Object.values(customerMap).sort((a, b) => b.total - a.total),
       supplierList: Object.values(supplierMap).sort((a, b) => b.total - a.total),
-      mealList, expenseList, payments, custMap
+      mealList, expenseList, payments, custMap,
+      china: { open: chinaOpen, inTotal: chinaInTotal, outTotal: chinaOutTotal, close: chinaClose, details: chinaTx }
     };
 
     renderUI();
@@ -376,6 +437,25 @@ function renderUI() {
   document.getElementById('claimNet').textContent = fmt(netClaim);
   document.getElementById('bossAmount').value = '';
   document.getElementById('claimBalance').textContent = 'NT$ 0';
+
+  // === 陸貨專戶 ===
+  const ch = d.china;
+  document.getElementById('chinaOpen').textContent = fmt(ch.open);
+  document.getElementById('chinaIn').textContent = fmt(ch.inTotal);
+  document.getElementById('chinaOut').textContent = fmt(ch.outTotal);
+  document.getElementById('chinaClose').textContent = fmt(ch.close);
+  let chHtml = '';
+  const chinaDetails = ch.details.filter(r => r.type !== '入金');
+  if (!chinaDetails.length) chHtml = '<tr><td colspan="6" style="text-align:center;color:#9ca3af;padding:16px;">本月無陸貨支出</td></tr>';
+  else {
+    chinaDetails.forEach(r => {
+      const isRmb = r.rmb && r.exchange_rate;
+      const typeLabel = (r.note||'').includes('關稅') ? '🏛️ 關稅' : '🚢 陸貨';
+      chHtml += `<tr><td>${(r.date||'').substring(5)}</td><td>${typeLabel}</td><td>${r.summary||'-'}</td><td style="text-align:right;color:#1e40af">${isRmb?'¥'+Number(r.rmb).toLocaleString():'-'}</td><td style="text-align:right">${isRmb?r.exchange_rate:'-'}</td><td style="text-align:right;font-weight:600;color:#dc2626">${fmt(r.amount)}</td></tr>`;
+    });
+    chHtml += `<tr style="background:#eff6ff;font-weight:bold"><td colspan="5" style="text-align:right">支出合計</td><td style="text-align:right;color:#dc2626">${fmt(ch.outTotal)}</td></tr>`;
+  }
+  document.getElementById('chinaDetailBody').innerHTML = chHtml;
 
   // === 公司營收卡片 ===
   document.getElementById('totSales').textContent = fmt(t.sales);
@@ -454,6 +534,14 @@ function exportToExcel() {
   csv += `我代墊支出合計,${t.expense + t.meals}\n`;
   csv += `我代收現金合計,${t.payCash}\n`;
   csv += `淨請款金額,${(t.expense + t.meals) - t.payCash}\n\n`;
+  const ch2 = d.china;
+  csv += `【陸貨專戶】\n`;
+  csv += `期初餘額,${ch2.open}\n本月撥入,${ch2.inTotal}\n本月支出,${ch2.outTotal}\n期末餘額,${ch2.close}\n`;
+  csv += `日期,類型,摘要,人民幣,匯率,台幣\n`;
+  ch2.details.filter(r=>r.type!=='入金').forEach(r => {
+    csv += `"${r.date}","${(r.note||'').includes('關稅')?'關稅':'陸貨'}","${r.summary||''}",${r.rmb||''},${r.exchange_rate||''},${r.amount}\n`;
+  });
+  csv += `\n`;
   csv += `【公司損益】\n`;
   csv += `銷貨收入,${t.sales}\n進貨成本,${t.purchase}\n支出,${t.expense}\n餐費,${t.meals}\n本月損益,${t.netProfit}\n\n`;
   csv += `【銷貨收入】\n客戶,總額,已收,未收\n`;
