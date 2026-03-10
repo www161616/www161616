@@ -196,6 +196,7 @@ select.form-control { cursor:pointer; }
     </div>
     <div class="modal-body">
       <div id="payInfo" style="background:var(--surface2);border-radius:8px;padding:12px;margin-bottom:16px;font-size:13px;line-height:1.8;"></div>
+      <div class="mfg"><label class="mlbl">收款日期</label><input type="date" class="form-control" id="payDate"></div>
       <div class="mfg"><label class="mlbl">收款金額</label><input type="number" class="form-control" id="payAmount"></div>
       <div class="mfg"><label class="mlbl">收款方式</label>
         <select class="form-control" id="payMethod"><option>現金</option><option>匯款</option><option>支票</option></select>
@@ -390,19 +391,22 @@ function renderDetail(o,details){
 function openPayModal(orderId,total,custId){
   payingData={orderId,custId,total:Number(total)};
   document.getElementById('payInfo').innerHTML=`單號：<strong>${orderId}</strong><br>應收：<strong>${fmt(total)}</strong>`;
+  document.getElementById('payDate').value=new Date().toISOString().split('T')[0];
   document.getElementById('payAmount').value=Number(total);
   document.getElementById('payNote').value='';
   document.getElementById('payModal').classList.add('show');
 }
 
 async function confirmPay(){
+  const payDate=document.getElementById('payDate').value;
   const amount=Number(document.getElementById('payAmount').value);
   const method=document.getElementById('payMethod').value;
   const note=document.getElementById('payNote').value;
+  if(!payDate){showToast('請選擇收款日期','error');return;}
   if(!amount||amount<=0){showToast('請輸入收款金額','error');return;}
   showLoading('記錄收款中...');
   try{
-    const now=new Date().toISOString().split('T')[0];
+    const now=payDate;
     const arList=await api('receivables',`order_id=eq.${payingData.orderId}&select=*`);
     const ar=arList[0];
     const lastPay=await api('payment_received','select=id&order=id.desc&limit=1');

@@ -209,10 +209,11 @@ select.form-control{cursor:pointer;}
           <th class="text-right">已收金額</th>
           <th class="text-right">未收金額</th>
           <th>付款狀態</th>
+          <th>操作</th>
         </tr>
       </thead>
       <tbody id="tableBody">
-        <tr><td colspan="7" class="no-data">載入中...</td></tr>
+        <tr><td colspan="8" class="no-data">載入中...</td></tr>
       </tbody>
     </table>
   </div>
@@ -263,6 +264,56 @@ select.form-control{cursor:pointer;}
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closePayModal()">取消</button>
       <button class="btn btn-primary" onclick="submitQuickPay()">確認收款</button>
+    </div>
+  </div>
+</div>
+
+<!-- 收款紀錄彈窗 -->
+<div class="overlay" id="phOverlay">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <h3 id="phTitle">收款紀錄</h3>
+      <button class="modal-close" onclick="closePhModal()">&times;</button>
+    </div>
+    <div class="modal-body" id="phBody">載入中...</div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closePhModal()">關閉</button>
+    </div>
+  </div>
+</div>
+
+<!-- 修改收款彈窗 -->
+<div class="overlay" id="epOverlay">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-header">
+      <h3>修改收款 - <span id="epId"></span></h3>
+      <button class="modal-close" onclick="closeEpModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="filter-group" style="margin-bottom:10px;">
+        <label class="form-label">收款日期</label>
+        <input type="date" id="epDate" class="form-control">
+      </div>
+      <div class="filter-group" style="margin-bottom:10px;">
+        <label class="form-label">收款金額</label>
+        <input type="number" id="epAmount" class="form-control">
+      </div>
+      <div class="filter-group" style="margin-bottom:10px;">
+        <label class="form-label">收款方式</label>
+        <select id="epMethod" class="form-control">
+          <option value="現金">現金</option>
+          <option value="轉帳">轉帳</option>
+          <option value="支票">支票</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label class="form-label">備註</label>
+        <input type="text" id="epNote" class="form-control" placeholder="選填">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeEpModal()">取消</button>
+      <button class="btn btn-primary" onclick="saveEditPayment()">💾 儲存</button>
     </div>
   </div>
 </div>
@@ -355,7 +406,7 @@ async function loadData(){
   }catch(e){
     console.error(e);
     showToast('載入失敗：'+e.message,'error');
-    document.getElementById('tableBody').innerHTML='<tr><td colspan="7" class="no-data">載入失敗</td></tr>';
+    document.getElementById('tableBody').innerHTML='<tr><td colspan="8" class="no-data">載入失敗</td></tr>';
   }finally{
     hideLoading();
   }
@@ -393,7 +444,7 @@ function updateStats(data){
 function renderTable(data){
   document.getElementById('recordCount').textContent=`共 ${data.length} 筆`;
   if(!data.length){
-    document.getElementById('tableBody').innerHTML='<tr><td colspan="7" class="no-data">查無資料</td></tr>';
+    document.getElementById('tableBody').innerHTML='<tr><td colspan="8" class="no-data">查無資料</td></tr>';
     return;
   }
   const rows=data.map(r=>`
@@ -405,6 +456,7 @@ function renderTable(data){
       <td class="text-right">${fmt(r.paid_amount)}</td>
       <td class="text-right" style="color:${Number(r.unpaid_amount||0)>0?'var(--danger)':'var(--success)'}">${fmt(r.unpaid_amount)}</td>
       <td>${r.status==='已收款'?statusBadge(r.status):`<span class="badge ${r.status==='未收款'?'badge-danger':'badge-warning'}" style="cursor:pointer;" onclick="openPayModal('${r.id}')" title="點擊收款">${r.status||'未收款'}</span>`}</td>
+      <td><button class="btn btn-secondary" style="padding:4px 10px;font-size:11px;" onclick="openPayHistory('${r.order_id||r.id}','${r.id}')">📋 收款紀錄</button></td>
     </tr>
   `).join('');
   document.getElementById('tableBody').innerHTML=rows;
@@ -684,10 +736,124 @@ async function submitQuickPay(){
   }
 }
 
+// ===== 收款紀錄 =====
+let currentRecId=null;
+
+async function openPayHistory(orderId,recId){
+  currentRecId=recId;
+  document.getElementById('phTitle').textContent=`收款紀錄 - ${orderId}`;
+  document.getElementById('phBody').innerHTML='<div style="text-align:center;padding:20px;color:var(--text2);">載入中...</div>';
+  document.getElementById('phOverlay').classList.add('active');
+  try{
+    const payments=await api('payment_received',`order_id=eq.${orderId}&select=*&order=date.desc`);
+    if(!payments.length){
+      document.getElementById('phBody').innerHTML='<div style="text-align:center;padding:20px;color:var(--text2);">尚無收款紀錄</div>';
+      return;
+    }
+    const rows=payments.map(p=>`<tr>
+      <td>${p.id}</td>
+      <td>${p.date||'-'}</td>
+      <td class="text-right">${fmt(p.amount)}</td>
+      <td>${p.payment_method||'-'}</td>
+      <td>${p.note||'-'}</td>
+      <td>
+        <button class="btn btn-secondary" style="padding:3px 8px;font-size:11px;" onclick="editPayment('${p.id}')">✏️</button>
+        <button class="btn btn-secondary" style="padding:3px 8px;font-size:11px;color:var(--danger);" onclick="deletePayment('${p.id}','${orderId}','${recId}')">🗑️</button>
+      </td>
+    </tr>`).join('');
+    document.getElementById('phBody').innerHTML=`<table class="data-table">
+      <thead><tr><th>編號</th><th>日期</th><th class="text-right">金額</th><th>方式</th><th>備註</th><th>操作</th></tr></thead>
+      <tbody>${rows}</tbody></table>`;
+  }catch(e){
+    document.getElementById('phBody').innerHTML=`<div style="color:var(--danger);padding:20px;">載入失敗：${e.message}</div>`;
+  }
+}
+
+function closePhModal(){document.getElementById('phOverlay').classList.remove('active');}
+
+async function editPayment(prId){
+  try{
+    const data=await api('payment_received',`id=eq.${prId}&select=*`);
+    if(!data.length){showToast('找不到此筆收款','error');return;}
+    const p=data[0];
+    document.getElementById('epId').textContent=prId;
+    document.getElementById('epDate').value=p.date||'';
+    document.getElementById('epAmount').value=p.amount||0;
+    document.getElementById('epMethod').value=p.payment_method||'現金';
+    document.getElementById('epNote').value=p.note||'';
+    document.getElementById('epOverlay').classList.add('active');
+  }catch(e){showToast('載入失敗：'+e.message,'error');}
+}
+
+function closeEpModal(){document.getElementById('epOverlay').classList.remove('active');}
+
+async function saveEditPayment(){
+  const prId=document.getElementById('epId').textContent;
+  const date=document.getElementById('epDate').value;
+  const amount=Number(document.getElementById('epAmount').value);
+  const method=document.getElementById('epMethod').value;
+  const note=document.getElementById('epNote').value;
+  if(!date){showToast('請填日期','error');return;}
+  if(!amount||amount<=0){showToast('請填金額','error');return;}
+  showLoading('更新中...');
+  try{
+    // 取得舊金額
+    const old=await api('payment_received',`id=eq.${prId}&select=*`);
+    const oldAmt=Number(old[0].amount||0);
+    const orderId=old[0].order_id;
+    // 更新收款
+    await apiWrite('payment_received',`id=eq.${prId}`,'PATCH',{date,amount,payment_method:method,note:note||null});
+    // 更新 receivables
+    const diff=amount-oldAmt;
+    if(diff!==0){
+      const arList=await api('receivables',`order_id=eq.${orderId}&select=*`);
+      if(arList.length){
+        const ar=arList[0];
+        const newPaid=Number(ar.paid_amount||0)+diff;
+        const newUnpaid=Math.max(0,Number(ar.total_amount||0)-newPaid);
+        const newSt=newUnpaid<=0?'已收款':newPaid>0?'部分收款':'未收款';
+        await apiWrite('receivables',`id=eq.${ar.id}`,'PATCH',{paid_amount:newPaid,unpaid_amount:newUnpaid,status:newSt});
+        await apiWrite('sales_orders',`id=eq.${orderId}`,'PATCH',{payment_status:newSt});
+      }
+    }
+    closeEpModal();
+    showToast('收款紀錄已更新');
+    openPayHistory(orderId,currentRecId);
+    await loadData();
+  }catch(e){showToast('更新失敗：'+e.message,'error');}
+  hideLoading();
+}
+
+async function deletePayment(prId,orderId,recId){
+  if(!confirm(`確定刪除收款 ${prId}？`))return;
+  showLoading('刪除中...');
+  try{
+    const old=await api('payment_received',`id=eq.${prId}&select=amount`);
+    const amt=Number(old[0].amount||0);
+    await apiWrite('payment_received',`id=eq.${prId}`,'DELETE');
+    // 更新 receivables
+    const arList=await api('receivables',`order_id=eq.${orderId}&select=*`);
+    if(arList.length){
+      const ar=arList[0];
+      const newPaid=Math.max(0,Number(ar.paid_amount||0)-amt);
+      const newUnpaid=Math.max(0,Number(ar.total_amount||0)-newPaid);
+      const newSt=newUnpaid<=0?'已收款':newPaid>0?'部分收款':'未收款';
+      await apiWrite('receivables',`id=eq.${ar.id}`,'PATCH',{paid_amount:newPaid,unpaid_amount:newUnpaid,status:newSt});
+      await apiWrite('sales_orders',`id=eq.${orderId}`,'PATCH',{payment_status:newSt});
+    }
+    showToast('已刪除收款紀錄');
+    openPayHistory(orderId,recId);
+    await loadData();
+  }catch(e){showToast('刪除失敗：'+e.message,'error');}
+  hideLoading();
+}
+
 // Close overlays on background click
 document.getElementById('detailOverlay').addEventListener('click',function(e){if(e.target===this)closeDetail();});
 document.getElementById('monthlyOverlay').addEventListener('click',function(e){if(e.target===this)closeMonthly();});
 document.getElementById('payOverlay').addEventListener('click',function(e){if(e.target===this)closePayModal();});
+document.getElementById('phOverlay').addEventListener('click',function(e){if(e.target===this)closePhModal();});
+document.getElementById('epOverlay').addEventListener('click',function(e){if(e.target===this)closeEpModal();});
 
 // Init
 initDates();
