@@ -333,11 +333,12 @@ async function loadReport() {
     // 2. 抓取支出
     const expenses = await api('expenses', `date=gte.${firstDay}&date=lte.${lastDay}&order=date.asc`);
     
-    // 3. 嘗試抓取進貨單
+    // 3. 抓取進貨單
     let purchases = [];
     try {
       purchases = await api('purchase_orders', `date=gte.${firstDay}&date=lte.${lastDay}`);
-    } catch(e) { console.warn("未找到 purchase_orders 資料表或權限不足"); }
+      console.log('進貨單筆數:', purchases.length, purchases);
+    } catch(e) { console.error("進貨單抓取失敗:", e.message); }
 
     // 4. 抓取實際收款紀錄（按付款方式分類）
     let payments = [];
