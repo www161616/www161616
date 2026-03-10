@@ -213,6 +213,25 @@ h4 { font-size: 14px; margin: 15px 0 10px 0; color: var(--accent2); font-weight:
 
       <div class="section">
         <div class="section-header">
+          <div class="section-title">🧾 收款明細（按方式分類）</div>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th width="12%">日期</th>
+              <th width="15%">單號</th>
+              <th width="25%">客戶</th>
+              <th width="12%">方式</th>
+              <th width="16%" style="text-align:right">金額</th>
+              <th>備註</th>
+            </tr>
+          </thead>
+          <tbody id="paymentTable"></tbody>
+        </table>
+      </div>
+
+      <div class="section">
+        <div class="section-header">
           <div class="section-title">🏢 應付帳款明細 (進貨與營運)</div>
         </div>
         <div id="purchaseSuppliers">
@@ -314,11 +333,17 @@ async function loadReport() {
     // 2. 抓取支出
     const expenses = await api('expenses', `date=gte.${firstDay}&date=lte.${lastDay}&order=date.asc`);
     
-    // 3. 嘗試抓取進貨單 (如果沒有這個資料表，捕捉錯誤並視為 0)
+    // 3. 嘗試抓取進貨單
     let purchases = [];
     try {
       purchases = await api('purchase_orders', `date=gte.${firstDay}&date=lte.${lastDay}`);
     } catch(e) { console.warn("未找到 purchase_orders 資料表或權限不足"); }
+
+    // 4. 抓取實際收款紀錄（按付款方式分類）
+    let payments = [];
+    try {
+      payments = await api('payment_received', `date=gte.${firstDay}&date=lte.${lastDay}&order=date.asc`);
+    } catch(e) { console.warn("未找到 payment_received"); }
 
     // ================= 數據處理與加總 =================
     
@@ -362,8 +387,8 @@ async function loadReport() {
       if(!supplierMap[sName]) supplierMap[sName] = { name: sName, total: 0, paid: 0, unpaid: 0 };
       
       const gTotal = Number(p.grand_total || 0);
-      const paid = Number(p.paid_amount || 0);
-      const unpaid = Number(p.unpaid_amount || (gTotal - paid));
+      const paid = p.payment_status === '已付款' ? gTotal : 0;
+      const unpaid = p.payment_status === '已付款' ? 0 : gTotal;
       
       supplierMap[sName].total += gTotal;
       supplierMap[sName].paid += paid;
@@ -390,13 +415,21 @@ async function loadReport() {
       }
     });
 
+    // -- 收款方式統計 --
+    let tPayCash = 0, tPayTransfer = 0;
+    payments.forEach(pr => {
+      const amt = Number(pr.amount || 0);
+      if (pr.payment_method === '現金') tPayCash += amt;
+      else tPayTransfer += amt; // 匯款
+    });
+
     const netCash = tSales - tPur - tExp - tMeals;
 
     // 將整理好的資料存入全域變數，供匯出使用
     reportData = {
       month: monthVal,
-      totals: { sales: tSales, salesPaid: tSalesPaid, salesUnpaid: tSalesUnpaid, purchase: tPur, purchasePaid: tPurPaid, purchaseUnpaid: tPurUnpaid, expense: tExp, meals: tMeals, net: netCash },
-      customerList, supplierList, mealList, expenseList
+      totals: { sales: tSales, salesPaid: tSalesPaid, salesUnpaid: tSalesUnpaid, purchase: tPur, purchasePaid: tPurPaid, purchaseUnpaid: tPurUnpaid, expense: tExp, meals: tMeals, net: netCash, payCash: tPayCash, payTransfer: tPayTransfer },
+      customerList, supplierList, mealList, expenseList, payments
     };
 
     renderUI();
@@ -413,7 +446,7 @@ function renderUI() {
 
   // 1. 更新卡片
   setTxt('totSales', fmt(t.sales));
-  document.getElementById('salesSubBox').innerHTML = `已收: <span style="color:var(--success); font-weight:bold;">${fmt(t.salesPaid)}</span> <span style="opacity:0.3; margin:0 4px;">|</span> 未收: <span style="color:var(--danger); font-weight:bold;">${fmt(t.salesUnpaid)}</span>`;
+  document.getElementById('salesSubBox').innerHTML = `已收: <span style="color:var(--success); font-weight:bold;">${fmt(t.salesPaid)}</span> <span style="opacity:0.3; margin:0 4px;">|</span> 未收: <span style="color:var(--danger); font-weight:bold;">${fmt(t.salesUnpaid)}</span><br><span style="font-size:11px;">💵 現金收款: <b>${fmt(t.payCash)}</b> &nbsp;🏦 匯款收款: <b>${fmt(t.payTransfer)}</b></span>`;
   
   setTxt('totPur', fmt(t.purchase));
   document.getElementById('purSubBox').innerHTML = `已付: <span style="color:var(--success); font-weight:bold;">${fmt(t.purchasePaid)}</span> <span style="opacity:0.3; margin:0 4px;">|</span> 未付: <span style="color:var(--danger); font-weight:bold;">${fmt(t.purchaseUnpaid)}</span>`;
@@ -449,6 +482,32 @@ function renderUI() {
     </tr>`;
   }
   document.getElementById('salesTable').innerHTML = sHtml;
+
+  // 2.5 渲染收款明細表
+  let payHtml = '';
+  if (!d.payments || d.payments.length === 0) payHtml = '<tr><td colspan="6" style="text-align:center; color:var(--text2); padding:20px;">本月無收款紀錄</td></tr>';
+  else {
+    d.payments.forEach(pr => {
+      const isCash = pr.payment_method === '現金';
+      payHtml += `<tr>
+        <td style="font-size:12px;color:var(--text2);">${pr.date||''}</td>
+        <td style="font-size:12px;">${pr.order_id||''}</td>
+        <td>${pr.customer_id||''}</td>
+        <td><span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;${isCash?'background:#d1fae5;color:var(--success);':'background:#dbeafe;color:#1e40af;'}">${pr.payment_method||''}</span></td>
+        <td style="text-align:right;font-weight:700;color:var(--orange);">${fmt(pr.amount)}</td>
+        <td style="font-size:12px;color:var(--text2);">${pr.note||''}</td>
+      </tr>`;
+    });
+    payHtml += `<tr style="background:rgba(255,255,255,0.05); font-weight:bold; font-size:14px;">
+      <td colspan="3">收款合計</td>
+      <td>💵 現金</td><td style="text-align:right;color:var(--success);">${fmt(t.payCash)}</td><td></td>
+    </tr>
+    <tr style="background:rgba(255,255,255,0.05); font-weight:bold; font-size:14px;">
+      <td colspan="3"></td>
+      <td>🏦 匯款</td><td style="text-align:right;color:#1e40af;">${fmt(t.payTransfer)}</td><td></td>
+    </tr>`;
+  }
+  document.getElementById('paymentTable').innerHTML = payHtml;
 
   // 3. 渲染進貨表
   let pHtml = '';
