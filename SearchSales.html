@@ -280,9 +280,7 @@ function showLoading(msg='處理中...'){document.getElementById('loading').styl
 function hideLoading(){document.getElementById('loading').style.display='none';}
 
 window.onload=async function(){
-  const now=new Date(),y=now.getFullYear(),m=String(now.getMonth()+1).padStart(2,'0');
-  document.getElementById('dateFrom').value=`${y}-${m}-01`;
-  document.getElementById('dateTo').value=`${y}-${m}-${String(now.getDate()).padStart(2,'0')}`;
+  // 不預設日期，查全部
   try{
     const custs=await api('customers','select=id,name&status=eq.啟用&order=name');
     custs.forEach(c=>document.getElementById('custFilter').innerHTML+=`<option value="${c.id}">${c.name}</option>`);
@@ -298,7 +296,7 @@ async function doSearch(){
   const st=document.getElementById('statusFilter').value;
   document.getElementById('orderList').innerHTML='<div class="list-empty">查詢中...</div>';
   try{
-    let params='select=*&order=date.asc,id.asc';
+    let params='select=*&order=date.desc,id.desc';
     if(df)params+=`&date=gte.${df}`;
     if(dt)params+=`&date=lte.${dt}`;
     if(custId)params+=`&customer_id=eq.${custId}`;
@@ -343,6 +341,7 @@ function renderDetail(o,details){
       <td style="text-align:center">${d.qty} ${d.unit}</td>
       <td style="text-align:right">${Number(d.price||0).toLocaleString()}</td>
       <td style="text-align:right;font-weight:600;color:var(--orange)">${Number(d.subtotal||0).toLocaleString()}</td>
+      <td style="font-size:12px;color:var(--text2)">${d.note||''}</td>
     </tr>`).join('');
   document.getElementById('rightPanel').innerHTML=`
     <div class="detail-container">
@@ -365,7 +364,7 @@ function renderDetail(o,details){
           ${Number(o.deduction)>0?`<div class="info-row"><span class="info-lbl">折扣：</span>-${fmt(o.deduction)}</div>`:''}
         </div>
         <table class="items-table">
-          <thead><tr><th>#</th><th>品名</th><th style="text-align:center">數量</th><th style="text-align:right">單價</th><th style="text-align:right">小計</th></tr></thead>
+          <thead><tr><th>#</th><th>品名</th><th style="text-align:center">數量</th><th style="text-align:right">單價</th><th style="text-align:right">小計</th><th>備註</th></tr></thead>
           <tbody>${rows}</tbody>
         </table>
       </div>
