@@ -238,7 +238,7 @@ async function loadCustomers(){
 async function loadData(){
   document.getElementById('loading').style.display='flex';
   try{
-    const raw=await api('payment_received','select=*&order=date.desc,id.desc');
+    const raw=await api('payment_received','select=*&order=date.asc,id.asc');
     allRecords=raw||[];
     applyFilter();
     showToast('資料載入完成');

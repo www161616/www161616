@@ -174,7 +174,7 @@ async function generate() {
     const salesRevenue = sales.reduce((sum, order) => sum + Number(order.grand_total || 0), 0);
 
     // 2. 撈取該月現金支出 (抓取 expenses 資料表)
-    const expenses = await api('expenses', `date=gte.${firstDay}&date=lte.${lastDay}&order=date.desc`);
+    const expenses = await api('expenses', `date=gte.${firstDay}&date=lte.${lastDay}&order=date.asc`);
     const cashExpense = expenses.reduce((sum, exp) => sum + Number(exp.amount || 0), 0);
 
     // 3. 撈取該月進貨支出 (抓取 purchase_orders 資料表，假設存在)

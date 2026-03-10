@@ -403,7 +403,7 @@ function initDates(){
 async function loadData(){
   showLoading('載入應收帳款...');
   try{
-    const raw=await api('receivables','select=*&order=order_date.desc');
+    const raw=await api('receivables','select=*&order=order_date.asc');
     allData=raw||[];
     applyFilter();
     showToast('資料載入成功');

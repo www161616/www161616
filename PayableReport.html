@@ -344,7 +344,7 @@ function initDates(){
 async function loadData(){
   showLoading('載入應付帳款...');
   try{
-    const raw=await api('payables','select=*&order=order_date.desc');
+    const raw=await api('payables','select=*&order=order_date.asc');
     allData=raw||[];
     applyFilter();
     showToast('資料載入成功');

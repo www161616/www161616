@@ -250,7 +250,7 @@ async function doSearch(){
   const st=document.getElementById('statusFilter').value;
   document.getElementById('orderList').innerHTML='<div class="list-empty">查詢中...</div>';
   try{
-    let params='select=*&order=date.desc,id.desc';
+    let params='select=*&order=date.asc,id.asc';
     if(df)params+=`&date=gte.${df}`;
     if(dt)params+=`&date=lte.${dt}`;
     if(suppId)params+=`&supplier_id=eq.${suppId}`;

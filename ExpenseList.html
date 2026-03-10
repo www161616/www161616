@@ -147,7 +147,7 @@ async function load() {
     const lastDay = new Date(year, month, 0).toISOString().split('T')[0];
 
     // 從 Supabase 的 expenses 資料表抓取該月資料，依日期與編號反序排列
-    const data = await api('expenses', `date=gte.${firstDay}&date=lte.${lastDay}&order=date.desc,id.desc`);
+    const data = await api('expenses', `date=gte.${firstDay}&date=lte.${lastDay}&order=date.asc,id.asc`);
     display(data);
 
   } catch (err) {
