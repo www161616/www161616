@@ -521,6 +521,7 @@ function onCustomerChange() {
   if (c.phone) html += `<span class="ci-item"><span class="ci-label">電話：</span>${c.phone}</span>`;
   if (c.mobile) html += `<span class="ci-item"><span class="ci-label">手機：</span>${c.mobile}</span>`;
   if (c.address) html += `<span class="ci-item"><span class="ci-label">地址：</span>${c.address}</span>`;
+  if (c.tax_id) html += `<span class="ci-item"><span class="ci-label">統編：</span>${c.tax_id}</span>`;
   html += `<span class="ci-item"><span class="ci-label">稅制：</span>${c.tax_type||'免稅'}</span>`;
   if (c.payment_term) html += `<span class="ci-item"><span class="ci-label">付款條件：</span>${c.payment_term}</span>`;
   if (c.note) html += `<span class="ci-item ci-note">⚠ 備註：${c.note}</span>`;
