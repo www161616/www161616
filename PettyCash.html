@@ -219,7 +219,7 @@ async function init(){
 
 async function loadRecords(){
   try{
-    const records=await api('petty_cash','select=*&order=id.desc&limit=100');
+    const records=await api('petty_cash','select=*&order=date.desc,id.desc&limit=100');
     renderTable(records);
     if(records.length>0){
       currentBalance=Number(records[0].balance);
