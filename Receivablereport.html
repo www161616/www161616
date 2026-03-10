@@ -180,6 +180,12 @@ select.form-control{cursor:pointer;}
       <input type="date" id="dateTo" class="form-control" style="width:160px;">
     </div>
     <div class="filter-group">
+      <label class="form-label">客戶</label>
+      <select id="custFilter" class="form-control" style="width:160px;">
+        <option value="">全部客戶</option>
+      </select>
+    </div>
+    <div class="filter-group">
       <label class="form-label">付款狀態</label>
       <select id="statusFilter" class="form-control" style="width:150px;">
         <option value="">全部</option>
@@ -417,11 +423,13 @@ function applyFilter(){
   const to=document.getElementById('dateTo').value;
   const status=document.getElementById('statusFilter').value;
 
+  const cust=document.getElementById('custFilter').value;
   filteredData=allData.filter(r=>{
     const d=r.order_date?r.order_date.substring(0,10):'';
     if(from&&d<from)return false;
     if(to&&d>to)return false;
     if(status&&r.status!==status)return false;
+    if(cust&&r.customer_id!==cust)return false;
     return true;
   });
 
@@ -857,6 +865,13 @@ document.getElementById('epOverlay').addEventListener('click',function(e){if(e.t
 
 // Init
 initDates();
+(async()=>{
+  try{
+    const custs=await api('customers','select=id,name&status=eq.啟用&order=name');
+    const sel=document.getElementById('custFilter');
+    custs.forEach(c=>sel.innerHTML+=`<option value="${c.id}">${c.name}</option>`);
+  }catch(e){}
+})();
 loadData();
 </script>
 </body>
