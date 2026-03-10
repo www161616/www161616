@@ -185,16 +185,16 @@ tr:hover td{background:var(--surface2);}
         <input class="form-input" type="date" id="c_date">
       </div>
 
-      <!-- 入金 & 關稅：台幣金額 -->
-      <div id="twdFields">
+      <!-- 關稅：台幣金額 -->
+      <div id="twdFields" style="display:none;">
         <div class="form-group">
-          <label class="form-label" id="c_twd_label">撥款金額（台幣）</label>
+          <label class="form-label">關稅金額（台幣）</label>
           <input class="form-input" type="number" id="c_twd" min="1" placeholder="台幣金額">
         </div>
       </div>
 
-      <!-- 陸貨支出：人民幣 + 匯率 -->
-      <div id="rmbFields" style="display:none;">
+      <!-- 入金 & 陸貨支出：人民幣 + 匯率 -->
+      <div id="rmbFields">
         <div class="form-group">
           <label class="form-label">人民幣金額</label>
           <input class="form-input" type="number" id="c_rmb" min="0.01" step="0.01" placeholder="¥ 人民幣" oninput="calcTwd()">
@@ -302,13 +302,12 @@ function switchAccount(acct){
 // ===== 陸貨表單切換 =====
 function toggleChinaForm(){
   const type=document.getElementById('c_type').value;
-  if(type==='陸貨支出'){
-    document.getElementById('twdFields').style.display='none';
-    document.getElementById('rmbFields').style.display='';
-  } else {
+  if(type==='關稅'){
     document.getElementById('twdFields').style.display='';
     document.getElementById('rmbFields').style.display='none';
-    document.getElementById('c_twd_label').textContent = type==='入金' ? '撥款金額（台幣）' : '關稅金額（台幣）';
+  } else {
+    document.getElementById('twdFields').style.display='none';
+    document.getElementById('rmbFields').style.display='';
   }
 }
 
@@ -440,15 +439,15 @@ async function addChinaTx(){
 
   let amount=0, rmb=null, rate=null;
 
-  if(type==='陸貨支出'){
+  if(type==='關稅'){
+    amount=Number(document.getElementById('c_twd').value);
+    if(!amount||amount<=0){showToast('請輸入有效金額','error');return;}
+  } else {
     rmb=Number(document.getElementById('c_rmb').value);
     rate=Number(document.getElementById('c_rate').value);
     if(!rmb||rmb<=0){showToast('請輸入人民幣金額','error');return;}
     if(!rate||rate<=0){showToast('請輸入匯率','error');return;}
     amount=Math.round(rmb*rate);
-  } else {
-    amount=Number(document.getElementById('c_twd').value);
-    if(!amount||amount<=0){showToast('請輸入有效金額','error');return;}
   }
 
   showLoading('處理中...');
