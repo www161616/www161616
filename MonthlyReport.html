@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>龍潭央廚 - 詳細月結報表</title>
+<title>龍潭央廚 - 月結報表</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
@@ -34,7 +34,7 @@ body { font-family:'Noto Sans TC',sans-serif; background:var(--bg); color:var(--
 .nav-btn.active { background:var(--accent); color:white; }
 
 .main { flex:1; padding:20px; display:flex; justify-content:center; }
-.container { width:100%; max-width:1000px; display:flex; flex-direction:column; gap:20px; }
+.container { width:100%; display:flex; flex-direction:column; gap:20px; }
 
 .header-card { display:flex; align-items:center; gap:12px; background:var(--surface); padding:16px 20px; border-radius:12px; border:1px solid var(--border); box-shadow:0 4px 15px rgba(0,0,0,0.2); flex-wrap:wrap; }
 h2 { margin:0; color:var(--accent); font-size:20px; flex-grow:1; display:flex; align-items:center; gap:8px; }
@@ -57,24 +57,6 @@ input[type="month"]:focus { border-color:var(--accent); }
 .card-value { font-size:22px; font-weight:700; }
 .card-sub { font-size:11px; color:var(--text2); margin-top:8px; padding-top:8px; border-top:1px dashed var(--border); }
 
-/* 請款結算區 */
-.claim-section { background:linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); border:2px solid var(--accent2); border-radius:14px; padding:24px; box-shadow:0 4px 15px rgba(180,83,9,0.1); }
-.claim-title { font-size:18px; font-weight:700; color:var(--accent); margin-bottom:16px; display:flex; align-items:center; gap:8px; }
-.claim-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
-.claim-item { background:white; border-radius:10px; padding:14px 18px; border:1px solid var(--border); }
-.claim-label { font-size:12px; color:var(--text2); margin-bottom:6px; }
-.claim-value { font-size:20px; font-weight:700; }
-.claim-value.expense { color:var(--orange); }
-.claim-value.cash-in { color:var(--success); }
-.claim-value.net { color:var(--danger); }
-.claim-value.balance { color:var(--accent); }
-.claim-full { grid-column:span 2; }
-.claim-input-row { display:flex; align-items:center; gap:12px; margin-top:12px; background:white; border-radius:10px; padding:14px 18px; border:2px dashed var(--accent2); }
-.claim-input-row label { font-size:13px; font-weight:600; color:var(--accent); white-space:nowrap; }
-.claim-input-row input { width:160px; padding:8px 12px; border:2px solid var(--accent2); border-radius:8px; font-size:16px; font-weight:700; color:var(--accent); text-align:right; font-family:inherit; outline:none; background:var(--bg); }
-.claim-input-row input:focus { border-color:var(--accent); }
-.claim-result { font-size:16px; font-weight:700; margin-left:auto; }
-
 /* 陸貨專戶區 */
 .china-section { background:linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border:2px solid #3b82f6; border-radius:14px; padding:24px; box-shadow:0 4px 15px rgba(30,64,175,0.1); }
 .china-title { font-size:18px; font-weight:700; color:#1e40af; margin-bottom:16px; display:flex; align-items:center; gap:8px; }
@@ -93,6 +75,9 @@ input[type="month"]:focus { border-color:var(--accent); }
 /* 分隔標題 */
 .divider-title { font-size:18px; font-weight:700; color:var(--text); padding:10px 0; border-bottom:3px solid var(--accent); display:flex; align-items:center; gap:10px; }
 
+/* 兩欄排版 */
+.two-col { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+
 /* 區塊 */
 .section { background:var(--surface); padding:20px; border-radius:12px; border:1px solid var(--border); box-shadow:0 4px 10px rgba(0,0,0,0.15); }
 .section-header { margin-bottom:12px; border-bottom:1px solid var(--border); padding-bottom:10px; }
@@ -109,36 +94,69 @@ tr:last-child td { border-bottom:none; }
 .paid-text { color:var(--success); }
 .zero { color:var(--text2); opacity:0.5; }
 
+/* 我的對帳區 */
+.my-section { background:linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); border:2px solid var(--accent2); border-radius:14px; padding:24px; box-shadow:0 4px 15px rgba(180,83,9,0.1); }
+.my-title { font-size:18px; font-weight:700; color:var(--accent); margin-bottom:16px; display:flex; align-items:center; gap:8px; }
+.my-sub-title { font-size:14px; font-weight:700; color:var(--accent); margin:16px 0 8px; padding-top:12px; border-top:1px dashed var(--border); }
+.my-sub-title:first-of-type { margin-top:0; padding-top:0; border-top:none; }
+.my-table { width:100%; border-collapse:collapse; font-size:13px; background:white; border-radius:8px; overflow:hidden; }
+.my-table th { background:var(--surface2); padding:8px 10px; text-align:left; font-size:11px; border-bottom:1px solid var(--border); }
+.my-table th:last-child { text-align:right; }
+.my-table td { padding:7px 10px; border-bottom:1px solid var(--border); }
+.my-table td:last-child { text-align:right; }
+.my-table tr:last-child td { border-bottom:none; }
+.settle-box { background:white; border-radius:10px; padding:16px 20px; margin-top:16px; border:2px solid var(--accent2); }
+.settle-row { display:flex; justify-content:space-between; align-items:center; padding:6px 0; font-size:14px; }
+.settle-row.total { border-top:2px solid var(--accent); margin-top:8px; padding-top:12px; font-size:18px; font-weight:700; }
+
 .loading-box { text-align:center; padding:60px; color:var(--text2); display:none; flex-direction:column; align-items:center; gap:15px; background:var(--surface); border-radius:12px; border:1px solid var(--border); }
 .spinner { width:40px; height:40px; border:4px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:spin 0.8s linear infinite; }
 @keyframes spin { to { transform:rotate(360deg); } }
 
 @media print {
-  body { background:white !important; color:#000 !important; font-family:"Microsoft JhengHei",sans-serif !important; font-size:11px !important; padding:10px !important; }
+  @page { margin: 3mm; size: landscape; }
+  * { color:#000 !important; }
+  body { background:white !important; font-family:"Microsoft JhengHei",sans-serif !important; font-size:9px !important; padding:0 !important; margin:0 !important; }
   .navbar, .header-card, .loading-box { display:none !important; }
-  .main { padding:0; display:block; }
-  .container { max-width:100% !important; gap:8px; }
-  .claim-section { border:2px solid #000 !important; background:white !important; padding:12px !important; }
-  .claim-item { border:1px solid #000 !important; }
-  .claim-input-row { border:1px solid #000 !important; }
-  .card { border:1px solid #000 !important; box-shadow:none !important; padding:6px 10px !important; background:white !important; }
-  .card-title { color:#000 !important; font-size:10px !important; }
-  .card-value { font-size:14px !important; color:#000 !important; }
-  .card-sub { color:#333 !important; font-size:9px !important; }
-  .section { border:1px solid #000 !important; box-shadow:none !important; padding:8px !important; background:white !important; break-inside:avoid; }
-  .section-header { border-bottom-color:#000 !important; }
-  .section-title { color:#000 !important; font-size:13px !important; }
-  th { background:white !important; color:#000 !important; border:1px solid #000 !important; padding:2px 5px !important; font-size:11px !important; }
-  td { border:1px solid #000 !important; padding:2px 5px !important; color:#000 !important; font-size:11px !important; }
-  .unpaid-text { color:#000 !important; font-weight:bold !important; }
-  .china-section { border:2px solid #000 !important; background:white !important; padding:12px !important; }
-  .china-item { border:1px solid #000 !important; }
-  .china-detail-table th { background:white !important; color:#000 !important; border:1px solid #000 !important; }
-  .china-detail-table td { border:1px solid #000 !important; color:#000 !important; }
-  .china-title { color:#000 !important; }
-  .china-value { color:#000 !important; }
-  .divider-title { border-bottom-color:#000 !important; color:#000 !important; }
-  .container::before { content:"丸十水產股份有限公司 - 月結報表"; display:block; font-size:14px; font-weight:bold; text-align:center; margin-bottom:10px; padding-bottom:6px; border-bottom:1px solid #000; }
+  .main { padding:0 !important; display:block !important; }
+  .container { gap:3px !important; }
+  /* 兩欄保持 */
+  .two-col { grid-template-columns:1fr 1fr !important; gap:4px !important; }
+  /* 損益卡片 - 一行四格 */
+  .summary-cards { gap:4px !important; }
+  .card { border:1px solid #999 !important; box-shadow:none !important; padding:3px 6px !important; background:white !important; min-width:auto !important; border-top-width:2px !important; }
+  .card-title { font-size:8px !important; margin-bottom:2px !important; }
+  .card-value { font-size:12px !important; }
+  .card-sub { font-size:7px !important; margin-top:2px !important; padding-top:2px !important; }
+  /* 陸貨專戶 */
+  .china-section { border:1px solid #999 !important; background:white !important; padding:4px !important; box-shadow:none !important; }
+  .china-item { border:1px solid #999 !important; padding:3px 6px !important; }
+  .china-label { font-size:8px !important; margin-bottom:1px !important; }
+  .china-value { font-size:11px !important; }
+  .china-title { font-size:10px !important; margin-bottom:4px !important; }
+  .china-detail-table th { background:#eee !important; border:1px solid #999 !important; padding:1px 3px !important; white-space:nowrap !important; line-height:1.2 !important; font-size:9px !important; }
+  .china-detail-table td { border:1px solid #999 !important; padding:1px 3px !important; white-space:nowrap !important; line-height:1.2 !important; font-size:9px !important; }
+  /* 分隔標題 */
+  .divider-title { border-bottom:2px solid #000 !important; font-size:11px !important; padding:2px 0 !important; margin-top:2px !important; }
+  /* 區塊 */
+  .section { border:none !important; box-shadow:none !important; padding:0 !important; background:white !important; margin-bottom:2px !important; }
+  .section-header { border-bottom:1px solid #000 !important; padding-bottom:1px !important; margin-bottom:1px !important; }
+  .section-title { font-size:10px !important; }
+  /* 表格：清單模式 */
+  th { background:#eee !important; border:1px solid #999 !important; padding:1px 3px !important; font-size:9px !important; white-space:nowrap !important; line-height:1.2 !important; }
+  td { border:1px solid #999 !important; padding:1px 3px !important; font-size:9px !important; white-space:nowrap !important; line-height:1.2 !important; }
+  td span, td b { font-size:9px !important; }
+  .unpaid-text { font-weight:bold !important; }
+  /* 我的對帳區 */
+  .my-section { border:1px solid #000 !important; background:white !important; padding:4px !important; box-shadow:none !important; }
+  .my-title { font-size:11px !important; margin-bottom:4px !important; }
+  .my-sub-title { font-size:9px !important; margin:4px 0 2px !important; padding-top:4px !important; }
+  .my-table th { background:#eee !important; border:1px solid #999 !important; padding:1px 3px !important; white-space:nowrap !important; line-height:1.2 !important; font-size:9px !important; }
+  .my-table td { border:1px solid #999 !important; padding:1px 3px !important; white-space:nowrap !important; line-height:1.2 !important; font-size:9px !important; }
+  .settle-box { border:2px solid #000 !important; padding:4px 8px !important; margin-top:4px !important; }
+  .settle-row { font-size:10px !important; padding:2px 0 !important; }
+  .settle-row.total { font-size:12px !important; border-top:2px solid #000 !important; margin-top:4px !important; padding-top:6px !important; }
+  .container::before { content:"丸十水產股份有限公司 - 月結報表"; display:block; font-size:14px; font-weight:bold; text-align:center; margin-bottom:4px; padding-bottom:3px; border-bottom:2px solid #000; }
 }
 </style>
 </head>
@@ -171,122 +189,126 @@ tr:last-child td { border-bottom:none; }
 
     <div id="reportContent" style="display:none;">
 
-      <!-- ========== 第一段：我的請款結算 ========== -->
-      <div class="claim-section">
-        <div class="claim-title">💼 我的請款結算</div>
-        <div class="claim-grid">
-          <div class="claim-item">
-            <div class="claim-label">我代墊支出合計（支出+餐費）</div>
-            <div class="claim-value expense" id="claimExpense">NT$ 0</div>
-          </div>
-          <div class="claim-item">
-            <div class="claim-label">我代收現金合計（要繳回老闆）</div>
-            <div class="claim-value cash-in" id="claimCashIn">NT$ 0</div>
-          </div>
-          <div class="claim-item claim-full" style="background:#fff7ed;">
-            <div class="claim-label">淨請款金額 = 代墊 - 代收現金</div>
-            <div class="claim-value net" id="claimNet">NT$ 0</div>
-          </div>
-        </div>
-        <div class="claim-input-row">
-          <label>💰 老闆實際撥款：</label>
-          <input type="number" id="bossAmount" placeholder="輸入金額" oninput="calcBalance()">
-          <div class="claim-result">留存零用金：<span id="claimBalance" style="color:var(--accent);">NT$ 0</span></div>
-        </div>
-      </div>
-
-      <!-- ========== 陸貨專戶結算 ========== -->
-      <div class="china-section">
-        <div class="china-title">📦 陸貨專戶結算</div>
-        <div class="china-grid">
-          <div class="china-item">
-            <div class="china-label">期初餘額</div>
-            <div class="china-value balance" id="chinaOpen">NT$ 0</div>
-          </div>
-          <div class="china-item">
-            <div class="china-label">本月老闆撥入</div>
-            <div class="china-value income" id="chinaIn">NT$ 0</div>
-          </div>
-          <div class="china-item">
-            <div class="china-label">本月支出（陸貨+關稅）</div>
-            <div class="china-value expense" id="chinaOut">NT$ 0</div>
-          </div>
-        </div>
-        <div style="background:white;border-radius:10px;padding:14px 18px;border:2px solid #3b82f6;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;">
-          <span style="font-size:14px;font-weight:700;color:#1e40af;">📌 期末餘額（陸貨專戶剩餘）</span>
-          <span style="font-size:22px;font-weight:700;color:#1e40af;" id="chinaClose">NT$ 0</span>
-        </div>
-        <div style="font-size:13px;font-weight:600;color:#1e40af;margin-bottom:8px;">本月陸貨明細</div>
-        <table class="china-detail-table">
-          <thead><tr><th>日期</th><th>類型</th><th>摘要</th><th style="text-align:right">人民幣</th><th style="text-align:right">匯率</th><th style="text-align:right">台幣金額</th></tr></thead>
-          <tbody id="chinaDetailBody"><tr><td colspan="6" style="text-align:center;color:#9ca3af;padding:16px;">無陸貨交易</td></tr></tbody>
-        </table>
-      </div>
-
-      <!-- ========== 第二段：公司營收報表 ========== -->
-      <div class="divider-title">📊 公司營收報表（給老闆看）</div>
-
+      <!-- ========== 一、損益總表 ========== -->
+      <div class="divider-title">📊 損益總表</div>
       <div class="summary-cards">
         <div class="card" style="border-top-color:var(--success);">
-          <div class="card-title">本月銷貨</div>
+          <div class="card-title">銷貨收入</div>
           <div class="card-value" id="totSales" style="color:var(--success);">NT$ 0</div>
-          <div class="card-sub" id="salesSubBox"></div>
         </div>
         <div class="card" style="border-top-color:var(--danger);">
-          <div class="card-title">本月進貨</div>
+          <div class="card-title">進貨成本</div>
           <div class="card-value" id="totPur" style="color:var(--danger);">NT$ 0</div>
-          <div class="card-sub" id="purSubBox"></div>
         </div>
         <div class="card" style="border-top-color:var(--orange);">
-          <div class="card-title">本月支出+餐費</div>
+          <div class="card-title">費用總計（支出+餐費）</div>
           <div class="card-value" id="totAllExp" style="color:var(--orange);">NT$ 0</div>
           <div class="card-sub" id="expSubBox"></div>
         </div>
         <div class="card" style="border-top-color:var(--accent);">
           <div class="card-title">本月損益</div>
           <div class="card-value" id="netProfit" style="color:var(--accent);">NT$ 0</div>
-          <div class="card-sub">銷貨 - 進貨 - 支出 - 餐費</div>
+          <div class="card-sub">銷貨 - 進貨 - 費用</div>
         </div>
       </div>
 
-      <div class="section">
-        <div class="section-header"><div class="section-title">💰 銷貨收入結算</div></div>
-        <table>
-          <thead><tr><th width="30%">客戶名稱</th><th width="20%">銷貨總額</th><th width="20%">已收款</th><th width="20%">未收款</th></tr></thead>
-          <tbody id="salesTable"></tbody>
-        </table>
+      <!-- ========== 二、陸貨專戶 ========== -->
+      <div class="china-section" style="padding:16px;">
+        <div class="two-col" style="gap:16px;align-items:start;">
+          <div>
+            <div class="china-title" style="margin-bottom:10px;">📦 陸貨專戶</div>
+            <table class="china-detail-table">
+              <thead><tr><th>日期</th><th>類型</th><th>摘要</th><th style="text-align:right">人民幣</th><th style="text-align:right">匯率</th><th style="text-align:right">台幣</th></tr></thead>
+              <tbody id="chinaDetailBody"><tr><td colspan="6" style="text-align:center;color:#9ca3af;padding:16px;">無陸貨交易</td></tr></tbody>
+            </table>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <div style="display:flex;gap:8px;">
+              <div class="china-item" style="flex:1;padding:10px 14px;"><div class="china-label">上月結餘</div><div class="china-value balance" style="font-size:16px;" id="chinaOpen">NT$ 0</div></div>
+              <div class="china-item" style="flex:1;padding:10px 14px;"><div class="china-label">本月撥入</div><div class="china-value income" style="font-size:16px;" id="chinaIn">NT$ 0</div></div>
+            </div>
+            <div style="display:flex;gap:8px;">
+              <div class="china-item" style="flex:1;padding:10px 14px;"><div class="china-label">本月支出</div><div class="china-value expense" style="font-size:16px;" id="chinaOut">NT$ 0</div></div>
+              <div class="china-item" style="flex:1;padding:10px 14px;border:2px solid #3b82f6;"><div class="china-label" style="font-weight:700;">本月結餘</div><div class="china-value balance" style="font-size:16px;" id="chinaClose">NT$ 0</div></div>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div class="section">
-        <div class="section-header"><div class="section-title">🧾 收款明細（現金/匯款）</div></div>
-        <table>
-          <thead><tr><th width="12%">日期</th><th width="15%">單號</th><th width="25%">客戶</th><th width="12%">方式</th><th width="16%" style="text-align:right">金額</th><th>備註</th></tr></thead>
-          <tbody id="paymentTable"></tbody>
-        </table>
+      <!-- 三+四：應付帳款 ＆ 銷貨收入（並排） -->
+      <div class="two-col">
+        <div class="section">
+          <div class="section-header"><div class="section-title">🏢 應付帳款</div></div>
+          <table>
+            <thead><tr><th>廠商</th><th>應付</th><th>已付</th><th>未付</th></tr></thead>
+            <tbody id="supplierTable"></tbody>
+          </table>
+        </div>
+        <div class="section">
+          <div class="section-header"><div class="section-title">💰 銷貨收入</div></div>
+          <table>
+            <thead><tr><th>客戶</th><th>總額</th><th>現金</th><th>匯款</th><th>未收</th></tr></thead>
+            <tbody id="salesTable"></tbody>
+          </table>
+        </div>
       </div>
 
-      <div class="section">
-        <div class="section-header"><div class="section-title">🏢 應付帳款（進貨廠商）</div></div>
-        <table>
-          <thead><tr><th width="30%">廠商名稱</th><th width="20%">應付總額</th><th width="20%">已付款</th><th width="20%">未付款</th></tr></thead>
-          <tbody id="supplierTable"></tbody>
-        </table>
+      <!-- 五+五之二：支出明細 ＆ 餐費明細（並排） -->
+      <div class="two-col">
+        <div class="section">
+          <div class="section-header"><div class="section-title">💸 支出明細</div></div>
+          <table>
+            <thead><tr><th>日期</th><th>類別</th><th>項目</th><th>金額</th><th>付款方式</th></tr></thead>
+            <tbody id="expenseTable"></tbody>
+          </table>
+        </div>
+        <div class="section">
+          <div class="section-header"><div class="section-title">🍱 餐費明細</div></div>
+          <table>
+            <thead><tr><th>日期</th><th>項目</th><th>付款方式</th><th>金額</th></tr></thead>
+            <tbody id="mealTable"></tbody>
+          </table>
+        </div>
       </div>
 
-      <div class="section">
-        <div class="section-header"><div class="section-title">💸 支出明細</div></div>
-        <table>
-          <thead><tr><th width="12%">日期</th><th width="12%">類別</th><th width="25%">項目</th><th width="13%">對象</th><th width="13%">付款方式</th><th width="15%">金額</th></tr></thead>
-          <tbody id="expenseTable"></tbody>
-        </table>
-      </div>
-
-      <div class="section">
-        <div class="section-header"><div class="section-title">🍱 餐費明細</div></div>
-        <table>
-          <thead><tr><th width="15%">日期</th><th width="35%">項目</th><th width="20%">付款方式</th><th width="30%">金額</th></tr></thead>
-          <tbody id="mealTable"></tbody>
-        </table>
+      <!-- ========== 六、我的對帳區 ========== -->
+      <div class="my-section">
+        <div class="my-title">💼 我的對帳</div>
+        <div class="two-col" style="gap:16px;">
+          <div>
+            <div class="my-sub-title" style="margin-top:0;padding-top:0;border-top:none;">A. 我代收的現金（要交給老闆）</div>
+            <table class="my-table">
+              <thead><tr><th>日期</th><th>單號</th><th>客戶</th><th>金額</th></tr></thead>
+              <tbody id="myCashInTable"></tbody>
+            </table>
+            <div class="my-sub-title">C. 我代墊的支出（零用金，不含餐費）</div>
+            <table class="my-table">
+              <thead><tr><th>日期</th><th>類別</th><th>項目</th><th>金額</th></tr></thead>
+              <tbody id="myExpTable"></tbody>
+            </table>
+          </div>
+          <div>
+            <div class="my-sub-title" style="margin-top:0;padding-top:0;border-top:none;">B. 餐費（零用金代墊）</div>
+            <table class="my-table">
+              <thead><tr><th>日期</th><th>項目</th><th>金額</th></tr></thead>
+              <tbody id="myMealTable"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="settle-box">
+          <div class="settle-row">
+            <span>我代收現金（要交老闆）</span>
+            <span style="color:var(--success);font-weight:600;" id="settCashIn">NT$ 0</span>
+          </div>
+          <div class="settle-row">
+            <span>我代墊支出＋餐費（老闆要給我）</span>
+            <span style="color:var(--orange);font-weight:600;" id="settAdvance">NT$ 0</span>
+          </div>
+          <div class="settle-row total" id="settResultRow">
+            <span id="settLabel">結算</span>
+            <span id="settResult" style="color:var(--accent);">NT$ 0</span>
+          </div>
+        </div>
       </div>
 
     </div>
@@ -328,38 +350,35 @@ async function loadReport() {
     const ld = new Date(year, month, 0);
     const lastDay = `${year}-${String(month).padStart(2,'0')}-${String(ld.getDate()).padStart(2,'0')}`;
 
-    const [salesOrders, receivables, expenses, purchases, payments, customers, chinaTx, chinaOpenArr] = await Promise.all([
+    const [salesOrders, expenses, purchases, payments, customers, chinaTx, chinaOpenArr] = await Promise.all([
       api('sales_orders', `date=gte.${firstDay}&date=lte.${lastDay}`),
-      api('receivables', `order_date=gte.${firstDay}&order_date=lte.${lastDay}`),
       api('expenses', `date=gte.${firstDay}&date=lte.${lastDay}&order=date.asc`),
       api('purchase_orders', `date=gte.${firstDay}&date=lte.${lastDay}`).catch(() => []),
       api('payment_received', `date=gte.${firstDay}&date=lte.${lastDay}&order=date.asc`).catch(() => []),
       api('customers', 'select=id,name').catch(() => []),
       api('petty_cash', `account=eq.${encodeURIComponent('陸貨專戶')}&date=gte.${firstDay}&date=lte.${lastDay}&order=date.asc,id.asc`).catch(() => []),
-      api('petty_cash', `account=eq.${encodeURIComponent('陸貨專戶')}&date=lt.${firstDay}&select=balance&order=id.desc&limit=1`).catch(() => [])
+      api('petty_cash', `account=eq.${encodeURIComponent('陸貨專戶')}&date=lt.${firstDay}&select=balance&order=date.desc,id.desc&limit=1`).catch(() => [])
     ]);
     const custMap = {};
     customers.forEach(c => custMap[c.id] = c.name);
 
-    // -- 銷貨 --
-    let customerMap = {}, tSales = 0, tSalesPaid = 0, tSalesUnpaid = 0;
+    // -- 銷貨（按客戶分組）--
+    let customerMap = {}, tSales = 0;
     salesOrders.forEach(s => {
       const cName = s.customer_name || '未知';
-      if (!customerMap[cName]) customerMap[cName] = { name: cName, total: 0, paid: 0, unpaid: 0 };
-      const g = Number(s.grand_total || 0);
-      customerMap[cName].total += g;
-      tSales += g;
-      const ar = receivables.find(r => r.order_id === s.id);
-      if (ar) {
-        customerMap[cName].paid += Number(ar.paid_amount || 0);
-        customerMap[cName].unpaid += Number(ar.unpaid_amount || 0);
-        tSalesPaid += Number(ar.paid_amount || 0);
-        tSalesUnpaid += Number(ar.unpaid_amount || 0);
-      } else if (s.payment_status === '已收款') {
-        customerMap[cName].paid += g; tSalesPaid += g;
-      } else {
-        customerMap[cName].unpaid += g; tSalesUnpaid += g;
-      }
+      if (!customerMap[cName]) customerMap[cName] = { name: cName, total: 0, cash: 0, transfer: 0 };
+      customerMap[cName].total += Number(s.grand_total || 0);
+      tSales += Number(s.grand_total || 0);
+    });
+
+    // -- 收款（現金/匯款，歸入客戶）--
+    let tPayCash = 0, tPayTransfer = 0;
+    payments.forEach(pr => {
+      const cName = custMap[pr.customer_id] || pr.customer_id || '未知';
+      if (!customerMap[cName]) customerMap[cName] = { name: cName, total: 0, cash: 0, transfer: 0 };
+      const amt = Number(pr.amount || 0);
+      if (pr.payment_method === '現金') { customerMap[cName].cash += amt; tPayCash += amt; }
+      else { customerMap[cName].transfer += amt; tPayTransfer += amt; }
     });
 
     // -- 進貨 --
@@ -375,22 +394,22 @@ async function loadReport() {
       tPur += g; tPurPaid += paid; tPurUnpaid += g - paid;
     });
 
-    // -- 支出 & 餐費 --
-    let mealList = [], expenseList = [], tMeals = 0, tExp = 0;
+    // -- 全部費用（支出+餐費合併）--
+    let allExpenses = [], tExp = 0, tMeals = 0;
+    let tExpPetty = 0, tExpCash = 0, tExpTransfer = 0;
     expenses.forEach(e => {
       const amt = Number(e.amount || 0);
-      if (e.category === '伙食費' || e.category === '餐費') { mealList.push(e); tMeals += amt; }
-      else { expenseList.push(e); tExp += amt; }
+      const isMeal = e.category === '伙食費' || e.category === '餐費';
+      if (isMeal) tMeals += amt; else tExp += amt;
+      allExpenses.push(e);
+      // 按付款方式分類
+      if (e.payment_method === '零用金') tExpPetty += amt;
+      else if (e.payment_method === '現金') tExpCash += amt;
+      else tExpTransfer += amt;
     });
+    const tAllExp = tExp + tMeals;
 
-    // -- 收款方式 --
-    let tPayCash = 0, tPayTransfer = 0;
-    payments.forEach(pr => {
-      if (pr.payment_method === '現金') tPayCash += Number(pr.amount || 0);
-      else tPayTransfer += Number(pr.amount || 0);
-    });
-
-    const netProfit = tSales - tPur - tExp - tMeals;
+    const netProfit = tSales - tPur - tAllExp;
 
     // -- 陸貨專戶 --
     const chinaOpen = chinaOpenArr.length > 0 ? Number(chinaOpenArr[0].balance) : 0;
@@ -401,12 +420,16 @@ async function loadReport() {
     });
     const chinaClose = chinaOpen + chinaInTotal - chinaOutTotal;
 
+    // -- 我的對帳：代墊（零用金支付的費用）--
+    const myAdvanceList = expenses.filter(e => e.payment_method === '零用金');
+    const myAdvanceTotal = myAdvanceList.reduce((s, e) => s + Number(e.amount || 0), 0);
+
     reportData = {
       month: monthVal,
-      totals: { sales: tSales, salesPaid: tSalesPaid, salesUnpaid: tSalesUnpaid, purchase: tPur, purchasePaid: tPurPaid, purchaseUnpaid: tPurUnpaid, expense: tExp, meals: tMeals, netProfit, payCash: tPayCash, payTransfer: tPayTransfer },
+      totals: { sales: tSales, purchase: tPur, purchasePaid: tPurPaid, purchaseUnpaid: tPurUnpaid, expense: tExp, meals: tMeals, allExp: tAllExp, netProfit, payCash: tPayCash, payTransfer: tPayTransfer, expPetty: tExpPetty, expCash: tExpCash, expTransfer: tExpTransfer, myAdvance: myAdvanceTotal },
       customerList: Object.values(customerMap).sort((a, b) => b.total - a.total),
       supplierList: Object.values(supplierMap).sort((a, b) => b.total - a.total),
-      mealList, expenseList, payments, custMap,
+      allExpenses, myAdvanceList, payments, custMap,
       china: { open: chinaOpen, inTotal: chinaInTotal, outTotal: chinaOutTotal, close: chinaClose, details: chinaTx }
     };
 
@@ -417,83 +440,36 @@ async function loadReport() {
   }
 }
 
-function calcBalance() {
-  if (!reportData) return;
-  const t = reportData.totals;
-  const boss = Number(document.getElementById('bossAmount').value) || 0;
-  const netClaim = (t.expense + t.meals) - t.payCash;
-  const balance = boss - netClaim;
-  document.getElementById('claimBalance').textContent = fmt(balance);
-  document.getElementById('claimBalance').style.color = balance >= 0 ? 'var(--accent)' : 'var(--danger)';
-}
-
 function renderUI() {
   const d = reportData, t = d.totals;
 
-  // === 請款結算 ===
-  document.getElementById('claimExpense').textContent = fmt(t.expense + t.meals);
-  document.getElementById('claimCashIn').textContent = fmt(t.payCash);
-  const netClaim = (t.expense + t.meals) - t.payCash;
-  document.getElementById('claimNet').textContent = fmt(netClaim);
-  document.getElementById('bossAmount').value = '';
-  document.getElementById('claimBalance').textContent = 'NT$ 0';
+  // === 一、損益總表 ===
+  document.getElementById('totSales').textContent = fmt(t.sales);
+  document.getElementById('totPur').textContent = fmt(t.purchase);
+  document.getElementById('totAllExp').textContent = fmt(t.allExp);
+  document.getElementById('expSubBox').innerHTML = `支出: ${fmt(t.expense)} | 餐費: ${fmt(t.meals)}`;
+  const npEl = document.getElementById('netProfit');
+  npEl.textContent = fmt(t.netProfit);
+  npEl.style.color = t.netProfit >= 0 ? 'var(--success)' : 'var(--danger)';
 
-  // === 陸貨專戶 ===
+  // === 二、陸貨專戶 ===
   const ch = d.china;
   document.getElementById('chinaOpen').textContent = fmt(ch.open);
   document.getElementById('chinaIn').textContent = fmt(ch.inTotal);
   document.getElementById('chinaOut').textContent = fmt(ch.outTotal);
   document.getElementById('chinaClose').textContent = fmt(ch.close);
   let chHtml = '';
-  const chinaDetails = ch.details.filter(r => r.type !== '入金');
-  if (!chinaDetails.length) chHtml = '<tr><td colspan="6" style="text-align:center;color:#9ca3af;padding:16px;">本月無陸貨支出</td></tr>';
+  if (!ch.details.length) chHtml = '<tr><td colspan="6" style="text-align:center;color:#9ca3af;padding:16px;">本月無陸貨交易</td></tr>';
   else {
-    chinaDetails.forEach(r => {
+    ch.details.forEach(r => {
       const isRmb = r.rmb && r.exchange_rate;
-      const typeLabel = (r.note||'').includes('關稅') ? '🏛️ 關稅' : '🚢 陸貨';
-      chHtml += `<tr><td>${(r.date||'').substring(5)}</td><td>${typeLabel}</td><td>${r.summary||'-'}</td><td style="text-align:right;color:#1e40af">${isRmb?'¥'+Number(r.rmb).toLocaleString():'-'}</td><td style="text-align:right">${isRmb?r.exchange_rate:'-'}</td><td style="text-align:right;font-weight:600;color:#dc2626">${fmt(r.amount)}</td></tr>`;
+      const typeLabel = r.type === '入金' ? '💰 撥入' : (r.note||'').includes('關稅') ? '🏛️ 關稅' : '🚢 陸貨';
+      chHtml += `<tr><td>${(r.date||'').substring(5)}</td><td>${typeLabel}</td><td>${r.summary||'-'}</td><td style="text-align:right;color:#1e40af">${isRmb?'¥'+Number(r.rmb).toLocaleString():'-'}</td><td style="text-align:right">${isRmb?r.exchange_rate:'-'}</td><td style="text-align:right;font-weight:600;color:${r.type==='入金'?'#059669':'#dc2626'}">${r.type==='入金'?'+':'−'}${fmt(r.amount)}</td></tr>`;
     });
-    chHtml += `<tr style="background:#eff6ff;font-weight:bold"><td colspan="5" style="text-align:right">支出合計</td><td style="text-align:right;color:#dc2626">${fmt(ch.outTotal)}</td></tr>`;
   }
   document.getElementById('chinaDetailBody').innerHTML = chHtml;
 
-  // === 公司營收卡片 ===
-  document.getElementById('totSales').textContent = fmt(t.sales);
-  document.getElementById('salesSubBox').innerHTML = `已收: <b style="color:var(--success)">${fmt(t.salesPaid)}</b> | 未收: <b style="color:var(--danger)">${fmt(t.salesUnpaid)}</b><br><span style="font-size:11px">💵 現金: ${fmt(t.payCash)} &nbsp; 🏦 匯款: ${fmt(t.payTransfer)}</span>`;
-
-  document.getElementById('totPur').textContent = fmt(t.purchase);
-  document.getElementById('purSubBox').innerHTML = `已付: <b style="color:var(--success)">${fmt(t.purchasePaid)}</b> | 未付: <b style="color:var(--danger)">${fmt(t.purchaseUnpaid)}</b>`;
-
-  document.getElementById('totAllExp').textContent = fmt(t.expense + t.meals);
-  document.getElementById('expSubBox').innerHTML = `支出: ${fmt(t.expense)} | 餐費: ${fmt(t.meals)}`;
-
-  const npEl = document.getElementById('netProfit');
-  npEl.textContent = fmt(t.netProfit);
-  npEl.style.color = t.netProfit >= 0 ? 'var(--success)' : 'var(--danger)';
-
-  // === 銷貨表 ===
-  let sHtml = '';
-  if (!d.customerList.length) sHtml = '<tr><td colspan="4" style="text-align:center;color:var(--text2);padding:20px;">無銷貨紀錄</td></tr>';
-  else {
-    d.customerList.forEach(c => { sHtml += `<tr><td>${c.name}</td><td style="font-weight:600">${fmt(c.total)}</td><td class="paid-text">${fmt(c.paid)}</td><td class="${c.unpaid>0?'unpaid-text':'zero'}">${fmt(c.unpaid)}</td></tr>`; });
-    sHtml += `<tr style="background:rgba(0,0,0,0.02);font-weight:bold;font-size:14px"><td>總計</td><td>${fmt(t.sales)}</td><td style="color:var(--success)">${fmt(t.salesPaid)}</td><td style="color:var(--danger)">${fmt(t.salesUnpaid)}</td></tr>`;
-  }
-  document.getElementById('salesTable').innerHTML = sHtml;
-
-  // === 收款明細 ===
-  let payHtml = '';
-  if (!d.payments.length) payHtml = '<tr><td colspan="6" style="text-align:center;color:var(--text2);padding:20px;">本月無收款紀錄</td></tr>';
-  else {
-    d.payments.forEach(pr => {
-      const isCash = pr.payment_method === '現金';
-      payHtml += `<tr><td style="font-size:12px;color:var(--text2)">${pr.date||''}</td><td style="font-size:12px">${pr.order_id||''}</td><td>${d.custMap[pr.customer_id]||pr.customer_id||''}</td><td><span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;${isCash?'background:#d1fae5;color:var(--success)':'background:#dbeafe;color:#1e40af'}">${pr.payment_method||''}</span></td><td style="text-align:right;font-weight:700;color:var(--orange)">${fmt(pr.amount)}</td><td style="font-size:12px;color:var(--text2)">${pr.note||''}</td></tr>`;
-    });
-    payHtml += `<tr style="background:rgba(0,0,0,0.02);font-weight:bold"><td colspan="3">合計</td><td>💵 現金</td><td style="text-align:right;color:var(--success)">${fmt(t.payCash)}</td><td></td></tr>`;
-    payHtml += `<tr style="background:rgba(0,0,0,0.02);font-weight:bold"><td colspan="3"></td><td>🏦 匯款</td><td style="text-align:right;color:#1e40af">${fmt(t.payTransfer)}</td><td></td></tr>`;
-  }
-  document.getElementById('paymentTable').innerHTML = payHtml;
-
-  // === 應付帳款 ===
+  // === 三、應付帳款 ===
   let pHtml = '';
   if (!d.supplierList.length) pHtml = '<tr><td colspan="4" style="text-align:center;color:var(--text2);padding:20px;">無進貨紀錄</td></tr>';
   else {
@@ -502,23 +478,107 @@ function renderUI() {
   }
   document.getElementById('supplierTable').innerHTML = pHtml;
 
-  // === 支出明細 ===
-  let eHtml = '';
-  if (!d.expenseList.length) eHtml = '<tr><td colspan="6" style="text-align:center;color:var(--text2);padding:20px;">無支出紀錄</td></tr>';
+  // === 四、銷貨收入明細 ===
+  let sHtml = '';
+  if (!d.customerList.length) sHtml = '<tr><td colspan="5" style="text-align:center;color:var(--text2);padding:20px;">無銷貨紀錄</td></tr>';
   else {
-    d.expenseList.forEach(e => { eHtml += `<tr><td style="font-size:12px;color:var(--text2)">${(e.date||'').substring(5)}</td><td><span style="background:rgba(255,159,67,0.15);color:var(--orange);padding:3px 8px;border-radius:4px;font-size:11px">${e.category}</span></td><td style="text-align:left;font-weight:500">${e.item}</td><td style="color:var(--text2)">${e.recipient||'-'}</td><td style="color:var(--text2)">${e.payment_method}</td><td style="font-weight:700;color:var(--orange)">${fmt(e.amount)}</td></tr>`; });
-    eHtml += `<tr style="background:rgba(0,0,0,0.02);font-weight:bold;font-size:14px"><td colspan="5" style="text-align:right">支出合計</td><td style="color:var(--orange)">${fmt(t.expense)}</td></tr>`;
+    d.customerList.forEach(c => {
+      const unpaid = c.total - c.cash - c.transfer;
+      sHtml += `<tr><td>${c.name}</td><td style="font-weight:600">${fmt(c.total)}</td><td class="${c.cash>0?'paid-text':'zero'}">${fmt(c.cash)}</td><td style="color:#1e40af">${fmt(c.transfer)}</td><td class="${unpaid>0?'unpaid-text':'zero'}">${fmt(unpaid)}</td></tr>`;
+    });
+    const tUnpaid = t.sales - t.payCash - t.payTransfer;
+    sHtml += `<tr style="background:rgba(0,0,0,0.02);font-weight:bold;font-size:14px"><td>總計</td><td>${fmt(t.sales)}</td><td style="color:var(--success)">${fmt(t.payCash)}</td><td style="color:#1e40af">${fmt(t.payTransfer)}</td><td style="color:var(--danger)">${fmt(tUnpaid)}</td></tr>`;
+  }
+  document.getElementById('salesTable').innerHTML = sHtml;
+
+  // === 五、支出明細（不含餐費）===
+  const expOnly = d.allExpenses.filter(e => e.category !== '伙食費' && e.category !== '餐費');
+  let eHtml = '';
+  if (!expOnly.length) eHtml = '<tr><td colspan="5" style="text-align:center;color:var(--text2);padding:20px;">無支出紀錄</td></tr>';
+  else {
+    let eCash = 0, eTransfer = 0, ePetty = 0;
+    expOnly.forEach(e => {
+      const amt = Number(e.amount || 0);
+      if (e.payment_method === '零用金') ePetty += amt;
+      else if (e.payment_method === '現金') eCash += amt;
+      else eTransfer += amt;
+      const pmColor = e.payment_method === '零用金' ? 'color:var(--accent);font-weight:600' : 'color:var(--text2)';
+      eHtml += `<tr><td style="font-size:12px;color:var(--text2)">${(e.date||'').substring(5)}</td><td><span style="background:rgba(255,159,67,0.15);color:var(--orange);padding:2px 6px;border-radius:4px;font-size:11px">${e.category}</span></td><td style="text-align:left;font-weight:500">${e.item}</td><td style="font-weight:700;color:var(--orange)">${fmt(e.amount)}</td><td style="${pmColor}">${e.payment_method}</td></tr>`;
+    });
+    if (eCash > 0) eHtml += `<tr style="background:rgba(0,0,0,0.02)"><td colspan="3" style="text-align:right;color:var(--text2)">公司現金</td><td style="font-weight:600">${fmt(eCash)}</td><td></td></tr>`;
+    if (eTransfer > 0) eHtml += `<tr style="background:rgba(0,0,0,0.02)"><td colspan="3" style="text-align:right;color:var(--text2)">公司轉帳</td><td style="font-weight:600">${fmt(eTransfer)}</td><td></td></tr>`;
+    if (ePetty > 0) eHtml += `<tr style="background:rgba(0,0,0,0.02)"><td colspan="3" style="text-align:right;color:var(--accent);font-weight:600">零用金（我代墊）</td><td style="font-weight:700;color:var(--accent)">${fmt(ePetty)}</td><td></td></tr>`;
+    eHtml += `<tr style="background:rgba(0,0,0,0.04);font-weight:bold"><td colspan="3" style="text-align:right">支出合計</td><td style="color:var(--orange)">${fmt(t.expense)}</td><td></td></tr>`;
   }
   document.getElementById('expenseTable').innerHTML = eHtml;
 
-  // === 餐費明細 ===
+  // === 五之二、餐費明細 ===
+  const mealOnly = d.allExpenses.filter(e => e.category === '伙食費' || e.category === '餐費');
   let mHtml = '';
-  if (!d.mealList.length) mHtml = '<tr><td colspan="4" style="text-align:center;color:var(--text2);padding:20px;">無餐費紀錄</td></tr>';
+  if (!mealOnly.length) mHtml = '<tr><td colspan="4" style="text-align:center;color:var(--text2);padding:20px;">無餐費紀錄</td></tr>';
   else {
-    d.mealList.forEach(m => { mHtml += `<tr><td style="font-size:12px;color:var(--text2)">${(m.date||'').substring(5)}</td><td style="text-align:left">${m.item} ${m.note?'<span style="color:var(--text2);font-size:11px">('+m.note+')</span>':''}</td><td style="color:var(--text2)">${m.payment_method}</td><td style="font-weight:700;color:#9C27B0">${fmt(m.amount)}</td></tr>`; });
+    mealOnly.forEach(m => {
+      const pmColor = m.payment_method === '零用金' ? 'color:var(--accent);font-weight:600' : 'color:var(--text2)';
+      mHtml += `<tr><td style="font-size:12px;color:var(--text2)">${(m.date||'').substring(5)}</td><td style="text-align:left">${m.item}${m.note?' <span style="color:var(--text2);font-size:11px">('+m.note+')</span>':''}</td><td style="${pmColor}">${m.payment_method}</td><td style="font-weight:700;color:#9C27B0">${fmt(m.amount)}</td></tr>`;
+    });
     mHtml += `<tr style="background:rgba(0,0,0,0.02);font-weight:bold;font-size:14px"><td colspan="3" style="text-align:right">餐費合計</td><td style="color:#9C27B0">${fmt(t.meals)}</td></tr>`;
   }
   document.getElementById('mealTable').innerHTML = mHtml;
+
+  // === 六、我的對帳 ===
+  // A. 代收現金
+  const cashPayments = d.payments.filter(pr => pr.payment_method === '現金');
+  let ciHtml = '';
+  if (!cashPayments.length) ciHtml = '<tr><td colspan="4" style="text-align:center;color:var(--text2);padding:12px;">本月無代收現金</td></tr>';
+  else {
+    cashPayments.forEach(pr => {
+      ciHtml += `<tr><td>${(pr.date||'').substring(5)}</td><td style="font-size:12px">${pr.order_id||''}</td><td>${d.custMap[pr.customer_id]||''}</td><td style="font-weight:700;color:var(--success)">${fmt(pr.amount)}</td></tr>`;
+    });
+    ciHtml += `<tr style="background:rgba(0,0,0,0.03);font-weight:bold"><td colspan="3" style="text-align:right">合計</td><td style="color:var(--success)">${fmt(t.payCash)}</td></tr>`;
+  }
+  document.getElementById('myCashInTable').innerHTML = ciHtml;
+
+  // B. 餐費（零用金）
+  const myMeals = d.myAdvanceList.filter(e => e.category === '伙食費' || e.category === '餐費');
+  const myMealTotal = myMeals.reduce((s, e) => s + Number(e.amount || 0), 0);
+  let bmHtml = '';
+  if (!myMeals.length) bmHtml = '<tr><td colspan="3" style="text-align:center;color:var(--text2);padding:12px;">本月無餐費</td></tr>';
+  else {
+    myMeals.forEach(m => {
+      bmHtml += `<tr><td>${(m.date||'').substring(5)}</td><td style="text-align:left">${m.item}${m.note?' ('+m.note+')':''}</td><td style="font-weight:700;color:#9C27B0">${fmt(m.amount)}</td></tr>`;
+    });
+    bmHtml += `<tr style="background:rgba(0,0,0,0.03);font-weight:bold"><td colspan="2" style="text-align:right">餐費合計</td><td style="color:#9C27B0">${fmt(myMealTotal)}</td></tr>`;
+  }
+  document.getElementById('myMealTable').innerHTML = bmHtml;
+
+  // C. 代墊支出（零用金，不含餐費）
+  const myExps = d.myAdvanceList.filter(e => e.category !== '伙食費' && e.category !== '餐費');
+  const myExpTotal = myExps.reduce((s, e) => s + Number(e.amount || 0), 0);
+  let ceHtml = '';
+  if (!myExps.length) ceHtml = '<tr><td colspan="4" style="text-align:center;color:var(--text2);padding:12px;">本月無代墊支出</td></tr>';
+  else {
+    myExps.forEach(e => {
+      ceHtml += `<tr><td>${(e.date||'').substring(5)}</td><td>${e.category}</td><td style="text-align:left">${e.item}</td><td style="font-weight:700;color:var(--orange)">${fmt(e.amount)}</td></tr>`;
+    });
+    ceHtml += `<tr style="background:rgba(0,0,0,0.03);font-weight:bold"><td colspan="3" style="text-align:right">代墊合計</td><td style="color:var(--orange)">${fmt(myExpTotal)}</td></tr>`;
+  }
+  document.getElementById('myExpTable').innerHTML = ceHtml;
+
+  // C. 結算
+  document.getElementById('settCashIn').textContent = '+' + fmt(t.payCash);
+  document.getElementById('settAdvance').textContent = '−' + fmt(t.myAdvance);
+  const settle = t.payCash - t.myAdvance;
+  const settEl = document.getElementById('settResult');
+  const settLabel = document.getElementById('settLabel');
+  if (settle >= 0) {
+    settLabel.textContent = '結算：我應交老闆';
+    settEl.textContent = fmt(settle);
+    settEl.style.color = 'var(--success)';
+  } else {
+    settLabel.textContent = '結算：老闆應付我';
+    settEl.textContent = fmt(Math.abs(settle));
+    settEl.style.color = 'var(--danger)';
+  }
 
   document.getElementById('loading').style.display = 'none';
   document.getElementById('reportContent').style.display = 'block';
@@ -530,30 +590,42 @@ function exportToExcel() {
   const d = reportData, t = d.totals;
   let csv = '\uFEFF';
   csv += `丸十水產 - 月結報表 (${d.month})\n\n`;
-  csv += `【我的請款結算】\n`;
-  csv += `我代墊支出合計,${t.expense + t.meals}\n`;
-  csv += `我代收現金合計,${t.payCash}\n`;
-  csv += `淨請款金額,${(t.expense + t.meals) - t.payCash}\n\n`;
-  const ch2 = d.china;
+
+  csv += `【損益總表】\n`;
+  csv += `銷貨收入,${t.sales}\n進貨成本,${t.purchase}\n費用總計,${t.allExp}\n支出,${t.expense}\n餐費,${t.meals}\n本月損益,${t.netProfit}\n\n`;
+
+  const ch = d.china;
   csv += `【陸貨專戶】\n`;
-  csv += `期初餘額,${ch2.open}\n本月撥入,${ch2.inTotal}\n本月支出,${ch2.outTotal}\n期末餘額,${ch2.close}\n`;
+  csv += `上月結餘,${ch.open}\n本月撥入,${ch.inTotal}\n本月支出,${ch.outTotal}\n本月結餘,${ch.close}\n`;
   csv += `日期,類型,摘要,人民幣,匯率,台幣\n`;
-  ch2.details.filter(r=>r.type!=='入金').forEach(r => {
-    csv += `"${r.date}","${(r.note||'').includes('關稅')?'關稅':'陸貨'}","${r.summary||''}",${r.rmb||''},${r.exchange_rate||''},${r.amount}\n`;
+  ch.details.forEach(r => {
+    const typeLabel = r.type === '入金' ? '撥入' : (r.note||'').includes('關稅') ? '關稅' : '陸貨';
+    csv += `"${r.date}","${typeLabel}","${r.summary||''}",${r.rmb||''},${r.exchange_rate||''},${r.amount}\n`;
   });
   csv += `\n`;
-  csv += `【公司損益】\n`;
-  csv += `銷貨收入,${t.sales}\n進貨成本,${t.purchase}\n支出,${t.expense}\n餐費,${t.meals}\n本月損益,${t.netProfit}\n\n`;
-  csv += `【銷貨收入】\n客戶,總額,已收,未收\n`;
-  d.customerList.forEach(c => csv += `"${c.name}",${c.total},${c.paid},${c.unpaid}\n`);
-  csv += `\n【收款明細】\n日期,單號,客戶,方式,金額\n`;
-  d.payments.forEach(p => csv += `"${p.date}","${p.order_id}","${d.custMap[p.customer_id]||p.customer_id||''}","${p.payment_method}",${p.amount}\n`);
-  csv += `\n【應付帳款】\n廠商,總額,已付,未付\n`;
+
+  csv += `【應付帳款】\n廠商,總額,已付,未付\n`;
   d.supplierList.forEach(s => csv += `"${s.name}",${s.total},${s.paid},${s.unpaid}\n`);
-  csv += `\n【支出明細】\n日期,類別,項目,對象,方式,金額\n`;
-  d.expenseList.forEach(e => csv += `"${e.date}","${e.category}","${e.item}","${e.recipient||''}","${e.payment_method}",${e.amount}\n`);
-  csv += `\n【餐費】\n日期,項目,方式,金額\n`;
-  d.mealList.forEach(m => csv += `"${m.date}","${m.item}","${m.payment_method}",${m.amount}\n`);
+
+  csv += `\n【銷貨收入】\n客戶,總額,現金收款,匯款收款,未收款\n`;
+  d.customerList.forEach(c => csv += `"${c.name}",${c.total},${c.cash},${c.transfer},${c.total-c.cash-c.transfer}\n`);
+
+  csv += `\n【費用明細】\n日期,類別,項目,對象,金額,付款方式\n`;
+  d.allExpenses.forEach(e => csv += `"${e.date}","${e.category}","${e.item}","${e.recipient||''}",${e.amount},"${e.payment_method}"\n`);
+  csv += `公司現金,,,,${t.expCash},\n公司轉帳,,,,${t.expTransfer},\n零用金,,,,${t.expPetty},\n合計,,,,${t.allExp},\n`;
+
+  csv += `\n【我的對帳-代收現金】\n日期,單號,客戶,金額,備註\n`;
+  d.payments.filter(p=>p.payment_method==='現金').forEach(p => csv += `"${p.date}","${p.order_id}","${d.custMap[p.customer_id]||''}",${p.amount},"${p.note||''}"\n`);
+  csv += `代收合計,,,${t.payCash},\n`;
+
+  csv += `\n【我的對帳-代墊】\n日期,類別,項目,金額\n`;
+  d.myAdvanceList.forEach(e => csv += `"${e.date}","${e.category}","${e.item}",${e.amount}\n`);
+  csv += `代墊合計,,,${t.myAdvance}\n`;
+
+  const settle = t.payCash - t.myAdvance;
+  csv += `\n【結算】\n`;
+  csv += `代收現金,${t.payCash}\n代墊支出,${t.myAdvance}\n`;
+  csv += settle >= 0 ? `我應交老闆,${settle}\n` : `老闆應付我,${Math.abs(settle)}\n`;
 
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));

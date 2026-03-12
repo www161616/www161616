@@ -226,7 +226,22 @@ document.getElementById('mealForm').addEventListener('submit', async function(e)
       method: 'POST', headers: H, body: JSON.stringify(insertData)
     });
     if (!postRes.ok) throw new Error(await postRes.text());
-    
+
+    // 同步寫入 petty_cash
+    try {
+      const pcLastId = await api('petty_cash', 'select=id&order=id.desc&limit=1');
+      const pcLastBal = await api('petty_cash', `select=balance&account=eq.${encodeURIComponent('零用金')}&order=date.desc,id.desc&limit=1`);
+      let pcNum = 1;
+      if (pcLastId.length > 0) pcNum = parseInt(pcLastId[0].id.replace(/[^0-9]/g, ''), 10) + 1;
+      const pcId = 'PC' + String(pcNum).padStart(5, '0');
+      const curBal = pcLastBal.length > 0 ? Number(pcLastBal[0].balance) : 0;
+      const newBal = curBal - insertData.amount;
+      await fetch(`${SUPABASE_URL}/rest/v1/petty_cash`, {
+        method: 'POST', headers: H,
+        body: JSON.stringify({ id: pcId, date: insertData.date, type: '出金', amount: insertData.amount, summary: `餐費：${insertData.item}`, handler: '', note: expId, balance: newBal, account: '零用金' })
+      });
+    } catch (e) { console.warn('petty_cash 同步失敗', e); }
+
     showToast('success', '記錄成功！', `已成功儲存 ${headcount} 人份的餐費，金額：NT$ ${insertData.amount}`);
     resetForm();
     

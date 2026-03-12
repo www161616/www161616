@@ -529,7 +529,7 @@ document.getElementById('expenseForm').addEventListener('submit', async function
     if (!editingId) {
       try {
         const pcLastId = await api('petty_cash', 'select=id&order=id.desc&limit=1');
-        const pcLastBal = await api('petty_cash', `select=balance&account=eq.${encodeURIComponent('零用金')}&order=id.desc&limit=1`);
+        const pcLastBal = await api('petty_cash', `select=balance&account=eq.${encodeURIComponent('零用金')}&order=date.desc,id.desc&limit=1`);
         const curBal = pcLastBal.length > 0 ? Number(pcLastBal[0].balance) : 0;
         const newBal = curBal - formData.amount;
         const pcNum = pcLastId.length > 0 ? (parseInt(pcLastId[0].id.replace(/\D/g,''), 10) || 0) + 1 : 1;
@@ -596,7 +596,7 @@ async function deleteItem(expId, itemName) {
       try {
         const amt = Number(expData[0].amount || 0);
         const pcLastId2 = await api('petty_cash', 'select=id&order=id.desc&limit=1');
-        const pcLastBal2 = await api('petty_cash', `select=balance&account=eq.${encodeURIComponent('零用金')}&order=id.desc&limit=1`);
+        const pcLastBal2 = await api('petty_cash', `select=balance&account=eq.${encodeURIComponent('零用金')}&order=date.desc,id.desc&limit=1`);
         const curBal = pcLastBal2.length > 0 ? Number(pcLastBal2[0].balance) : 0;
         const newBal = curBal + amt;
         const pcNum = pcLastId2.length > 0 ? (parseInt(pcLastId2[0].id.replace(/\D/g,''), 10) || 0) + 1 : 1;

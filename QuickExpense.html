@@ -410,7 +410,7 @@ async function saveExpense() {
     try {
       const pcLastIdRes = await fetch(`${SB_URL}/rest/v1/petty_cash?select=id&order=id.desc&limit=1`, { headers: { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY } });
       const pcLastId = await pcLastIdRes.json();
-      const pcLastBalRes = await fetch(`${SB_URL}/rest/v1/petty_cash?select=balance&account=eq.${encodeURIComponent('零用金')}&order=id.desc&limit=1`, { headers: { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY } });
+      const pcLastBalRes = await fetch(`${SB_URL}/rest/v1/petty_cash?select=balance&account=eq.${encodeURIComponent('零用金')}&order=date.desc,id.desc&limit=1`, { headers: { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY } });
       const pcLastBal = await pcLastBalRes.json();
       const curBal = pcLastBal.length > 0 ? Number(pcLastBal[0].balance) : 0;
       const newBal = curBal - amount;
