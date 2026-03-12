@@ -240,6 +240,7 @@ tr:hover td{background:var(--surface2);}
         <button class="filter-tab" onclick="setFilter('陸貨專戶',this)">📦 陸貨</button>
       </div>
       <button class="refresh-btn" onclick="loadRecords()">🔄 重整</button>
+      <button class="refresh-btn" onclick="recalcAll()" style="border-color:var(--accent);color:var(--accent);font-weight:600;">🧮 重算結餘</button>
     </div>
     <div class="table-wrap">
       <table>
@@ -349,7 +350,7 @@ async function getNewId(){
 
 // ===== 取得帳戶餘額 =====
 async function getBalance(acct){
-  const rows=await api('petty_cash',`select=balance&account=eq.${encodeURIComponent(acct)}&order=id.desc&limit=1`);
+  const rows=await api('petty_cash',`select=balance&account=eq.${encodeURIComponent(acct)}&order=date.desc,id.desc&limit=1`);
   return rows.length>0?Number(rows[0].balance):0;
 }
 
@@ -427,15 +428,17 @@ async function addPettyIncome(){
 
     await apiPost('petty_cash',{
       id:newId, date, type:'入金', amount, summary:source,
-      handler:'', note, balance:newBal, account:'零用金'
+      handler:'', note, balance:0, account:'零用金'
     });
 
-    balPetty=newBal;
-    document.getElementById('balPetty').textContent=fmt(newBal);
+    // 重算整個帳戶結餘，確保日期順序正確
+    await recalcBalance('零用金');
+    await loadRecords();
+    balPetty=await getBalance('零用金');
+    document.getElementById('balPetty').textContent=fmt(balPetty);
     document.getElementById('p_amount').value='';
     document.getElementById('p_note').value='';
-    await loadRecords();
-    showToast(`零用金撥補成功，餘額 ${fmt(newBal)}`);
+    showToast(`零用金撥補成功，餘額 ${fmt(balPetty)}`);
   }catch(e){showToast('撥補失敗：'+e.message,'error');}
   hideLoading();
 }
@@ -473,25 +476,27 @@ async function addChinaTx(){
       id:newId, date, type: type==='入金'?'入金':'出金',
       amount, summary: type==='入金'?(summary||'老闆撥款'):summary,
       handler:'', note: type==='關稅'?('關稅'+(note?' '+note:'')):(note||''),
-      balance:newBal, account:'陸貨專戶'
+      balance:0, account:'陸貨專戶'
     };
     if(rmb) row.rmb=rmb;
     if(rate) row.exchange_rate=rate;
 
     await apiPost('petty_cash',row);
 
-    balChina=newBal;
-    document.getElementById('balChina').textContent=fmt(newBal);
+    // 重算整個帳戶結餘
+    await recalcBalance('陸貨專戶');
+    await loadRecords();
+    balChina=await getBalance('陸貨專戶');
+    document.getElementById('balChina').textContent=fmt(balChina);
     // Reset form
     document.getElementById('c_twd').value='';
     document.getElementById('c_rmb').value='';
     document.getElementById('c_summary').value='';
     document.getElementById('c_note').value='';
     document.getElementById('calcResult').textContent='折合台幣：NT$ 0';
-    await loadRecords();
 
     const typeLabel = type==='入金'?'撥款入金':type==='關稅'?'關稅支出':'陸貨付款';
-    showToast(`${typeLabel}成功，陸貨專戶餘額 ${fmt(newBal)}`);
+    showToast(`${typeLabel}成功，陸貨專戶餘額 ${fmt(balChina)}`);
   }catch(e){showToast('操作失敗：'+e.message,'error');}
   hideLoading();
 }
@@ -538,6 +543,23 @@ async function recalcBalance(acct){
       await fetch(`${SUPABASE_URL}/rest/v1/petty_cash?id=eq.${row.id}`,{method:'PATCH',headers:patchH,body:JSON.stringify({balance:bal})});
     }
   }
+}
+
+// ===== 重算全部帳戶結餘 =====
+async function recalcAll(){
+  if(!confirm('確定要重新計算零用金和陸貨專戶的所有結餘？')) return;
+  showLoading('重新計算所有結餘...');
+  try{
+    await recalcBalance('零用金');
+    await recalcBalance('陸貨專戶');
+    await loadRecords();
+    balPetty=await getBalance('零用金');
+    balChina=await getBalance('陸貨專戶');
+    document.getElementById('balPetty').textContent=fmt(balPetty);
+    document.getElementById('balChina').textContent=fmt(balChina);
+    showToast('所有結餘已重新計算');
+  }catch(e){showToast('重算失敗：'+e.message,'error');}
+  hideLoading();
 }
 
 init();
