@@ -466,30 +466,8 @@ async function shipOrder(orderId){
 }
 
 /* ===== 複製 ===== */
-async function copyOrder(orderId){
-  if(!confirm(`確定要複製銷貨單 ${orderId} 嗎？`))return;
-  showLoading('複製中...');
-  try{
-    const[orders,details]=await Promise.all([
-      api('sales_orders',`id=eq.${orderId}&select=*`),
-      api('sales_details',`order_id=eq.${orderId}&select=*`)
-    ]);
-    const o=orders[0];
-    const last=await api('sales_orders','select=id&order=id.desc&limit=1');
-    const lastNum=last.length>0?parseInt(last[0].id.replace(/[^0-9]/g,''),10):0;
-    const newId='SO'+String(lastNum+1).padStart(5,'0');
-    const today=new Date().toISOString().split('T')[0];
-    await apiWrite(`${SUPABASE_URL}/rest/v1/sales_orders`,'POST',{...o,id:newId,date:today,payment_status:'未收款',created_at:today});
-    const newDetails=details.map((d,i)=>({...d,id:newId+'-'+(i+1),order_id:newId}));
-    await apiWrite(`${SUPABASE_URL}/rest/v1/sales_details`,'POST',newDetails);
-    const arLast=await api('receivables','select=id&order=id.desc&limit=1');
-    const arNum=arLast.length>0?parseInt(arLast[0].id.replace(/[^0-9]/g,''),10):0;
-    const arId='AR'+String(arNum+1).padStart(5,'0');
-    await apiWrite(`${SUPABASE_URL}/rest/v1/receivables`,'POST',{id:arId,customer_id:o.customer_id,customer_name:o.customer_name,order_id:newId,order_date:today,total_amount:o.grand_total,paid_amount:0,unpaid_amount:o.grand_total,status:'未收款',note:'複製自'+orderId});
-    showToast(`✅ 已複製為 ${newId}`,'success');
-    doSearch();
-  }catch(e){showToast('複製失敗：'+e.message,'error');}
-  hideLoading();
+function copyOrder(orderId){
+  location.href = `SalesOrder.html?copy=${orderId}`;
 }
 
 /* ===== 修改 ===== */

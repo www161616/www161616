@@ -452,11 +452,15 @@ window.onload = async function() {
     // --- 新增：檢查是不是從「修改」按鈕跳過來的 ---
     const urlParams = new URLSearchParams(window.location.search);
     const editId = urlParams.get('edit') || sessionStorage.getItem('editOrderId');
+    const copyId = urlParams.get('copy');
 
     if (editId) {
       document.querySelector('.loading-full div:last-child').textContent = `載入訂單 ${editId} 資料中...`;
       await loadOrderForEdit(editId);
-      sessionStorage.removeItem('editOrderId'); // 清除記錄
+      sessionStorage.removeItem('editOrderId');
+    } else if (copyId) {
+      document.querySelector('.loading-full div:last-child').textContent = `複製訂單 ${copyId} 中...`;
+      await loadOrderForCopy(copyId);
     } else {
       filterProducts();
     }
@@ -503,6 +507,38 @@ async function loadOrderForEdit(orderId) {
     showToast(`已載入訂單 ${orderId}`, 'success');
   } catch (e) {
     showToast('載入訂單失敗：' + e.message, 'error');
+    filterProducts();
+  }
+}
+
+// --- 複製模式：載入舊單資料但不設 editingOrderId，儲存時會建新單 ---
+async function loadOrderForCopy(orderId) {
+  try {
+    const [orders, details] = await Promise.all([
+      api('sales_orders', `id=eq.${orderId}&select=*`),
+      api('sales_details', `order_id=eq.${orderId}&select=*`)
+    ]);
+    if (orders.length === 0) {
+      showToast('找不到該筆訂單資料', 'error');
+      filterProducts();
+      return;
+    }
+    const o = orders[0];
+    document.getElementById('orderDate').value = new Date().toISOString().split('T')[0];
+    document.getElementById('custSelect').value = o.customer_id;
+    document.getElementById('shipping').value = o.shipping || 0;
+    document.getElementById('deduction').value = o.deduction || 0;
+    document.getElementById('orderNote').value = o.note ? '複製自 ' + orderId + ' | ' + o.note : '複製自 ' + orderId;
+    onCustomerChange();
+    cart = details.map(d => ({
+      id: d.product_id, name: d.product_name, unit: d.unit || '個',
+      price: d.price, basePrice: d.price, qty: d.qty, cost: d.cost || 0, note: d.note || ''
+    }));
+    renderCart();
+    filterProducts();
+    showToast(`已載入 ${orderId} 的資料，可修改後儲存為新單`, 'success');
+  } catch (e) {
+    showToast('複製載入失敗：' + e.message, 'error');
     filterProducts();
   }
 }
