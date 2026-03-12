@@ -434,9 +434,7 @@ function addToCart(pid) {
   const list = currentSource==='PRODUCT' ? allProducts : allMaterials;
   const p = list.find(x=>x.id===pid);
   if (!p) return;
-  const exist = cart.find(x=>x.id===pid);
-  if (exist) exist.qty++;
-  else cart.push({ id:p.id, name:p.name, unit:p.unit||'個', cost:p.cost||0, qty:1, type:currentSource });
+  cart.push({ id:p.id, name:p.name, unit:p.unit||'個', cost:p.cost||0, qty:1, type:currentSource });
   renderCart(); filterProducts();
 }
 

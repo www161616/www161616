@@ -650,9 +650,7 @@ function renderProducts(list) {
 function addToCart(pid) {
   const p = allProducts.find(x => x.id === pid);
   const price = getPrice(pid);
-  const exist = cart.find(x => x.id === pid);
-  if (exist) { exist.qty++; }
-  else { cart.push({ id:p.id, name:p.name, unit:p.unit||'個', price, basePrice:price, qty:1, cost:p.cost||0, note:'' }); }
+  cart.push({ id:p.id, name:p.name, unit:p.unit||'個', price, basePrice:price, qty:1, cost:p.cost||0, note:'' });
   renderCart();
   filterProducts();
 }
